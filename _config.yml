@@ -3,7 +3,7 @@
 title: A Tutorial for Kalman Filters
 author: ivaquero
 copyright: "2023"
-logo: doge.png
+logo: Kalman.png
 exclude_patterns: [_build, Thumbs.db, .DS_Store, "**.ipynb_checkpoints"]
 only_build_toc_files: true
 
