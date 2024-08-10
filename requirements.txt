@@ -1,4 +1,4 @@
-jupyterlab
+jupyter-book
 matplotlib
 numpy
 pandas
