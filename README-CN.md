@@ -1,9 +1,9 @@
-# 滤波仿真教学工具箱
+# Kalman 滤波仿真教程
 
 ![code size](https://img.shields.io/github/languages/code-size/ivaquero/blog-filters.svg)
 ![repo size](https://img.shields.io/github/repo-size/ivaquero/blog-filters.svg)
 
-本工程是 [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python) 一书中代码的整合和再组织，并借鉴了 [EKF/UKF Toolbox for Matlab](https://github.com/EEA-sensors/ekfukf) 中的部分内容。
+本工程是 [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python) 一书中代码的整合和再组织，并借鉴了 [EKF/UKF Toolbox for MATLAB](https://github.com/EEA-sensors/ekfukf) 中的部分内容。
 
 <p align="left">
 <a href="README.md">English</a> |
@@ -12,8 +12,8 @@
 
 ## 工程目标
 
-- 构建一个对入门者友好的滤波仿真试验工具
-- 形成一套通俗易懂的入门教程
+- 提供一套通俗易懂的入门教程
+- 构建一个对入门者友好的滤波仿真工具箱
 
 ## 要求
 
