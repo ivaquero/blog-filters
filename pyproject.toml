@@ -2,6 +2,7 @@
     fix = true
     fix-only = true
     target-version = "py38"
+    extend-include = ["*.ipynb"]
 
 [tool.ruff.format]
     # Enable reformatting of code snippets in docstrings.
