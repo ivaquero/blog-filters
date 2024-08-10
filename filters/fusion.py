@@ -1,15 +1,15 @@
 import sys
 
-import numpy as np
 from numpy import random
+import numpy as np
 
 from .helpers import KFSaver
 from .kalman import KalmanFilter
 from .kalman_ukf import UnscentedKalmanFilter
 from .sigma_points import JulierSigmas
 
-sys.path.append("..")
-from models.constant_velocity import FCV
+sys.path.append('..')
+from models.const_vel import FCV
 
 
 def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=1123):
@@ -30,7 +30,7 @@ def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=1123):
         kf.update(np.array([[m0], [m1]]))
         saver.save()
     saver.to_array()
-    print(f"fusion std: {np.std(saver.y[:, 0]):.3f}")
+    print(f'fusion std: {np.std(saver.y[:, 0]):.3f}')
 
     return saver
 
