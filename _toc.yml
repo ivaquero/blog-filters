@@ -16,5 +16,5 @@ parts:
   - caption: Real Scenario Simulation
     chapters:
       - file: filters-maneuver
-      - file: filters-task-fusion
       - file: filters-task-tracking
+      - file: filters-task-fusion

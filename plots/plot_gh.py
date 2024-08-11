@@ -9,7 +9,7 @@ def plot_ghf(ax, data, filt, x0, vary_obj='data'):
     if x0:
         data = prepend_x0(x0, data)
     rng = range(len(data) + 1)
-    estimates, predictions = filt.batch_filt(data, save_preds=True)
+    estimates, predictions = filt.batch_filter(data, save_preds=True)
 
     label_printed = {'dx': f' by dx={filt.dx}', 'g': f' by g={filt.g}', 'data': ''}
 
