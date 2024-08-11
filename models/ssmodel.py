@@ -1,4 +1,5 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC
+from abc import abstractclassmethod
 
 
 class StateSpaceModel(ABC):

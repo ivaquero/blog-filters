@@ -1,5 +1,5 @@
-import numpy as np
 from scipy import linalg
+import numpy as np
 
 
 def reshape_z(z, dim_z, ndim):
@@ -31,7 +31,7 @@ def reshape_z(z, dim_z, ndim):
 
     if z.shape != (dim_z, 1):
         raise ValueError(
-            f"z (shape {z.shape}) must be convertible to shape ({dim_z}, 1)"
+            f'z (shape {z.shape}) must be convertible to shape ({dim_z}, 1)'
         )
 
     if ndim == 1:

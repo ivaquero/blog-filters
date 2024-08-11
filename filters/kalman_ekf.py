@@ -1,11 +1,14 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from typing import Callable
+from typing import Union
 import math
 import sys
-from copy import deepcopy
-from typing import Callable, Union
 
-import numpy as np
 from numpy import linalg
 from scipy import stats
+import numpy as np
 
 from .helpers import pretty_str
 from .transformers import reshape_z
@@ -114,12 +117,12 @@ class ExtendedKalmanFilter:
         self.x_post = self.x.copy()
         self.P_post = self.P.copy()
 
-    def predict_x(self, u: Union[np.array, float] = 0.0):
+    def predict_x(self, u: np.array | float = 0.0):
         """Predicts the next state of X. You would need to do this when the usual Taylor expansion to generate F is not providing accurate results.
 
         Parameters
         ----------
-        u : Union[np.array, float], optional, by default 0.0
+        u : np.array | float, optional, by default 0.0
         """
 
         # x = Fx + Gu
@@ -128,12 +131,12 @@ class ExtendedKalmanFilter:
         else:
             self.x = self.F @ self.x
 
-    def predict(self, u: Union[np.array, float] = 0):
+    def predict(self, u: np.array | float = 0):
         """Predict next state (prior) using the Kalman filter state propagation equations.
 
         Parameters
         ----------
-        u : Union[np.array, float], optional, by default 0
+        u : np.array | float, optional, by default 0
         """
 
         self.predict_x(u)
@@ -148,7 +151,7 @@ class ExtendedKalmanFilter:
         z: np.array,
         HJac: Callable[[np.array], np.ndarray],
         Hx: Callable[[np.array], np.ndarray],
-        R: Union[np.array, float, None] = None,
+        R: np.array | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
         residual=np.subtract,
@@ -163,7 +166,7 @@ class ExtendedKalmanFilter:
            function which computes the Jacobian of the H matrix. Takes state variable (self.x) as input, returns H.
         Hx : function
            function which takes as input the state variable (self.x) along with the optional arguments in hx_args, and returns the measurement that would correspond to that state.
-        R : Union[np.array, float, None]
+        R : np.array | float | None
         args : tuple, optional, default (,)
            arguments to be passed into HJac after the required state variable.
         hx_args : tuple, optional, default (,)
@@ -223,7 +226,7 @@ class ExtendedKalmanFilter:
         Hx: Callable[[np.array], np.ndarray],
         Hxx: Callable[[np.array], np.ndarray],
         HxR: Callable[[np.array], np.ndarray] = None,
-        R: Union[np.array, float, None] = None,
+        R: np.array | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
         hxx_args: tuple = (),
@@ -304,7 +307,7 @@ class ExtendedKalmanFilter:
         z: np.array,
         HJac: Callable[[np.array], np.ndarray],
         Hx: Callable[[np.array], np.ndarray],
-        R: Union[np.array, float, None] = None,
+        R: np.array | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
         u: int = 0,
@@ -316,7 +319,7 @@ class ExtendedKalmanFilter:
         z : np.array
         HJac : Callable[[np.array], np.ndarray]
         Hx : Callable[[np.array], np.ndarray]
-        R : Union[np.array, float, None]
+        R : np.array | float | None
         args : tuple
         hx_args : tuple
         u : int, optional, by default 0
@@ -356,24 +359,22 @@ class ExtendedKalmanFilter:
         return self._mahalanobis
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "KalmanFilter object",
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("x_prior", self.x_prior),
-                pretty_str("P_prior", self.P_prior),
-                pretty_str("F", self.F),
-                pretty_str("Q", self.Q),
-                pretty_str("R", self.R),
-                pretty_str("K", self.K),
-                pretty_str("y", self.y),
-                pretty_str("S", self.S),
-                pretty_str("likelihood", self.likelihood),
-                pretty_str("log-likelihood", self.log_likelihood),
-                pretty_str("mahalanobis", self.mahalanobis),
-            ]
-        )
+        return '\n'.join([
+            'KalmanFilter object',
+            pretty_str('x', self.x),
+            pretty_str('P', self.P),
+            pretty_str('x_prior', self.x_prior),
+            pretty_str('P_prior', self.P_prior),
+            pretty_str('F', self.F),
+            pretty_str('Q', self.Q),
+            pretty_str('R', self.R),
+            pretty_str('K', self.K),
+            pretty_str('y', self.y),
+            pretty_str('S', self.S),
+            pretty_str('likelihood', self.likelihood),
+            pretty_str('log-likelihood', self.log_likelihood),
+            pretty_str('mahalanobis', self.mahalanobis),
+        ])
 
 
 def etf_smooth1(
@@ -991,15 +992,7 @@ def eimm_smooth(
 
             # Backward-time EKF prediction step
             x_kp[i2][ind[i2]], P_kp[i2][np.ix_(ind[i2], ind[i2])] = (
-                ExtendedKalmanFilter().predict(
-                    x_bki[i2][ind[i2]],
-                    P_bki[i2][np.ix_(ind[i2], ind[i2])],
-                    linalg.inv(A2),
-                    Q[i2],
-                    a[i2],
-                    None,
-                    a_param[i2],
-                )
+                ExtendedKalmanFilter().predict(x_bki[i2][ind[i2]], P_bki[i2][np.ix_(ind[i2], ind[i2])], linalg.inv(A2), Q[i2], a[i2], None, a_param[i2])
             )
 
         # Space for mixed predicted mean and covariance
@@ -1126,9 +1119,10 @@ def eimm_smooth(
             # Initialize with default values
             x_sik[k, i2] = MM_def.copy()
             P_sik[k, i2] = PP_def.copy()
-            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros(
-                (len(ind[i2]), len(ind[i2]))
-            )
+            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros((
+                len(ind[i2]),
+                len(ind[i2]),
+            ))
 
             # Mixed mean
             for i1 in range(m):

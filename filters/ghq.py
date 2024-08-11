@@ -1,5 +1,6 @@
+from scipy import linalg
+from scipy import stats
 import numpy as np
-from scipy import linalg, stats
 
 
 def gh_packed_pc(x, fmm_param):
@@ -27,11 +28,11 @@ def gh_packed_pc(x, fmm_param):
         param = fmm_param[3]
 
     if type(f) == str or callable(f):
-        F = f(x) if "param" not in locals() else f(x, param)
+        F = f(x) if 'param' not in locals() else f(x, param)
     elif type(f) == np.ndarray:
         F = f @ x
     else:
-        F = f(x) if "param" not in locals() else f(x, param)
+        F = f(x) if 'param' not in locals() else f(x, param)
     d = x.shape[0]
     s = F.shape[0]
 

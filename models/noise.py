@@ -1,5 +1,5 @@
-import numpy as np
 from scipy import linalg
+import numpy as np
 
 
 def order_by_derivative(Q, dim, block_size):
@@ -68,10 +68,7 @@ def white_noise_discrete(
     np.random.seed(seed)
 
     if dim == 2:
-        Q = [
-            [0.25 * dt**4, 0.5 * dt**3],
-            [0.5 * dt**3, dt**2],
-        ]
+        Q = [[0.25 * dt**4, 0.5 * dt**3], [0.5 * dt**3, dt**2]]
     elif dim == 3:
         Q = [
             [0.25 * dt**4, 0.5 * dt**3, 0.5 * dt**2],
@@ -86,7 +83,7 @@ def white_noise_discrete(
             [(dt**3) / 6, (dt**2) / 2, dt, 1.0],
         ]
     else:
-        raise ValueError("dim must be 1, 2, 3, 4")
+        raise ValueError('dim must be 1, 2, 3, 4')
 
     if order_by_dim:
         return linalg.block_diag(*[Q] * block_size) * var
@@ -143,7 +140,7 @@ def white_noise_continuous(
             [(dt**4) / 24.0, (dt**3) / 6.0, (dt**2 / 2.0), dt],
         ]
     else:
-        ValueError("dim must be 2, 3, 4")
+        ValueError('dim must be 2, 3, 4')
 
     if order_by_dim:
         return linalg.block_diag(*[Q] * block_size) * spectral_density

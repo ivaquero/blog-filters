@@ -1,10 +1,10 @@
 from collections import namedtuple
 
-import numpy as np
 from numpy import linalg
+import numpy as np
 
-gaussian = namedtuple("Gaussian", ["mean", "var"])  # noqa: PYI024
-gaussian.__repr__ = lambda s: f"N(μ={s[0]:.3f}, σ²={s[1]**2:.3f})"
+gaussian = namedtuple('Gaussian', ['mean', 'var'])  # noqa: PYI024
+gaussian.__repr__ = lambda s: f'N(μ={s[0]:.3f}, σ²={s[1] ** 2:.3f})'
 
 
 def gaussian_product(g1, g2):

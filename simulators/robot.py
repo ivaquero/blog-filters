@@ -1,14 +1,18 @@
 import math
 import sys
 
+from numpy import linalg
+from numpy import random
 import numpy as np
 import sympy as sy
-from numpy import linalg, random
 
-from .datagen import gen_particles_gaussian, gen_particles_uniform
+from .datagen import gen_particles_gaussian
+from .datagen import gen_particles_uniform
 
-sys.path.append("..")
-from filters import kalman_ekf, particle, resamplers
+sys.path.append('..')
+from filters import kalman_ekf
+from filters import particle
+from filters import resamplers
 from plots import plot_pf
 
 
@@ -87,21 +91,14 @@ def HJac(x, lmark):
     dx, dy = lmark[0] - x[0, 0], lmark[1] - x[1, 0]
     dist = np.hypot(dx, dy)
 
-    return np.array(
-        [
-            [-dx / dist, -dy / dist, 0],
-            [dy / dist**2, -dx / dist**2, -1],
-        ]
-    )
+    return np.array([[-dx / dist, -dy / dist, 0], [dy / dist**2, -dx / dist**2, -1]])
 
 
 def z_landmark(lmark, sim_pos, std_rng, std_brg):
     x, y = sim_pos[0], sim_pos[1]
     dist = np.hypot(lmark[0] - x, lmark[1] - y)
     angle = math.atan2(lmark[1] - y, lmark[0] - x) - sim_pos[2]
-    return np.array(
-        [dist + random.randn() * std_rng, angle + random.randn() * std_brg],
-    )
+    return np.array([dist + random.randn() * std_rng, angle + random.randn() * std_brg])
 
 
 def state_mean(sigmas, Wm):
@@ -126,26 +123,24 @@ def z_mean(sigmas, Wm):
 
 
 def robot3d_symbol(print=False):
-    vars = sy.symbols("a, x, y, v, w, θ, t")
+    vars = sy.symbols('a, x, y, v, w, θ, t')
     [a, x, y, v, w, θ, time] = vars
     d = v * time
     β = (d / w) * sy.tan(a)
     r = w / sy.tan(a)
 
-    fxu = sy.Matrix(
-        [
-            [x - r * sy.sin(θ) + r * sy.sin(θ + β)],
-            [y + r * sy.cos(θ) - r * sy.cos(θ + β)],
-            [θ + β],
-        ]
-    )
+    fxu = sy.Matrix([
+        [x - r * sy.sin(θ) + r * sy.sin(θ + β)],
+        [y + r * sy.cos(θ) - r * sy.cos(θ + β)],
+        [θ + β],
+    ])
     F_j = fxu.jacobian(sy.Matrix([x, y, θ]))
     V_j = fxu.jacobian(sy.Matrix([v, a]))
 
     if print:
-        print("fxu: ", fxu)
-        print("F_j: ", fxu)
-        print("V_j: ", fxu)
+        print('fxu: ', fxu)
+        print('F_j: ', fxu)
+        print('V_j: ', fxu)
 
     return fxu, F_j, V_j, vars
 
@@ -179,12 +174,7 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         V = np.array(self.V_j.evalf(subs=self.subs)).astype(float)
 
         # covariance of motion noise in control space
-        M = np.array(
-            [
-                [self.std_vel * u[0] ** 2, 0],
-                [0, self.std_steer**2],
-            ]
-        )
+        M = np.array([[self.std_vel * u[0] ** 2, 0], [0, self.std_steer**2]])
         self.P = F @ self.P @ F.T + V @ M @ V.T
 
     def move(self, x, u, dt):
@@ -196,32 +186,17 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         if abs(steering_angle) > 0.001:
             β = (dist / self.wheelbase) * math.tan(steering_angle)
             r = self.wheelbase / math.tan(steering_angle)
-            dx = np.array(
-                [
-                    [-r * math.sin(hdg) + r * math.sin(hdg + β)],
-                    [r * math.cos(hdg) - r * math.cos(hdg + β)],
-                    [β],
-                ]
-            )
+            dx = np.array([
+                [-r * math.sin(hdg) + r * math.sin(hdg + β)],
+                [r * math.cos(hdg) - r * math.cos(hdg + β)],
+                [β],
+            ])
         else:
-            dx = np.array(
-                [
-                    [dist * math.cos(hdg)],
-                    [dist * math.sin(hdg)],
-                    [0],
-                ]
-            )
+            dx = np.array([[dist * math.cos(hdg)], [dist * math.sin(hdg)], [0]])
         return x + dx
 
 
-def robot_pf(
-    ax,
-    N,
-    iters=18,
-    sensor_std_err=0.1,
-    initial_x=None,
-    show_particles=False,
-):
+def robot_pf(ax, N, iters=18, sensor_std_err=0.1, initial_x=None, show_particles=False):
     landmarks = np.array([[-1, 2], [5, 10], [12, 14], [18, 21]])
     NL = len(landmarks)
 
@@ -258,11 +233,11 @@ def robot_pf(
         xs.append(mu)
 
         if show_particles:
-            plot_pf.plot_particles(ax, particles, color="k", marker=",")
+            plot_pf.plot_particles(ax, particles, color='k', marker=',')
 
-        p1 = ax.scatter(robot_pos[0], robot_pos[1], marker="+", color="k", s=180, lw=3)
-        p2 = ax.scatter(mu[0], mu[1], marker="s", color="r")
+        p1 = ax.scatter(robot_pos[0], robot_pos[1], marker='+', color='k', s=180, lw=3)
+        p2 = ax.scatter(mu[0], mu[1], marker='s', color='r')
 
-    ax.legend([p1, p2], ["Actual", "PF"], loc=4, numpoints=1)
+    ax.legend([p1, p2], ['Actual', 'PF'], loc=4, numpoints=1)
     xs = np.array(xs)
-    print("final position error, variance:\n\t", mu - np.array([iters, iters]), var)
+    print('final position error, variance:\n\t', mu - np.array([iters, iters]), var)

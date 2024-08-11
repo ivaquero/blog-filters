@@ -1,10 +1,10 @@
+from copy import deepcopy
 import math
 import sys
-from copy import deepcopy
 
-import numpy as np
 from numpy import linalg
 from scipy import stats
+import numpy as np
 
 from .helpers import pretty_str
 from .sigma_points import SphericalRadialSigmas
@@ -36,11 +36,11 @@ def ckf_packed_pc(x, fmmparam):
         param = fmmparam[3]
 
     if type(f) == str or callable(f):
-        F = f(x) if "param" not in locals() else f(x, param)
+        F = f(x) if 'param' not in locals() else f(x, param)
     elif type(f) == np.ndarray:
         F = f @ x
     else:
-        F = f(x) if "param" not in locals() else f(x, param)
+        F = f(x) if 'param' not in locals() else f(x, param)
     d = x.shape[0]
     s = F.shape[0]
 
@@ -248,12 +248,7 @@ class CubatureKalmanFilter:
 
         Pxz = (
             np.sum(
-                np.einsum(
-                    "ij,ik->ijk",
-                    self.sigmas_f - xf,
-                    self.sigmas_h - zpf,
-                ),
-                axis=0,
+                np.einsum('ij,ik->ijk', self.sigmas_f - xf, self.sigmas_h - zpf), axis=0
             )
             / m
         )
@@ -308,23 +303,21 @@ class CubatureKalmanFilter:
         return self._mahalanobis
 
     def _repr_(self):
-        return "\n".join(
-            [
-                "CubatureKalmanFilter object",
-                pretty_str("dim_x", self.dim_x),
-                pretty_str("dim_z", self.dim_z),
-                pretty_str("dt", self._dt),
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("Q", self.Q),
-                pretty_str("R", self.R),
-                pretty_str("K", self.K),
-                pretty_str("y", self.y),
-                pretty_str("log-likelihood", self.log_likelihood),
-                pretty_str("likelihood", self.likelihood),
-                pretty_str("mahalanobis", self.mahalanobis),
-            ]
-        )
+        return '\n'.join([
+            'CubatureKalmanFilter object',
+            pretty_str('dim_x', self.dim_x),
+            pretty_str('dim_z', self.dim_z),
+            pretty_str('dt', self._dt),
+            pretty_str('x', self.x),
+            pretty_str('P', self.P),
+            pretty_str('Q', self.Q),
+            pretty_str('R', self.R),
+            pretty_str('K', self.K),
+            pretty_str('y', self.y),
+            pretty_str('log-likelihood', self.log_likelihood),
+            pretty_str('likelihood', self.likelihood),
+            pretty_str('mahalanobis', self.mahalanobis),
+        ])
 
 
 def crts_smooth(M, P, f, Q, f_param=None, same_p=True):

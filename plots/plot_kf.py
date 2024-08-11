@@ -1,17 +1,12 @@
 import numpy as np
 
-from .plot_common import gen_data_by_only_x, plot_track, plot_zs
+from .plot_common import gen_data_by_only_x
+from .plot_common import plot_track
+from .plot_common import plot_zs
 
 
 def plot_kf(
-    ax,
-    xs,
-    ys=None,
-    dt=1,
-    var=None,
-    label="Filter",
-    band_color="blue",
-    **kwargs,
+    ax, xs, ys=None, dt=1, var=None, label='Filter', band_color='blue', **kwargs
 ):
     if ys is None:
         xs, ys = gen_data_by_only_x(xs, dt)
@@ -19,15 +14,9 @@ def plot_kf(
 
     if var is not None:
         std = np.sqrt(var)
-        ax.plot(xs, ys + std, linestyle=":", color="k", lw=2)
-        ax.plot(xs, ys - std, linestyle=":", color="k", lw=2)
-        ax.fill_between(
-            xs,
-            ys - std,
-            ys + std,
-            facecolor=band_color,
-            alpha=0.1,
-        )
+        ax.plot(xs, ys + std, linestyle=':', color='k', lw=2)
+        ax.plot(xs, ys - std, linestyle=':', color='k', lw=2)
+        ax.fill_between(xs, ys - std, ys + std, facecolor=band_color, alpha=0.1)
 
 
 def plot_kf_track(ax, xs, filter_xs, zs, label=None, title=None):
@@ -37,12 +26,7 @@ def plot_kf_track(ax, xs, filter_xs, zs, label=None, title=None):
     if zs is not None:
         plot_zs(ax, zs, label=label)
 
-    ax.set(
-        title=title,
-        xlabel="time",
-        ylabel="meters",
-        xlim=(-1, len(xs)),
-    )
+    ax.set(title=title, xlabel='time', ylabel='meters', xlim=(-1, len(xs)))
     ax.legend()
 
 
@@ -54,9 +38,9 @@ def plot_kf_with_cov(
     zs,
     std_scale=1,
     y_lim=None,
-    xlabel="time",
-    ylabel="position",
-    title="Kalman Filter",
+    xlabel='time',
+    ylabel='position',
+    title='Kalman Filter',
 ):
     num = len(zs)
     zs = np.asarray(zs)
@@ -69,17 +53,17 @@ def plot_kf_with_cov(
     std_top = track + std
     std_btm = track - std
 
-    plot_track(ax, track, c="k")
+    plot_track(ax, track, c='k')
     plot_zs(ax, xs=zs)
     plot_kf(ax, xs)
 
-    ax.plot(std_top, linestyle=":", color="k", lw=1, alpha=0.4)
-    ax.plot(std_btm, linestyle=":", color="k", lw=1, alpha=0.4)
+    ax.plot(std_top, linestyle=':', color='k', lw=1, alpha=0.4)
+    ax.plot(std_btm, linestyle=':', color='k', lw=1, alpha=0.4)
     ax.fill_between(
         range(len(std_top)),
         std_top,
         std_btm,
-        facecolor="yellow",
+        facecolor='yellow',
         alpha=0.2,
         interpolate=True,
     )
@@ -94,14 +78,10 @@ def plot_kf_with_cov(
 def plot_kf_with_resids(axes, dt, xs, z_xs, res):
     t = np.arange(0, len(xs) * dt, dt)
     if z_xs is not None:
-        plot_zs(axes[0], xs=t, ys=z_xs, dt=dt, label="z")
+        plot_zs(axes[0], xs=t, ys=z_xs, dt=dt, label='z')
     plot_kf(axes[0], xs=t, ys=xs, dt=dt)
-    axes[0].set(
-        xlabel="time",
-        ylabel="X",
-        title="estimates vs measurements",
-    )
+    axes[0].set(xlabel='time', ylabel='X', title='estimates vs measurements')
     axes[0].legend()
 
     axes[1].plot(t, res)
-    axes[1].set(xlabel="time", ylabel="residual", title="residuals")
+    axes[1].set(xlabel='time', ylabel='residual', title='residuals')

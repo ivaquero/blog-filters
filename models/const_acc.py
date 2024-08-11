@@ -1,11 +1,11 @@
 import sys
 
-import numpy as np
 from scipy import linalg
+import numpy as np
 
 from .noise import white_noise_discrete
 
-sys.path.append("..")
+sys.path.append('..')
 from filters.kalman import KalmanFilter
 
 
@@ -15,7 +15,7 @@ def H(dim_x, dim_z):
     elif dim_z > 1:
         H = np.eye(dim_x)
     else:
-        ValueError("dim_z >= 1")
+        ValueError('dim_z >= 1')
     return H
 
 
@@ -37,7 +37,7 @@ def FCA(dim, dt):
     elif dim == 9:
         F = linalg.block_diag(F, F, F)
     else:
-        ValueError("dim must be 3, 6, 9")
+        ValueError('dim must be 3, 6, 9')
     return F
 
 

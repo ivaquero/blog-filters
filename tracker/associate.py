@@ -1,9 +1,10 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC
+from abc import abstractclassmethod
 
-import numpy as np
-import numpy.linalg as la
 from filter import KalmanFilter
 from utils import gaussian_mixture_moment
+import numpy as np
+import numpy.linalg as la
 
 
 class AssociateMixin(ABC):
@@ -15,7 +16,7 @@ class AssociateMixin(ABC):
         PG: float,
         PD: float,
         gamma: float,
-        parametric: float = False,
+        parametric=False,
         clutter_density: float = None,
     ):
         """Compute asscocation probability."""

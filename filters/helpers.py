@@ -1,7 +1,8 @@
+from collections import defaultdict
+from collections import deque
+from copy import deepcopy
 import contextlib
 import inspect
-from collections import defaultdict, deque
-from copy import deepcopy
 
 import numpy as np
 
@@ -34,7 +35,7 @@ class KFSaver:
 
         if self._skip_private:
             for key in list(v.keys()):
-                if key.startswith("_"):
+                if key.startswith('_'):
                     del v[key]
 
         if self._skip_callable:
@@ -74,7 +75,7 @@ class KFSaver:
             except Exception as e:
                 # get back to lists so we are in a valid state
                 self.__dict__.update(self._DL)
-                raise ValueError(f"could not convert {key} into np.array") from e
+                raise ValueError(f'could not convert {key} into np.array') from e
         if flatten:
             self.flatten()
 
@@ -105,28 +106,28 @@ def pretty_str(label, arr):
     # display empty lists correctly
     with contextlib.suppress(TypeError):
         if len(arr) == 0:
-            return f"{label} = {str(type(arr)())}"
+            return f'{label} = {str(type(arr)())}'
     if isinstance(arr, (list, tuple, deque)):
-        return "\n".join(
-            [pretty_str(f"{label}[{str(i)}]", x) for (i, x) in enumerate(arr)]
-        )
+        return '\n'.join([
+            pretty_str(f'{label}[{str(i)}]', x) for (i, x) in enumerate(arr)
+        ])
 
     if label is None:
-        label = ""
+        label = ''
 
     if label:
-        label += " = "
+        label += ' = '
 
     if is_col(arr):
-        return label + str(arr.T).replace("\n", "") + ".T"
+        return label + str(arr.T).replace('\n', '') + '.T'
 
-    rows = str(arr).split("\n")
+    rows = str(arr).split('\n')
     if not rows:
-        return ""
+        return ''
 
     s = label + rows[0]
-    pad = " " * len(label)
+    pad = ' ' * len(label)
     for line in rows[1:]:
-        s = s + "\n" + pad + line
+        s = s + '\n' + pad + line
 
     return s

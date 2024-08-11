@@ -1,7 +1,7 @@
-import numpy as np
-import scipy.stats as stats
 from filter import KalmanFilter
 from utils import inner_elipsoide_data
+import numpy as np
+import scipy.stats as stats
 
 
 class BayesianTargetTracker(KalmanFilter):

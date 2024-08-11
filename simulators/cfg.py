@@ -1,28 +1,28 @@
 import argparse
 import os
 
+from filter import ExtendedKalmanBehavior
+from filter import IMMFilter
+from filter import KalmanFilter
+from filter import LinearKalmanBehavior
+from filter import UnscentedendKalmanBehavior
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from filter import (
-    ExtendedKalmanBehavior,
-    IMMFilter,
-    KalmanFilter,
-    LinearKalmanBehavior,
-    UnscentedendKalmanBehavior,
-)
-from models import ConstantVelocity, CoordinatedTurn
+
+from models import ConstantVelocity
+from models import CoordinatedTurn
 
 
 def parse_arguments():
     """Parse optional arguments."""
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cfg", default="cfg/sim1.yaml", help="configuration file.")
+    parser.add_argument('--cfg', default='cfg/sim1.yaml', help='configuration file.')
     parser.add_argument(
-        "--seed", type=int, default=-1, help="seed of random variables."
+        '--seed', type=int, default=-1, help='seed of random variables.'
     )
-    parser.add_argument("--output_dir", default="result", help="output directory.")
+    parser.add_argument('--output_dir', default='result', help='output directory.')
     return parser.parse_args()
 
 
@@ -30,39 +30,39 @@ def make_imm_filter(cfg):
     """Make an IMM filter."""
 
     to_model_cls = {
-        "ConstantVelocity": ConstantVelocity,
-        "CoordinatedTurn": CoordinatedTurn,
+        'ConstantVelocity': ConstantVelocity,
+        'CoordinatedTurn': CoordinatedTurn,
     }
 
     to_behavior_cls = {
-        "LKF": LinearKalmanBehavior,
-        "EKF": ExtendedKalmanBehavior,
-        "UKF": UnscentedendKalmanBehavior,
+        'LKF': LinearKalmanBehavior,
+        'EKF': ExtendedKalmanBehavior,
+        'UKF': UnscentedendKalmanBehavior,
     }
 
     kfs = []
-    dt = cfg["sampling_period"]
-    param_models = cfg["dynamics"]["model"]
-    param_kfs = cfg["imm_filter"]["kalman_filter"]
+    dt = cfg['sampling_period']
+    param_models = cfg['dynamics']['model']
+    param_kfs = cfg['imm_filter']['kalman_filter']
 
     for prm_kf in param_kfs:
-        idx = prm_kf["model_idx"]
+        idx = prm_kf['model_idx']
         prm_model = param_models[idx]
 
-        model_cls = to_model_cls[prm_model["kind"]]
+        model_cls = to_model_cls[prm_model['kind']]
         model = model_cls(dt=dt)
 
-        covar_w = np.diag(np.array(prm_model["sigma_w"]) ** 2)
-        covar_v = np.diag(np.array(prm_model["sigma_v"]) ** 2)
-        kf_behavior_cls = to_behavior_cls[prm_kf["kind"]]
+        covar_w = np.diag(np.array(prm_model['sigma_w']) ** 2)
+        covar_v = np.diag(np.array(prm_model['sigma_v']) ** 2)
+        kf_behavior_cls = to_behavior_cls[prm_kf['kind']]
         kf_behavior = kf_behavior_cls(model, covar_w, covar_v)
 
         kf = KalmanFilter(kf_behavior)
-        kf.init_posterior(P=np.diag(prm_kf["initial_P"]))
+        kf.init_posterior(P=np.diag(prm_kf['initial_P']))
         kfs.append(kf)
 
-    mode_proba = np.array(cfg["imm_filter"]["mode_proba"])
-    transition_mat = np.array(cfg["imm_filter"]["transition_mat"])
+    mode_proba = np.array(cfg['imm_filter']['mode_proba'])
+    transition_mat = np.array(cfg['imm_filter']['transition_mat'])
     return IMMFilter(kfs, mode_proba, transition_mat)
 
 
@@ -70,19 +70,19 @@ def extract_models(cfg):
     """Extract models and parameters."""
 
     to_model_cls = {
-        "ConstantVelocity": ConstantVelocity,
-        "CoordinatedTurn": CoordinatedTurn,
+        'ConstantVelocity': ConstantVelocity,
+        'CoordinatedTurn': CoordinatedTurn,
     }
 
     models, covar_ws, covar_vs, initial_xs = [], [], [], []
 
-    for param in cfg["dynamics"]["model"]:
-        cls = to_model_cls[param["kind"]]
-        models.append(cls(dt=cfg["sampling_period"]))
+    for param in cfg['dynamics']['model']:
+        cls = to_model_cls[param['kind']]
+        models.append(cls(dt=cfg['sampling_period']))
 
-        covar_ws.append(np.diag(np.array(param["sigma_w"]) ** 2))
-        covar_vs.append(np.diag(np.array(param["sigma_v"]) ** 2))
-        initial_xs.append(np.array(param["initial_x"]))
+        covar_ws.append(np.diag(np.array(param['sigma_w']) ** 2))
+        covar_vs.append(np.diag(np.array(param['sigma_v']) ** 2))
+        initial_xs.append(np.array(param['initial_x']))
 
     return models, covar_ws, covar_vs, initial_xs
 
@@ -96,17 +96,17 @@ def generate_time_series_data(cfg):
 
     models, covar_ws, covar_vs, initial_xs = extract_models(cfg)
 
-    steps = cfg["steps"]
-    change_interval = cfg["dynamics"]["change_interval"]
+    steps = cfg['steps']
+    change_interval = cfg['dynamics']['change_interval']
 
-    dim_x = max([m.NDIM["x"] for m in models])
-    dim_z = max([m.NDIM["z"] for m in models])
+    dim_x = max([m.NDIM['x'] for m in models])
+    dim_z = max([m.NDIM['z'] for m in models])
 
     x_hist = np.zeros((steps, dim_x))
     z_hist = np.zeros((steps, dim_z))
     mode_hist = np.zeros(steps, dtype=np.int32)
 
-    mode = cfg["dynamics"]["initial_model_idx"]
+    mode = cfg['dynamics']['initial_model_idx']
     initial_x = np.array(initial_xs[mode])
     x_hist[0, : initial_x.shape[0]] = initial_x
     model, covar_w, covar_v = models[mode], covar_ws[mode], covar_vs[mode]
@@ -121,7 +121,7 @@ def generate_time_series_data(cfg):
         w = _generate_noise(covar_w)
         v = _generate_noise(covar_v)
 
-        ndim_x, ndim_z = model.NDIM["x"], model.NDIM["z"]
+        ndim_x, ndim_z = model.NDIM['x'], model.NDIM['z']
 
         if t > 0:
             x_hist[t, :ndim_x] = model.state_equation(
@@ -156,48 +156,48 @@ def plot_result(args, x_est, mode_proba, x_real, z_real, mode_real):
     os.makedirs(args.output_dir, exist_ok=True)
 
     plt.figure(1, (8, 7))
-    plt.scatter(z_real[:, 0], z_real[:, 1], s=15, c="#377eb8")
-    plt.plot(x_real[:, 0], x_real[:, 2], "yellowgreen")
-    plt.plot(x_est[:, 0], x_est[:, 2], "r")
-    plt.xlabel("x [m]")
-    plt.ylabel("y [m]")
-    plt.title("Trajectory")
-    plt.legend(["measurment", "state (truth)", "state (estimate)"])
-    plt.grid(True)
-    fname = os.path.join(args.output_dir, "trajectory")
+    plt.scatter(z_real[:, 0], z_real[:, 1], s=15, c='#377eb8')
+    plt.plot(x_real[:, 0], x_real[:, 2], 'yellowgreen')
+    plt.plot(x_est[:, 0], x_est[:, 2], 'r')
+    plt.xlabel('x [m]')
+    plt.ylabel('y [m]')
+    plt.title('Trajectory')
+    plt.legend(['measurment', 'state (truth)', 'state (estimate)'])
+    plt.grid(1)
+    fname = os.path.join(args.output_dir, 'trajectory')
     if args.seed >= 0:
-        fname += f"_seed{args.seed}"
-    plt.savefig(fname + ".png")
+        fname += f'_seed{args.seed}'
+    plt.savefig(fname + '.png')
 
     steps = x_est.shape[0]
     plt.figure(2, (8, 11))
     plt.subplot(311)
     plt.plot(range(steps), np.array(mode_real))
     plt.plot(range(steps), mode_proba[:, 1])
-    plt.legend(["mode (truth)", "mode (estimate)"], loc="upper left")
-    plt.ylabel("Mode")
-    plt.grid(True)
+    plt.legend(['mode (truth)', 'mode (estimate)'], loc='upper left')
+    plt.ylabel('Mode')
+    plt.grid(1)
 
     plt.subplot(312)
     plt.plot(range(steps), np.array(x_real[:, 1]) * 3600 / 1000)
     plt.plot(range(steps), np.array(x_est[:, 1]) * 3600 / 1000)
-    plt.legend(["truth", "estimate"], loc="upper left")
-    plt.legend(["vx (truth)", "vx (estimate)"], loc="lower left")
-    plt.ylabel("Velocity-x [km/h]")
-    plt.grid(True)
+    plt.legend(['truth', 'estimate'], loc='upper left')
+    plt.legend(['vx (truth)', 'vx (estimate)'], loc='lower left')
+    plt.ylabel('Velocity-x [km/h]')
+    plt.grid(1)
 
     plt.subplot(313)
     plt.plot(range(steps), np.array(x_real[:, 3]) * 3600 / 1000)
     plt.plot(range(steps), np.array(x_est[:, 3]) * 3600 / 1000)
-    plt.legend(["vy (truth)", "vy (estimate)"], loc="lower left")
-    plt.xlabel("Steps")
-    plt.ylabel("Velocity-y [km/h]")
-    plt.grid(True)
+    plt.legend(['vy (truth)', 'vy (estimate)'], loc='lower left')
+    plt.xlabel('Steps')
+    plt.ylabel('Velocity-y [km/h]')
+    plt.grid(1)
     plt.subplots_adjust(bottom=0.1, top=0.95)
-    fname = os.path.join(args.output_dir, "mode-velocity")
+    fname = os.path.join(args.output_dir, 'mode-velocity')
     if args.seed >= 0:
-        fname += f"_seed{args.seed}"
-    plt.savefig(fname + ".png")
+        fname += f'_seed{args.seed}'
+    plt.savefig(fname + '.png')
 
 
 def main():
@@ -211,10 +211,10 @@ def main():
 
     imm_filter = make_imm_filter(cfg)
     x_real, z_real, mode_real = generate_time_series_data(cfg)
-    x_est, mode_proba = estimate_state(cfg["steps"], imm_filter, z_real)
+    x_est, mode_proba = estimate_state(cfg['steps'], imm_filter, z_real)
 
     plot_result(args, x_est, mode_proba, x_real, z_real, mode_real)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
