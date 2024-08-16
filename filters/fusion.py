@@ -1,12 +1,13 @@
 import sys
 
-from numpy import random
 import numpy as np
+from numpy import random
 
 from .helpers import KFSaver
 from .kalman import KalmanFilter
 from .kalman_ukf import UnscentedKalmanFilter
 from .sigma_points import JulierSigmas
+
 
 sys.path.append('..')
 from models.const_vel import FCV

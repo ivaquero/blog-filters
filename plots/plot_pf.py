@@ -1,9 +1,10 @@
 import sys
 
-from numpy import random
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy import random
+
 
 sys.path.append('..')
 from filters.resamplers import residual_resample

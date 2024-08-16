@@ -1,7 +1,7 @@
 from collections import defaultdict
 from collections import deque
-from copy import deepcopy
 import contextlib
+from copy import deepcopy
 import inspect
 
 import numpy as np
@@ -75,7 +75,8 @@ class KFSaver:
             except Exception as e:
                 # get back to lists so we are in a valid state
                 self.__dict__.update(self._DL)
-                raise ValueError(f'could not convert {key} into np.array') from e
+                error_message = f'could not convert {key} into np.array'
+                raise ValueError(error_message) from e
         if flatten:
             self.flatten()
 

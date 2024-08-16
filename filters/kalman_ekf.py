@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Callable
-from typing import Union
 import math
 import sys
+from typing import Callable
 
+import numpy as np
 from numpy import linalg
 from scipy import stats
-import numpy as np
 
 from .helpers import pretty_str
 from .transformers import reshape_z

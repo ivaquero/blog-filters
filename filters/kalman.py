@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 from copy import deepcopy
-from typing import Union
 import math
 import sys
+from typing import Union
 
+import numpy as np
 from numpy import linalg
 from scipy import stats
-import numpy as np
 
 from .helpers import pretty_str
 from .transformers import reshape_z
@@ -65,11 +67,14 @@ class KalmanFilter:
         Dan Simon. "Optimal State Estimation." John Wiley & Sons. p. 208-212. (2006)
         """
         if dim_x < 1:
-            raise ValueError('dim_x ≥ 1')
+            error_message = 'dim_x ≥ 1'
+            raise ValueError(error_message)
         if dim_z < 1:
-            raise ValueError('dim_z ≥ 1')
+            error_message = 'dim_z ≥ 1'
+            raise ValueError(error_message)
         if dim_u < 0:
-            raise ValueError('dim_u ≥ 0')
+            error_message = 'dim_u ≥ 0'
+            raise ValueError(error_message)
 
         self.dim_x = dim_x
         self.dim_z = dim_z
@@ -122,10 +127,10 @@ class KalmanFilter:
 
     def predict(
         self,
-        F: Union[bool, np.ndarray] = None,
-        G: Union[bool, np.ndarray] = None,
-        u: Union[bool, np.array] = None,
-        Q: Union[bool, np.ndarray] = None,
+        F: bool | np.ndarray = None,
+        G: bool | np.ndarray = None,
+        u: bool | np.array = None,
+        Q: bool | np.ndarray = None,
     ):
         """Predict next state using the Kalman filter state propagation equations.
 
@@ -318,7 +323,8 @@ class KalmanFilter:
         means and covariances computed by a Kalman filter. The usual input would come from the output of `batch_filter()`.
         """
         if len(Xs) != len(Ps):
-            raise ValueError('length of Xs and Ps must be the same')
+            error_message = 'length of Xs and Ps must be the same'
+            raise ValueError(error_message)
 
         n = Xs.shape[0]
         dim_x = Xs.shape[1]
@@ -402,7 +408,8 @@ class KalmanFilter:
     @alpha.setter
     def alpha(self, value):
         if not np.isscalar(value) or value < 1:
-            raise ValueError('alpha must be a float greater than 1')
+            error_message = 'alpha must be a float greater than 1'
+            raise ValueError(error_message)
 
         self._alpha_sq = value**2
 

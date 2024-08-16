@@ -1,5 +1,5 @@
-from numpy import random
 import numpy as np
+from numpy import random
 
 
 def resample_from_index(particles, weights, indexes):

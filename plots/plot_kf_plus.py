@@ -1,8 +1,9 @@
 import sys
 
+import numpy as np
 from numpy import random
 from scipy import stats
-import numpy as np
+
 
 sys.path.append('..')
 from filters.kalman_ukf import unscented_transform

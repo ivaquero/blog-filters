@@ -1,9 +1,10 @@
 import sys
 
-from scipy import linalg
 import numpy as np
+from scipy import linalg
 
 from .noise import white_noise_discrete
+
 
 sys.path.append('..')
 from filters.kalman import KalmanFilter
@@ -41,7 +42,7 @@ def FCA(dim, dt):
     return F
 
 
-def KFCA3d(P, R, Q=0, dt=1, x=[0, 0, 0]):
+def KFCA3d(P, R, Q=0, dt=1, x=(0, 0, 0)):
     if type(x) == list:
         x = np.array(x)
     dim_x = len(x)

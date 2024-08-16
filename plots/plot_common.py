@@ -36,7 +36,7 @@ def plot_track(ax, xs, ys=None, dt=None, label='Track', c='k', lw=2, ls=':', **k
     return ax.plot(xs, color=c, lw=lw, ls=ls, label=label, **kwargs)
 
 
-def plot_preds(ax, priors, kind=None, scatter=False):
+def plot_preds(ax, priors, kind=None):
     rng = range(len(priors))
     if kind == 'scatter':
         ax.scatter(rng, priors, marker='d', label='Predicted', color='r')
@@ -79,7 +79,8 @@ def cal_cov_ellipse(cov, deviations=1):
     height_radius = deviations * np.sqrt(s[1])
 
     if height_radius > width_radius:
-        raise ValueError('width_radius must be greater than height_radius')
+        error_message = 'width_radius must be greater than height_radius'
+        raise ValueError(error_message)
 
     return (orientation, width_radius, height_radius)
 
@@ -96,7 +97,7 @@ def plot_cov_ellipse(
     facecolor='green',
     alpha=0.2,
     label='',
-    title=True,
+    show_title=True,
     **line_kwargs,
 ):
     if stds is None:
@@ -129,7 +130,7 @@ def plot_cov_ellipse(
             [y, y + h * math.sin(a + math.pi / 2)],
         )
         ax.plot([x, x + w * math.cos(a)], [y, y + w * math.sin(a)])
-    if title:
+    if show_title:
         ax.set(title=f'[{cov[0]}\n   {cov[1]}]')
 
 

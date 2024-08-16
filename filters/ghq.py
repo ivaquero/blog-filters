@@ -1,6 +1,6 @@
+import numpy as np
 from scipy import linalg
 from scipy import stats
-import numpy as np
 
 
 def gh_packed_pc(x, fmm_param):

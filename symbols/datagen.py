@@ -4,6 +4,7 @@ from sympy import init_printing
 from sympy import integrate
 from sympy import symbols
 
+
 init_printing(use_latex='mathjax')
 
 

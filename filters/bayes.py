@@ -60,8 +60,7 @@ def prior_estimate(x0, model, zs, R, show_steps=False):
         priors[i], estimates[i], ps[i] = prior, x.mean, x.var
         if show_steps:
             if i == 0:
-                print_header
-            print_steps(prior, z, x)
+                print_steps(prior, z, x)
             if i == len(zs) - 1:
                 print_conclusion(z, x)
     return (priors, estimates, ps)

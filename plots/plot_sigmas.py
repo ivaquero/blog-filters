@@ -4,6 +4,7 @@ import numpy as np
 
 from .plot_common import plot_cov_ellipse
 
+
 sys.path.append('..')
 from filters.sigma_points import MerweScaledSigmas
 

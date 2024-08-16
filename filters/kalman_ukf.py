@@ -2,9 +2,9 @@ from copy import deepcopy
 import math
 import sys
 
+import numpy as np
 from numpy import linalg
 from scipy import stats
-import numpy as np
 
 from .helpers import pretty_str
 from .kalman import KalmanFilter

@@ -1,8 +1,8 @@
 from filter import IMMFilter
-from utils import gaussian_mixture_moment
-from utils import inner_elipsoide_data
 import numpy as np
 import numpy.linalg as la
+from utils import gaussian_mixture_moment
+from utils import inner_elipsoide_data
 
 
 class IMMPDATracker(IMMFilter):

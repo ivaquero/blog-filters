@@ -1,9 +1,10 @@
 import sys
 
-from numpy import random
 import numpy as np
+from numpy import random
 
 from .plot_common import plot_zs
+
 
 sys.path.append('..')
 from filters.kalman import KalmanFilter

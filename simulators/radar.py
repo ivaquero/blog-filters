@@ -1,10 +1,11 @@
 import math
 import sys
 
+import numpy as np
 from numpy import linalg
 from numpy import random
-import numpy as np
 import sympy as sy
+
 
 sys.path.append('..')
 from plots.plot_kf import plot_kf
@@ -136,7 +137,7 @@ def plot_radar3d(axes, time, xs, ylabels=None, track=None):
             plot_track(ax, time, ys=track_dict[ylabel], label=f'{ylabel} track')
         ax.set(xlabel='time', ylabel=ylabel)
         ax.legend()
-        ax.grid(True)
+        ax.grid(1)
 
 
 def plot_radar3d_zs(ax, time, xs, obj, track=None, ylabels=None):
@@ -244,19 +245,19 @@ def show_radar_chart(ax):
         '',
         xy=(2, 2),
         xytext=(1, 1),
-        arrowprops=dict(arrowstyle='->', ec='r', shrinkA=3, shrinkB=4),
+        arrowprops={'arrowstyle': '->', 'ec': 'r', 'shrinkA': 3, 'shrinkB': 4},
     )
     ax.annotate(
         '',
         xy=(2, 1),
         xytext=(1, 1),
-        arrowprops=dict(arrowstyle='->', ec='b', shrinkA=0, shrinkB=0),
+        arrowprops={'arrowstyle': '->', 'ec': 'b', 'shrinkA': 0, 'shrinkB': 0},
     )
     ax.annotate(
         '',
         xy=(2, 2),
         xytext=(2, 1),
-        arrowprops=dict(arrowstyle='->', ec='b', shrinkA=0, shrinkB=4),
+        arrowprops={'arrowstyle': '->', 'ec': 'b', 'shrinkA': 0, 'shrinkB': 4},
     )
 
     ax.annotate('ϵ', xy=(1.2, 1.05), color='b')

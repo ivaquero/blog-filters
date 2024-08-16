@@ -17,7 +17,8 @@ class LeastSquaresFilter:
 
     def __init__(self, dt, order, noise_sigma=0.0):
         if order < 0 or order > 2:
-            raise ValueError('order must be between 0 and 2')
+            error_message = 'order must be between 0 and 2'
+            raise ValueError(error_message)
 
         self.dt = dt
 

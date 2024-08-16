@@ -1,7 +1,7 @@
 from copy import deepcopy
 
-from numpy import linalg
 import numpy as np
+from numpy import linalg
 
 from .helpers import pretty_str
 

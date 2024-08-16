@@ -2,9 +2,9 @@ from abc import ABC
 from abc import abstractclassmethod
 
 from filter import KalmanFilter
-from utils import gaussian_mixture_moment
 import numpy as np
 import numpy.linalg as la
+from utils import gaussian_mixture_moment
 
 
 class AssociateMixin(ABC):

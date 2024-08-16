@@ -4,12 +4,12 @@ import os
 from filter import ExtendedKalmanBehavior
 from filter import LinearKalmanBehavior
 from filter import UnscentedendKalmanBehavior
-from utils import Detector
-from utils import EllipseShape
 import matplotlib.patches as pat
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+from utils import Detector
+from utils import EllipseShape
 import yaml
 
 from clutter import PoissonClutter2D
@@ -123,7 +123,7 @@ def generate_target_data(cfg):
     steps = cfg['steps']
     change_interval = cfg['dynamics']['change_interval']
 
-    ndim_x = max([m.NDIM['x'] for m in models])
+    ndim_x = max(m.NDIM['x'] for m in models)
     ndim_z = models[0].NDIM['z']  # outputs are same dimension.
 
     x_hist = np.zeros((steps, ndim_x))  # history

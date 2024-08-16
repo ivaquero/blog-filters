@@ -20,7 +20,8 @@ class IMMEstimator:
     def __init__(self, filters, mu, M):
         self.num_f = len(filters)
         if self.num_f < 2:
-            raise ValueError('filters must contain at least two filters')
+            error_message = 'filters must contain at least two filters'
+            raise ValueError(error_message)
 
         self.filters = filters
         self.mu = np.asarray(mu) / np.sum(mu)
@@ -70,7 +71,7 @@ class IMMEstimator:
 
         # compute mixed initial conditions
         xs, Ps = [], []
-        for i, (f, w) in enumerate(zip(self.filters, self.omega.T)):
+        for _, (_, w) in enumerate(zip(self.filters, self.omega.T)):
             x = np.zeros(self.x.shape)
             for kf, wj in zip(self.filters, w):
                 x += kf.x * wj
@@ -141,10 +142,12 @@ class MMAEFilterBank:
 
     def __init__(self, filters, p, dim_x, H=None):
         if len(filters) != len(p):
-            raise ValueError('length of filters and p must be the same')
+            error_message = 'length of filters and p must be the same'
+            raise ValueError(error_message)
 
         if dim_x < 1:
-            raise ValueError('dim_x must be >= 1')
+            error_message = 'dim_x must be >= 1'
+            raise ValueError(error_message)
 
         self.filters = filters
         self.p = np.asarray(p)

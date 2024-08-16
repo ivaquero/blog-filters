@@ -1,8 +1,9 @@
 import math
 import sys
 
-from numpy import random
 import numpy as np
+from numpy import random
+
 
 sys.path.append('..')
 from models.const_vel import FCV

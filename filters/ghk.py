@@ -490,7 +490,8 @@ def critical_damping_params(theta, order=2):
     """
 
     if theta < 0 or theta > 1:
-        raise ValueError('theta must be between 0 and 1')
+        error_message = 'theta must be between 0 and 1'
+        raise ValueError(error_message)
 
     if order == 2:
         return (1.0 - theta**2, (1.0 - theta) ** 2)
@@ -502,7 +503,8 @@ def critical_damping_params(theta, order=2):
             0.5 * (1 - theta) ** 3,
         )
 
-    raise ValueError(f'bad order specified: {order}')
+    error_message = f'bad order specified: {order}'
+    raise ValueError(error_message)
 
 
 def benedict_bornder_constants(g, critical=False):

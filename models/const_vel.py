@@ -1,10 +1,11 @@
 import sys
 
-from scipy import linalg
 import numpy as np
+from scipy import linalg
 
 from .noise import white_noise_discrete
 from .ssmodel_linear import LinearStateSpaceModel
+
 
 sys.path.append('..')
 from filters.kalman import KalmanFilter
@@ -39,21 +40,25 @@ class ConstantVelocity(LinearStateSpaceModel):
         self.H = np.array([[1, 0, 0, 0], [0, 0, 1, 0]])
         self.M = np.eye(2)
 
-    def state_equation(self, t, x, u=0, w=np.zeros(2)):
+    def state_equation(self, t, x, u=0, w=None):
         """Sate equation.
 
         x[t+1] = F[t]*x[t] + G[t]*u[t] + L[t]*w[t],
         x: state, [x1, vx1, x2, vx2]
         """
+        if w is None:
+            w = np.zeros(2)
         return self.F @ x + self.L @ w
 
-    def observation_equation(self, t, x, v=np.zeros(2)):
+    def observation_equation(self, t, x, v=None):
         """Observation equation.
 
         z[t] = H[t]*x[t] + M[t]*v[t],
         x: state, [x1, vx1, x2, vx2]
         z: output, [x1, x2]
         """
+        if v is None:
+            v = np.zeros(2)
         return self.H @ x + self.M @ v
 
     def Ft(self, t):
@@ -119,7 +124,7 @@ def FxCV(x, dt):
     return FCV(len(x), dt) @ x
 
 
-def KFCV1d(P, R, Q=0, dt=1, x=[0]):
+def KFCV1d(P, R, Q=0, dt=1, x=(0)):
     if type(x) == list:
         x = np.array(x)
     dim_x = len(x)
@@ -134,7 +139,7 @@ def KFCV1d(P, R, Q=0, dt=1, x=[0]):
     return kf_cv
 
 
-def KFCV2d(P, R, Q=0, dt=1, x=[0, 0]):
+def KFCV2d(P, R, Q=0, dt=1, x=(0, 0)):
     if type(x) == list:
         x = np.array(x)
     dim_x = len(x)

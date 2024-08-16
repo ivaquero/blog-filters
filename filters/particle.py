@@ -1,6 +1,6 @@
+import numpy as np
 from numpy import random
 from scipy import stats
-import numpy as np
 
 
 class ParticleFilter:

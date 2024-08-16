@@ -5,12 +5,13 @@ from typing import Any
 from typing import Generic
 from typing import TypeVar
 
-from scipy import special
 import numpy as np
+from scipy import special
 
 from .estimators import GaussParams
 from .estimators import MixtureParameters
 from .estimators import StateEstimator
+
 
 ET = TypeVar('ET')
 

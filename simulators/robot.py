@@ -1,13 +1,14 @@
 import math
 import sys
 
+import numpy as np
 from numpy import linalg
 from numpy import random
-import numpy as np
 import sympy as sy
 
 from .datagen import gen_particles_gaussian
 from .datagen import gen_particles_uniform
+
 
 sys.path.append('..')
 from filters import kalman_ekf
@@ -123,8 +124,8 @@ def z_mean(sigmas, Wm):
 
 
 def robot3d_symbol(print=False):
-    vars = sy.symbols('a, x, y, v, w, θ, t')
-    [a, x, y, v, w, θ, time] = vars
+    vars_ = sy.symbols('a, x, y, v, w, θ, t')
+    [a, x, y, v, w, θ, time] = vars_
     d = v * time
     β = (d / w) * sy.tan(a)
     r = w / sy.tan(a)
@@ -142,7 +143,7 @@ def robot3d_symbol(print=False):
         print('F_j: ', fxu)
         print('V_j: ', fxu)
 
-    return fxu, F_j, V_j, vars
+    return fxu, F_j, V_j, vars_
 
 
 class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
@@ -153,11 +154,11 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         self.std_vel = std_vel
         self.std_steer = std_steer
 
-        fxu, F_j, V_j, vars = robot3d_symbol()
+        fxu, F_j, V_j, vars_ = robot3d_symbol()
         self.fxu = fxu
         self.F_j = F_j
         self.V_j = V_j
-        [a, x, y, v, w, θ, time] = vars
+        [a, x, y, v, w, θ, time] = vars_
 
         # save dictionary and it's variables for later use
         self.subs = {x: 0, y: 0, v: 0, a: 0, time: dt, w: wheelbase, θ: 0}

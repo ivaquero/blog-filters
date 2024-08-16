@@ -8,10 +8,11 @@ from typing import Sequence
 from typing import TypeVar
 
 from mytypes import ArrayLike
+import numpy as np
 from singledispatchmethod import singledispatchmethod
 from typing_extensions import Protocol
 from typing_extensions import runtime
-import numpy as np
+
 
 T = TypeVar('T')
 

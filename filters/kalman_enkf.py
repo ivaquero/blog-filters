@@ -1,8 +1,8 @@
 from copy import deepcopy
 
+import numpy as np
 from numpy import linalg
 from numpy import random
-import numpy as np
 
 from .helpers import pretty_str
 

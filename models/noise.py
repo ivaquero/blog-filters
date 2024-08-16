@@ -1,5 +1,5 @@
-from scipy import linalg
 import numpy as np
+from scipy import linalg
 
 
 def order_by_derivative(Q, dim, block_size):
@@ -83,7 +83,8 @@ def white_noise_discrete(
             [(dt**3) / 6, (dt**2) / 2, dt, 1.0],
         ]
     else:
-        raise ValueError('dim must be 1, 2, 3, 4')
+        error_message = 'dim must be 1, 2, 3 or 4'
+        raise ValueError(error_message)
 
     if order_by_dim:
         return linalg.block_diag(*[Q] * block_size) * var

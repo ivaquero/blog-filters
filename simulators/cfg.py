@@ -99,8 +99,8 @@ def generate_time_series_data(cfg):
     steps = cfg['steps']
     change_interval = cfg['dynamics']['change_interval']
 
-    dim_x = max([m.NDIM['x'] for m in models])
-    dim_z = max([m.NDIM['z'] for m in models])
+    dim_x = max(m.NDIM['x'] for m in models)
+    dim_z = max(m.NDIM['z'] for m in models)
 
     x_hist = np.zeros((steps, dim_x))
     z_hist = np.zeros((steps, dim_z))

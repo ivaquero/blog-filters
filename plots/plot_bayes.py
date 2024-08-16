@@ -1,7 +1,8 @@
 import sys
 
-from scipy import stats
 import matplotlib.pyplot as plt
+from scipy import stats
+
 
 sys.path.append('..')
 from filters.stats import gaussian_product

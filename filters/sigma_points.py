@@ -1,5 +1,5 @@
-from scipy import linalg
 import numpy as np
+from scipy import linalg
 
 from .helpers import pretty_str
 
@@ -50,7 +50,8 @@ class JulierSigmas:
         """
 
         if self.n != np.size(x):
-            raise ValueError(f'expected size(x) {self.n}, but size is {np.size(x)}')
+            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            raise ValueError(error_message)
 
         n = self.n
 
@@ -121,7 +122,8 @@ class MerweScaledSigmas:
         """
 
         if self.n != np.size(x):
-            raise ValueError(f'expected size(x) {self.n}, but size is {np.size(x)}')
+            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            raise ValueError(error_message)
 
         if np.isscalar(x):
             x = np.asarray([x])
@@ -205,7 +207,8 @@ class SimplexSigmas:
         """
 
         if self.n != np.size(x):
-            raise ValueError(f'expected size(x) {self.n}, but size is {np.size(x)}')
+            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            raise ValueError(error_message)
 
         n = self.n
 
@@ -220,9 +223,8 @@ class SimplexSigmas:
         Istar = np.array([[-1 / np.sqrt(2 * λ), 1 / np.sqrt(2 * λ)]])
 
         for d in range(2, n + 1):
-            row = np.ones((1, Istar.shape[1] + 1)) * 1.0 / np.sqrt(λ * d * (d + 1))  # pylint: disable=unsubscriptable-object
+            row = np.ones((1, Istar.shape[1] + 1)) * 1.0 / np.sqrt(λ * d * (d + 1))
             row[0, -1] = -d / np.sqrt(λ * d * (d + 1))
-            Istar = np.r_[np.c_[Istar, np.zeros((Istar.shape[0]))], row]  # pylint: disable=unsubscriptable-object
 
         _I = np.sqrt(n) * Istar
         scaled_unitary = U.T @ _I
@@ -282,7 +284,8 @@ class SphericalRadialSigmas:
         Arasaratnam, I, Haykin, S. "Cubature Kalman Filters," IEEE Transactions on Automatic Control, 2009, pp 1254-1269, vol 54, No 6
         """
         if self.n != np.size(x):
-            raise ValueError(f'expected size(x) {self.n}, but size is {np.size(x)}')
+            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            raise ValueError(error_message)
 
         # dimension of P is
         n = self.n

@@ -77,13 +77,14 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
 
         return Ft
 
-    def state_equation(self, t, x, u=0, w=np.zeros(NDIM['w'])):
+    def state_equation(self, t, x, u=0, w=None):
         """Calculate the state equation.
 
         x[t+1] = f(t, x[t], u[t], w[t])
         x: state, [x1, vx1, x2, vx2, omega]
         """
-
+        if w is None:
+            w = np.zeros(self.NDIM['w'])
         dt = self.dt
         omega = x[4]
         Ft = self.compute_F(omega, dt)
@@ -98,13 +99,15 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
 
         return Ft @ x + Lt @ w
 
-    def observation_equation(self, t, x, v=np.zeros(NDIM['v'])):
+    def observation_equation(self, t, x, v=None):
         """Calculate the observation equation.
 
         y[t] = h(t, x[t], v[t])
         x: state, [x1, vx1, x2, vx2, omega]
         z: output, [x1, x2]
         """
+        if v is None:
+            v = np.zeros(self.NDIM['v'])
         Ht = np.array([[1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0]])
         return Ht @ x + v
 
