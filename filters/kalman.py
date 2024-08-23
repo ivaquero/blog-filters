@@ -3,7 +3,6 @@ from __future__ import annotations
 from copy import deepcopy
 import math
 import sys
-from typing import Union
 
 import numpy as np
 from numpy import linalg

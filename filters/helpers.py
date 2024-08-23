@@ -9,7 +9,13 @@ import numpy as np
 
 class KFSaver:
     def __init__(
-        self, kf, save_current=False, skip_private=False, skip_callable=False, ignore=()
+        self,
+        kf,
+        ignore=(),
+        *,
+        save_current=False,
+        skip_private=False,
+        skip_callable=False,
     ):
         self._kf = kf
         self._DL = defaultdict(list)
@@ -68,7 +74,7 @@ class KFSaver:
         """list of all keys"""
         return list(self._DL.keys())
 
-    def to_array(self, flatten=False):
+    def to_array(self, *, flatten=False):
         for key in self.keys:
             try:
                 self.__dict__[key] = np.array(self._DL[key])

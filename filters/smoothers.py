@@ -191,7 +191,7 @@ class FixedLagSmoother:
         ])
 
 
-def tf_smooth(M, P, Y, A, Q, H, R, use_inf=True):
+def tf_smooth(M, P, Y, A, Q, H, R, *, use_inf=True):
     """
     Two filter based Smoother
 

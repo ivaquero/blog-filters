@@ -98,7 +98,7 @@ class HInfinityFilter:
         # x = Fx + Gu
         self.x = self.F @ self.x + self.G @ u
 
-    def batch_filter(self, Zs, update_first=False, saver=False):
+    def batch_filter(self, Zs, *, update_first=False, saver=False):
         """Batch processes a sequences of measurements.
 
         Parameters

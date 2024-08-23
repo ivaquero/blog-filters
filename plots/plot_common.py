@@ -90,6 +90,7 @@ def plot_cov_ellipse(
     mean,
     cov,
     stds=None,
+    *,
     show_semiaxis=False,
     show_center=True,
     angle=1,
@@ -142,7 +143,7 @@ def plot_resids_lims(ax, Ps, stds=1.0):
     ax.fill_between(range(len(std)), -std, std, facecolor='#ffff00', alpha=0.3)
 
 
-def plot_resids(ax, xs, data, col, ylabel, title=None, limits=True, stds=1):
+def plot_resids(ax, xs, data, col, ylabel, stds=1, title=None, *, limits=True):
     res = xs - data.x[:, col]
     ax.plot(res)
     if limits:

@@ -35,6 +35,7 @@ def white_noise_discrete(
     dt: float = 1.0,
     var: float = 1.0,
     block_size: int = 1,
+    *,
     order_by_dim: bool = True,
     seed: int = 1123,
 ):
@@ -96,6 +97,7 @@ def white_noise_continuous(
     dt: float = 1.0,
     spectral_density: float = 1.0,
     block_size: int = 1,
+    *,
     order_by_dim: bool = True,
 ):
     """Generate white noise with continuous time steps

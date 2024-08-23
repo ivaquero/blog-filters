@@ -36,6 +36,7 @@ def plot_gh_compar_param(
     rng=None,
     vary_obj='data',
     figwidth=8,
+    *,
     sharey=False,
     combined=True,
     show_preds=False,
@@ -43,7 +44,8 @@ def plot_gh_compar_param(
 ):
     if combined:
         if len(set(x0s)) != 1:
-            raise ValueError('x0s must be uniform')
+            error_message = 'x0s must be uniform'
+            raise ValueError(error_message)
 
         x0 = x0s[0]
         ax = axes
@@ -61,7 +63,7 @@ def plot_gh_compar_param(
                 plot_preds(ax, np.r_[x0, preds])
 
 
-def plot_gh_compar_data(axes, data_ls, filt, x0, show_preds=False, **scatter_kwargs):
+def plot_gh_compar_data(axes, data_ls, filt, x0, *, show_preds=False, **scatter_kwargs):
     for ax, data in zip(axes.flatten(), data_ls):
         plot_zs(ax, xs=data, x0=x0, **scatter_kwargs)
         _, preds = plot_ghf(ax, data, filt, x0)

@@ -7,7 +7,6 @@ from typing import Generic
 from typing import Sequence
 from typing import TypeVar
 
-from mytypes import ArrayLike
 import numpy as np
 from singledispatchmethod import singledispatchmethod
 from typing_extensions import Protocol
@@ -60,7 +59,7 @@ class GaussParams:
     mean: np.ndarray  # shape=(n,)
     cov: np.ndarray  # shape=(n, n)
 
-    def __init__(self, mean: ArrayLike, cov: ArrayLike) -> None:
+    def __init__(self, mean, cov) -> None:
         self.mean = np.asarray(mean, dtype=float)
         self.cov = np.asarray(cov, dtype=float)
 
@@ -138,7 +137,6 @@ class MixtureParametersList(Generic[T]):
     @classmethod
     def allocate(cls, shape: int | tuple[int, ...], component_type: T):
         shape = (shape,) if isinstance(shape, int) else shape
-        # TODO
         raise NotImplementedError
 
     @singledispatchmethod

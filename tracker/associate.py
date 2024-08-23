@@ -16,8 +16,9 @@ class AssociateMixin(ABC):
         PG: float,
         PD: float,
         gamma: float,
-        parametric=False,
         clutter_density: float = None,
+        *,
+        parametric=False,
     ):
         """Compute asscocation probability."""
 

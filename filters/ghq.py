@@ -314,7 +314,7 @@ def gh_kf_update(M, P, Y, h, R=None, h_param=None, p=3):
     return M, P, K, MU, S
 
 
-def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, same_p=True):
+def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
     """
     GHRTS_SMOOTH - Additive form Gauss-Hermite Rauch-Tung-Striebel smoother
 

@@ -25,7 +25,7 @@ def plot_particles(ax, particles, marker='o', markersize=1, color='g'):
     )
 
 
-def plot_pf(axes, pf, xlim=100, ylim=100, weights=True):
+def plot_pf(axes, pf, xlim=100, ylim=100, *, weights=True):
     if weights:
         axes[1].set(yticklabels='', xlim=(0, ylim), ylim=(0, xlim))
         axes[1].scatter(pf.particles[:, 0], pf.weights, marker='.', s=1, color='k')

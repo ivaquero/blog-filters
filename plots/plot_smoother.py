@@ -10,7 +10,7 @@ sys.path.append('..')
 from filters.kalman import KalmanFilter
 
 
-def plot_rts(ax, R, Q=0.001, seed=123, show_velocity=False):
+def plot_rts(ax, R, Q=0.001, seed=123, *, show_velocity=False):
     random.seed(seed)
     kf = KalmanFilter(dim_x=2, dim_z=1)
     kf.x = np.array([0.0, 1.0])

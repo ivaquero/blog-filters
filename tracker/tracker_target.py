@@ -7,7 +7,9 @@ from utils import inner_elipsoide_data
 class BayesianTargetTracker(KalmanFilter):
     """Bayesian target tracker."""
 
-    def __init__(self, kalman_behavior, PG, PD, parametric=False, clutter_density=None):
+    def __init__(
+        self, kalman_behavior, PG, PD, clutter_density=None, *, parametric=False
+    ):
         super().__init__(kalman_behavior)
 
         self.PG = PG

@@ -123,7 +123,7 @@ def z_mean(sigmas, Wm):
     return x
 
 
-def robot3d_symbol(print=False):
+def robot3d_symbol(*, print_symbol=False):
     vars_ = sy.symbols('a, x, y, v, w, θ, t')
     [a, x, y, v, w, θ, time] = vars_
     d = v * time
@@ -138,7 +138,7 @@ def robot3d_symbol(print=False):
     F_j = fxu.jacobian(sy.Matrix([x, y, θ]))
     V_j = fxu.jacobian(sy.Matrix([v, a]))
 
-    if print:
+    if print_symbol:
         print('fxu: ', fxu)
         print('F_j: ', fxu)
         print('V_j: ', fxu)
@@ -197,7 +197,9 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         return x + dx
 
 
-def robot_pf(ax, N, iters=18, sensor_std_err=0.1, initial_x=None, show_particles=False):
+def robot_pf(
+    ax, N, iters=18, sensor_std_err=0.1, initial_x=None, *, show_particles=False
+):
     landmarks = np.array([[-1, 2], [5, 10], [12, 14], [18, 21]])
     NL = len(landmarks)
 

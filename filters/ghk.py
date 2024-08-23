@@ -72,7 +72,7 @@ class GFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, save_preds=False, saver=None):
+    def batch_filter(self, data, saver=None, *, save_preds=False):
         """Performs g-h filter with a fixed g and h.
 
         Parameters
@@ -201,7 +201,7 @@ class GHFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, save_preds=False, saver=None):
+    def batch_filter(self, data, saver=None, *, save_preds=False):
         """Performs g-h filter with a fixed g and h."""
 
         x = self.x
@@ -339,7 +339,7 @@ class GHKFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, save_preds=False):
+    def batch_filter(self, data, *, save_preds=False):
         """Performs g-h filter with a fixed g and h."""
 
         x = self.x
@@ -507,7 +507,7 @@ def critical_damping_params(theta, order=2):
     raise ValueError(error_message)
 
 
-def benedict_bornder_constants(g, critical=False):
+def benedict_bornder_constants(g, *, critical=False):
     """Computes the g,h constants for a Benedict-Bordner filter, which
     minimizes transient errors for a g-h filter.
 

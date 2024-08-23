@@ -80,7 +80,7 @@ def show_markov_chain(figsize=(4, 4), facecolor='w'):
 
 
 def plot_adkf_2d(
-    axes, xs, z_xs2, dt, Q_scale_factor, std_scale, std_title=False, Q_title=False
+    axes, xs, z_xs2, dt, Q_scale_factor, std_scale, *, std_title=False, Q_title=False
 ):
     plot_zs(axes[0], z_xs2, dt=dt, label='z')
     plot_kf(axes[0], xs[:, 0], dt=dt, lw=1.5)

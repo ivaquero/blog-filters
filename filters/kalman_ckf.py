@@ -320,7 +320,7 @@ class CubatureKalmanFilter:
         ])
 
 
-def crts_smooth(M, P, f, Q, f_param=None, same_p=True):
+def crts_smooth(M, P, f, Q, f_param=None, *, same_p=True):
     """
     CRTS_SMOOTH - Additive form cubature Rauch-Tung-Striebel smoother
 

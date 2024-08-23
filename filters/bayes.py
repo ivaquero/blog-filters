@@ -46,7 +46,7 @@ def posterior(likelihood, prior):
     return likelihood * prior / sum(likelihood * prior)
 
 
-def prior_estimate(x0, model, zs, R, show_steps=False):
+def prior_estimate(x0, model, zs, R, *, show_steps=False):
     x = x0
     priors, estimates, ps = (
         np.zeros((len(zs), 2)),

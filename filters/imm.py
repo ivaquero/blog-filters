@@ -31,7 +31,8 @@ class IMMEstimator:
         x_shape = filters[0].x.shape
         for f in filters:
             if x_shape != f.x.shape:
-                raise ValueError('All filters must have the same state dimension')
+                error_message = 'All filters must have the same state dimension'
+                raise ValueError(error_message)
 
         self.x = np.zeros(filters[0].x.shape)
         self.P = np.zeros(filters[0].P.shape)

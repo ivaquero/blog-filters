@@ -72,7 +72,7 @@ def plot_bivariate_colormap(ax, xs, ys):
 
 
 def plot_monte_carlo_mean(
-    axes, xs, ys, f, mean_fx, label, figsize=(8, 4), plot_colormap=True
+    axes, xs, ys, f, mean_fx, label, figsize=(8, 4), *, plot_colormap=True
 ):
     plot_bivariate_colormap(axes[0], xs, ys)
 

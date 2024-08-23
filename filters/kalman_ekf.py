@@ -515,7 +515,7 @@ def etf_smooth1(
     return M, P
 
 
-def erts_smooth1(M, P, A=None, Q=None, a=None, W=None, param=None, same_p=True):
+def erts_smooth1(M, P, A=None, Q=None, a=None, W=None, param=None, *, same_p=True):
     """
     ERTS_SMOOTH1  Extended Rauch-Tung-Striebel smoother
 
