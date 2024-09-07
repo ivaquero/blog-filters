@@ -279,7 +279,7 @@ class KalmanFilter:
             Rs = [self.R] * n
 
         # mean estimates from Kalman Filter
-        if self.x.ndim == 1:
+        if np.ndim(self.x) == 1:
             means = np.zeros((n, self.dim_x))
             means_p = np.zeros((n, self.dim_x))
         else:
@@ -297,6 +297,8 @@ class KalmanFilter:
                 cov[i, :, :] = self.P
 
                 self.predict(u=u, G=G, F=F, Q=Q)
+                print()
+
                 means_p[i, :] = self.x
                 cov_p[i, :, :] = self.P
 

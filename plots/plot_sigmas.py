@@ -42,7 +42,7 @@ def plot_sigmas_selection(ax, kappas=None, alphas=None, betas=None, var=None):
         sigmas = points.sigma_points(x, P)
         _plot_sigmas(ax, sigmas, points.Wc, alpha=1.0, facecolor='k')
         plot_cov_ellipse(
-            ax, x, P, stds=np.sqrt(var), facecolor='b', alpha=0.3, title=False
+            ax, x, P, stds=np.sqrt(var), facecolor='b', alpha=0.3, show_title=False
         )
 
     ax.axis('equal')

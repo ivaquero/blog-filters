@@ -116,7 +116,7 @@ class UnscentedKalmanFilter:
         self.sigmas_h = np.zeros((self._num_sigmas, self._dim_z))
 
         self.K = np.zeros((dim_x, dim_z))
-        self.y = np.zeros((dim_z))
+        self.y = np.zeros((dim_z, dim_z))
         self.z = np.array([[None] * dim_z]).T
         self.S = np.zeros((dim_z, dim_z))
         self.SI = np.zeros((dim_z, dim_z))
@@ -223,15 +223,18 @@ class UnscentedKalmanFilter:
         try:
             z = zs[0]
         except TypeError as e:
-            raise TypeError('zs must be list-like') from e
+            error_message = 'zs must be list-like'
+            raise TypeError(error_message) from e
 
         if self._dim_z == 1:
             if not np.isscalar(z) and (z.ndim != 1 or len(z) != 1):
-                raise TypeError('zs must be a list of scalars or 1D, 1 element arrays')
+                error_message = 'zs must be a list of scalars or 1D, 1 element arrays'
+                raise TypeError(error_message)
         elif len(z) != self._dim_z:
-            raise TypeError(
+            error_message = (
                 f'each element in zs must be a 1D array of length {self._dim_z}'
             )
+            raise TypeError(error_message)
 
         z_n = len(zs)
 
@@ -268,7 +271,8 @@ class UnscentedKalmanFilter:
         """
 
         if len(Xs) != len(Ps):
-            raise ValueError('Xs and Ps must have the same length')
+            error_message = 'Xs and Ps must have the same length'
+            raise ValueError(error_message)
 
         n, dim_x = Xs.shape
 

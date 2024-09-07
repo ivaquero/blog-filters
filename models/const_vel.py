@@ -124,9 +124,10 @@ def FxCV(x, dt):
     return FCV(len(x), dt) @ x
 
 
-def KFCV1d(P, R, Q=0, dt=1, x=(0)):
-    if type(x) == list:
+def KFCV1d(P, R, Q=0, dt=1, x=(0,)):
+    if type(x) == list | tuple:
         x = np.array(x)
+
     dim_x = len(x)
     kf_cv = KalmanFilter(dim_x=dim_x, dim_z=1)
     kf_cv.x = np.zeros(dim_x)
