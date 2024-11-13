@@ -3,7 +3,7 @@
 ![code size](https://img.shields.io/github/languages/code-size/ivaquero/blog-filters.svg)
 ![repo size](https://img.shields.io/github/repo-size/ivaquero/blog-filters.svg)
 
-This project is the reorganization of the code in the book [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python) and draws on some of the content in [EKF/UKF Toolbox for MATLAB](https://github.com/EEA-sensors/ekfukf).
+This project is the reorganization of the code in the book [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python) and draws on some content in [EKF/UKF Toolbox for MATLAB](https://github.com/EEA-sensors/ekfukf).
 
 <p align="left">
 <a href="README.md">English</a> |
@@ -26,10 +26,16 @@ To build the environment, there are 3 options
 For option 2&3, you need to run the following command after installation
 
 ```bash
-conda install scipy matplotlib pandas jupyterlab
+conda install matplotlib pandas scipy sympy jupyterlab
 ```
 
-Then, launch jupyterlab to run the code
+Then, clone this repo
+
+```bash
+git clone https://github.com/ivaquero/blog-filters.git
+```
+
+Finally, launch jupyterlab to run the code
 
 ```bash
 cd [this repo] && jupyter lab
@@ -50,7 +56,7 @@ cd [this repo] && jupyter lab
   - `kalman_hinf`: H∞ filter
   - `kalman_ukf`: unscented Kalman filter
   - `kalman`: linear Kalman filter
-  - `lsq`: least squares filter
+  - `lsq`: the least squares filter
   - `particle`: particle filter
   - `resamplers`: sampler
   - `sigma_points`: Sigma point

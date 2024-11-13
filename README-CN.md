@@ -32,10 +32,16 @@ conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
 conda config --set show_channel_urls yes
 # 安装包
-conda install scipy matplotlib pandas jupyterlab
+conda install matplotlib pandas scipy sympy jupyterlab
 ```
 
-然后，启动 `jupyterlab` 运行代码
+然后，克隆本仓库
+
+```bash
+git clone https://github.com/ivaquero/blog-filters.git
+```
+
+最后，启动 `jupyterlab` 运行代码
 
 ```bash
 cd [本仓库路径] && jupyter lab
