@@ -41,7 +41,20 @@ Finally, launch jupyterlab to run the code
 cd [this repo] && jupyter lab
 ```
 
-## Structure
+## Examples
+
+- [filters-ghk.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-ghk.ipynb): α-β-γ filtering
+- [filters-bayes.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-bayes.ipynb): Basics of Bayesian Statistics
+- [filters-kf-basic.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-basic.ipynb): Basics of Kalman Filtering
+- [filters-kf-design.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-design.ipynb): Kalman Filter Design
+- [filters-kf-plus.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-plus.ipynb): Nonlinear Kalman Filtering
+- [filters-maneuver.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-maneuver.ipynb): Maneuvering Target Tracking
+- [filters-pf.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-pf.ipynb): Particle Filtering
+- [filters-smoothers.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-smoothers.ipynb): Smoothers
+- [filters-task-fusion.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-task-fusion.ipynb): Data Fusion
+- [filters-task-tracking.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-task-tracking.ipynb): Target Tracking
+
+## Kit Structure
 
 - `filters`: Filter-related module
   - `bayes`: Bayesian statistics
@@ -100,16 +113,3 @@ cd [this repo] && jupyter lab
 - `symbol`: Symbol derivation module
   - `datagen`: data generation
   - `models`: motion model
-
-## Examples
-
-- `filters-abcf.ipynb`: α-β-γ filtering
-- `filters-bayes.ipynb`: Basics of Bayesian Statistics
-- `filters-kf-basic.ipynb`: Basics of Kalman Filtering
-- `filters-kf-design.ipynb`: Kalman Filter Design
-- `filters-kf-plus.ipynb`: Nonlinear Kalman Filtering
-- `filters-maneuver.ipynb`: Maneuvering Target Tracking
-- `filters-pf.ipynb`: Particle Filtering
-- `filters-smoothers.ipynb`: Smoothers
-- `filters-task-fusion.ipynb`: Data Fusion
-- `filters-task-tracking.ipynb`: Target Tracking

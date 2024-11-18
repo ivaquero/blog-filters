@@ -47,7 +47,20 @@ git clone https://github.com/ivaquero/blog-filters.git
 cd [本仓库路径] && jupyter lab
 ```
 
-## 工程结构
+## 工程示例
+
+- [filters-ghk.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-ghk.ipynb): α-β-γ 滤波
+- [filters-bayes.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-bayes.ipynb): Bayes 统计基础
+- [filters-kf-basic.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-basic.ipynb): Kalman 滤波基础
+- [filters-kf-design.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-design.ipynb): Kalman 滤波设计
+- [filters-kf-plus.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-plus.ipynb): 非线性 Kalman 滤波
+- [filters-maneuver.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-maneuver.ipynb): 机动目标跟踪
+- [filters-pf.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-pf.ipynb): 粒子滤波
+- [filters-smoothers.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-smoothers.ipynb): 平滑器
+- [filters-task-fusion.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-task-fusion.ipynb): 数据融合
+- [filters-task-tracking.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-task-tracking.ipynb): 目标跟踪
+
+## 工具箱结构
 
 - `filters`：滤波相关模块
   - `bayes`：Bayes 统计
@@ -106,16 +119,3 @@ cd [本仓库路径] && jupyter lab
 - `symbol`：符号推导模块
   - `datagen`：数据生成
   - `models`：运动模型
-
-## 工程示例
-
-- `filters-abcf.ipynb`：α-β-γ 滤波
-- `filters-bayes.ipynb`：Bayes 统计基础
-- `filters-kf-basic.ipynb`：Kalman 滤波基础
-- `filters-kf-design.ipynb`：Kalman 滤波设计
-- `filters-kf-plus.ipynb`：非线性 Kalman 滤波
-- `filters-maneuver.ipynb`：机动目标跟踪
-- `filters-pf.ipynb`：粒子滤波
-- `filters-smoothers.ipynb`：平滑器
-- `filters-task-fusion.ipynb`：数据融合
-- `filters-task-tracking.ipynb`：目标跟踪
