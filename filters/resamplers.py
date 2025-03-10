@@ -19,7 +19,7 @@ def residual_resample(weights):
     """
 
     N = len(weights)
-    indexes = np.zeros(N, 'i')
+    indexes = np.zeros(N, "i")
 
     # take int(N*w) copies of each weight, which ensures particles with the
     # same weight are drawn uniformly
@@ -51,7 +51,7 @@ def stratified_resample(weights):
     # make N subdivisions, and chose a random position within each one
     positions = (random.random(N) + range(N)) / N
 
-    indexes = np.zeros(N, 'i')
+    indexes = np.zeros(N, "i")
     cumulative_sum = np.cumsum(weights)
     i, j = 0, 0
     while i < N:
@@ -73,7 +73,7 @@ def systematic_resample(weights):
     # make N subdivisions, and choose positions with a consistent random offset
     positions = (random.random() + np.arange(N)) / N
 
-    indexes = np.zeros(N, 'i')
+    indexes = np.zeros(N, "i")
     cumulative_sum = np.cumsum(weights)
     i, j = 0, 0
     while i < N:

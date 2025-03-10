@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import math
 import sys
-from typing import Callable
+from copy import deepcopy
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy import linalg
@@ -11,6 +11,9 @@ from scipy import stats
 
 from .helpers import pretty_str
 from .transformers import reshape_z
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ExtendedKalmanFilter:
@@ -224,7 +227,7 @@ class ExtendedKalmanFilter:
         Hess: Callable[[np.array], np.ndarray],
         Hx: Callable[[np.array], np.ndarray],
         Hxx: Callable[[np.array], np.ndarray],
-        HxR: Callable[[np.array], np.ndarray] = None,
+        HxR: Callable[[np.array], np.ndarray] | None = None,
         R: np.array | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
@@ -358,21 +361,21 @@ class ExtendedKalmanFilter:
         return self._mahalanobis
 
     def __repr__(self):
-        return '\n'.join([
-            'KalmanFilter object',
-            pretty_str('x', self.x),
-            pretty_str('P', self.P),
-            pretty_str('x_prior', self.x_prior),
-            pretty_str('P_prior', self.P_prior),
-            pretty_str('F', self.F),
-            pretty_str('Q', self.Q),
-            pretty_str('R', self.R),
-            pretty_str('K', self.K),
-            pretty_str('y', self.y),
-            pretty_str('S', self.S),
-            pretty_str('likelihood', self.likelihood),
-            pretty_str('log-likelihood', self.log_likelihood),
-            pretty_str('mahalanobis', self.mahalanobis),
+        return "\n".join([
+            "KalmanFilter object",
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("x_prior", self.x_prior),
+            pretty_str("P_prior", self.P_prior),
+            pretty_str("F", self.F),
+            pretty_str("Q", self.Q),
+            pretty_str("R", self.R),
+            pretty_str("K", self.K),
+            pretty_str("y", self.y),
+            pretty_str("S", self.S),
+            pretty_str("likelihood", self.likelihood),
+            pretty_str("log-likelihood", self.log_likelihood),
+            pretty_str("mahalanobis", self.mahalanobis),
         ])
 
 
@@ -482,9 +485,9 @@ def etf_smooth1(
         # Backward prediction
         if A is None:
             IA = None
-        elif type(A) == np.ndarray:
+        elif isinstance(A, np.ndarray):
             IA = linalg.inv(A)
-        elif type(A) == str or callable(A):
+        elif isinstance(A, str | callable):
             IA = linalg.inv(A(fm, aparams))
         else:
             IA = linalg.inv(A(fm, aparams))
@@ -492,9 +495,9 @@ def etf_smooth1(
         if W is None:
             B = np.eye(M.shape[1]) if Q is not None else np.eye(M.shape[1])
 
-        elif type(W) == np.ndarray:
+        elif isinstance(W, np.ndarray):
             B = W
-        elif type(W) == str or callable(W):
+        elif isinstance(W, str | callable):
             B = W(fm, aparams)
         else:
             B = W(fm, aparams)
@@ -586,21 +589,21 @@ def erts_smooth1(M, P, A=None, Q=None, a=None, W=None, param=None, *, same_p=Tru
         # Perform prediction
         if a is None:
             m_pred = A @ M[k]
-        elif type(a) == np.ndarray:
+        elif isinstance(a, np.ndarray):
             m_pred = a
-        elif type(a) == str or callable(a):
+        elif isinstance(a, str | callable):
             m_pred = a(M[k], params)
         else:
             m_pred = a(M[k], params)
 
-        if type(A) == np.ndarray:
+        if isinstance(A, np.ndarray):
             F = A
         elif type(A) or callable(A):
             F = A(M[k], params)
         else:
             F = A(M[k], params)
 
-        if type(W) == np.ndarray:
+        if isinstance(W, np.ndarray):
             B = W
         elif type(W) or callable(W):
             B = W(M[k], params)
@@ -982,16 +985,24 @@ def eimm_smooth(
             mu_bijp[:, i2] = p_ijb[k][i2] * mu_bp / a_j[i2]
 
             # Retrieve the transition matrix or the Jacobian of the dynamic model
-            if type(A[i2]) == np.ndarray:
+            if isinstance(A[i2], np.ndarray):
                 A2 = A[i2]
-            elif type(A[i2]) == str or callable(A[i2]):
+            elif isinstance(A[i2], str | callable):
                 A2 = A[i2](x_bki[i2][ind[i2]], a_param[i2])
             else:
                 A2 = A[i2](x_bki[i2][ind[i2]], a_param[i2])
 
             # Backward-time EKF prediction step
             x_kp[i2][ind[i2]], P_kp[i2][np.ix_(ind[i2], ind[i2])] = (
-                ExtendedKalmanFilter().predict(x_bki[i2][ind[i2]], P_bki[i2][np.ix_(ind[i2], ind[i2])], linalg.inv(A2), Q[i2], a[i2], None, a_param[i2])
+                ExtendedKalmanFilter().predict(
+                    x_bki[i2][ind[i2]],
+                    P_bki[i2][np.ix_(ind[i2], ind[i2])],
+                    linalg.inv(A2),
+                    Q[i2],
+                    a[i2],
+                    None,
+                    a_param[i2],
+                )
             )
 
         # Space for mixed predicted mean and covariance

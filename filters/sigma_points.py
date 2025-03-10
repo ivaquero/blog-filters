@@ -18,12 +18,12 @@ def print_sigmas(n=1, mean=5, cov=3, κ=2, α=0.1, β=2.0):
     """
 
     points = MerweScaledSigmas(n, κ, α, β)
-    print(f'sigmas: {points.sigma_points(mean, cov).T[0]}')
+    print(f"sigmas: {points.sigma_points(mean, cov).T[0]}")
     Wm, Wc = points.Wm, points.Wc
-    print(f'mean weights: {Wm}')
-    print(f'cov weights: {Wc}')
-    print(f'lambda: {α**2 * (n + κ) - n}')
-    print(f'sum cov: {sum(Wc)}')
+    print(f"mean weights: {Wm}")
+    print(f"cov weights: {Wc}")
+    print(f"lambda: {α**2 * (n + κ) - n}")
+    print(f"sum cov: {sum(Wc)}")
 
 
 class JulierSigmas:
@@ -50,7 +50,7 @@ class JulierSigmas:
         """
 
         if self.n != np.size(x):
-            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            error_message = f"expected size(x) {self.n}, but size is {np.size(x)}"
             raise ValueError(error_message)
 
         n = self.n
@@ -84,14 +84,14 @@ class JulierSigmas:
         self.Wc = self.Wm
 
     def __repr__(self):
-        return '\n'.join([
-            'JulierSigmas object',
-            pretty_str('n', self.n),
-            pretty_str('κ', self.κ),
-            pretty_str('Wm', self.Wm),
-            pretty_str('Wc', self.Wc),
-            pretty_str('subtract', self.subtract),
-            pretty_str('sqrt', self.sqrt),
+        return "\n".join([
+            "JulierSigmas object",
+            pretty_str("n", self.n),
+            pretty_str("κ", self.κ),
+            pretty_str("Wm", self.Wm),
+            pretty_str("Wc", self.Wc),
+            pretty_str("subtract", self.subtract),
+            pretty_str("sqrt", self.sqrt),
         ])
 
 
@@ -122,7 +122,7 @@ class MerweScaledSigmas:
         """
 
         if self.n != np.size(x):
-            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            error_message = f"expected size(x) {self.n}, but size is {np.size(x)}"
             raise ValueError(error_message)
 
         if np.isscalar(x):
@@ -170,16 +170,16 @@ class MerweScaledSigmas:
         return Wm, W, c
 
     def __repr__(self):
-        return '\n'.join([
-            'MerweScaledSigmas object',
-            pretty_str('n', self.n),
-            pretty_str('α', self.α),
-            pretty_str('β', self.β),
-            pretty_str('κ', self.κ),
-            pretty_str('Wm', self.Wm),
-            pretty_str('Wc', self.Wc),
-            pretty_str('subtract', self.subtract),
-            pretty_str('sqrt', self.sqrt),
+        return "\n".join([
+            "MerweScaledSigmas object",
+            pretty_str("n", self.n),
+            pretty_str("α", self.α),
+            pretty_str("β", self.β),
+            pretty_str("κ", self.κ),
+            pretty_str("Wm", self.Wm),
+            pretty_str("Wc", self.Wc),
+            pretty_str("subtract", self.subtract),
+            pretty_str("sqrt", self.sqrt),
         ])
 
 
@@ -207,7 +207,7 @@ class SimplexSigmas:
         """
 
         if self.n != np.size(x):
-            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            error_message = f"expected size(x) {self.n}, but size is {np.size(x)}"
             raise ValueError(error_message)
 
         n = self.n
@@ -241,14 +241,14 @@ class SimplexSigmas:
         self.Wc = self.Wm
 
     def __repr__(self):
-        return '\n'.join([
-            'SimplexSigmas object',
-            pretty_str('n', self.n),
-            pretty_str('α', self.α),
-            pretty_str('Wm', self.Wm),
-            pretty_str('Wc', self.Wc),
-            pretty_str('subtract', self.subtract),
-            pretty_str('sqrt', self.sqrt),
+        return "\n".join([
+            "SimplexSigmas object",
+            pretty_str("n", self.n),
+            pretty_str("α", self.α),
+            pretty_str("Wm", self.Wm),
+            pretty_str("Wc", self.Wc),
+            pretty_str("subtract", self.subtract),
+            pretty_str("sqrt", self.sqrt),
         ])
 
 
@@ -284,7 +284,7 @@ class SphericalRadialSigmas:
         Arasaratnam, I, Haykin, S. "Cubature Kalman Filters," IEEE Transactions on Automatic Control, 2009, pp 1254-1269, vol 54, No 6
         """
         if self.n != np.size(x):
-            error_message = f'expected size(x) {self.n}, but size is {np.size(x)}'
+            error_message = f"expected size(x) {self.n}, but size is {np.size(x)}"
             raise ValueError(error_message)
 
         # dimension of P is

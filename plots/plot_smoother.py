@@ -5,8 +5,7 @@ from numpy import random
 
 from .plot_common import plot_zs
 
-
-sys.path.append('..')
+sys.path.append("..")
 from filters.kalman import KalmanFilter
 
 
@@ -27,14 +26,14 @@ def plot_rts(ax, R, Q=0.001, seed=123, *, show_velocity=False):
     # plot data
     if show_velocity:
         index = 1
-        print('gu')
+        print("gu")
     else:
         index = 0
         plot_zs(ax, zs, lw=1)
         N = len(zs)
-        ax.plot([0, N], [0, N], 'k', lw=2, label='track')
+        ax.plot([0, N], [0, N], "k", lw=2, label="track")
 
-    ax.plot(M[:, index], c='b', label='RTS')
-    ax.plot(mu[:, index], c='g', ls='--', label='KF output')
+    ax.plot(M[:, index], c="b", label="RTS")
+    ax.plot(mu[:, index], c="g", ls="--", label="KF output")
 
     ax.legend()

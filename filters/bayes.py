@@ -67,15 +67,15 @@ def prior_estimate(x0, model, zs, R, *, show_steps=False):
 
 
 def print_steps(prior, z, x):
-    print(f'{prior[0]: 7.3f} {prior[1]: 8.3f}', end='\t')
-    print(f'{z:.3f}\t{x[0]: 7.3f} {x[1]: 7.3f}')
+    print(f"{prior[0]: 7.3f} {prior[1]: 8.3f}", end="\t")
+    print(f"{z:.3f}\t{x[0]: 7.3f} {x[1]: 7.3f}")
 
 
 def print_header():
-    print('\tprior\t\t\tESTIMATE')
-    print('    x\t    var\t\t  z\t    x\t   var')
+    print("\tprior\t\t\tESTIMATE")
+    print("    x\t    var\t\t  z\t    x\t   var")
 
 
 def print_conclusion(z, x):
-    print(f' final estimate:     {x.mean:10.3f}')
-    print(f' actual final value: {z:10.3f}')
+    print(f" final estimate:     {x.mean:10.3f}")
+    print(f" actual final value: {z:10.3f}")

@@ -1,16 +1,16 @@
 import argparse
 import os
 
-from filter import ExtendedKalmanBehavior
-from filter import LinearKalmanBehavior
-from filter import UnscentedendKalmanBehavior
 import matplotlib.patches as pat
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
+import yaml
+from filter import ExtendedKalmanBehavior
+from filter import LinearKalmanBehavior
+from filter import UnscentedendKalmanBehavior
 from utils import Detector
 from utils import EllipseShape
-import yaml
 
 from clutter import PoissonClutter2D
 from models import ConstantVelocity
@@ -24,12 +24,12 @@ def parse_arguments():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--cfg', default='cfg/sim_imm_pda.yaml', help='configuration file.'
+        "--cfg", default="cfg/sim_imm_pda.yaml", help="configuration file."
     )
     parser.add_argument(
-        '--seed', type=int, default=-1, help='seed of random variables.'
+        "--seed", type=int, default=-1, help="seed of random variables."
     )
-    parser.add_argument('--output_dir', default='result', help='output directory.')
+    parser.add_argument("--output_dir", default="result", help="output directory.")
     return parser.parse_args()
 
 
@@ -37,52 +37,52 @@ def make_target_tracker(cfg):
     """Make an single target tracker."""
 
     to_model_cls = {
-        'ConstantVelocity': ConstantVelocity,
-        'CoordinatedTurn': CoordinatedTurn,
+        "ConstantVelocity": ConstantVelocity,
+        "CoordinatedTurn": CoordinatedTurn,
     }
 
     to_kf_behavior_cls = {
-        'LKF': LinearKalmanBehavior,
-        'EKF': ExtendedKalmanBehavior,
-        'UKF': UnscentedendKalmanBehavior,
+        "LKF": LinearKalmanBehavior,
+        "EKF": ExtendedKalmanBehavior,
+        "UKF": UnscentedendKalmanBehavior,
     }
 
-    to_tracker_cls = {'pda': PDATracker}
+    to_tracker_cls = {"pda": PDATracker}
 
     trackers = []
-    dt = cfg['sampling_period']
-    param_models = cfg['dynamics']['model']
+    dt = cfg["sampling_period"]
+    param_models = cfg["dynamics"]["model"]
 
-    is_imm = cfg['estimator']['IMM']
-    param_kfs = cfg['estimator']['kalman_filter']
+    is_imm = cfg["estimator"]["IMM"]
+    param_kfs = cfg["estimator"]["kalman_filter"]
 
-    tracker_cls = to_tracker_cls[cfg['associate']['kind']]
-    PD = cfg['associate']['detection_proba']
-    PG = cfg['associate']['gate_proba']
-    is_parametric = cfg['associate']['parametric']
-    clutter_density = cfg['clutter']['spatial_density']
+    tracker_cls = to_tracker_cls[cfg["associate"]["kind"]]
+    PD = cfg["associate"]["detection_proba"]
+    PG = cfg["associate"]["gate_proba"]
+    is_parametric = cfg["associate"]["parametric"]
+    clutter_density = cfg["clutter"]["spatial_density"]
 
     for prm_kf in param_kfs:
-        idx = prm_kf['model_idx']
+        idx = prm_kf["model_idx"]
         prm_model = param_models[idx]
 
-        model_cls = to_model_cls[prm_model['kind']]
+        model_cls = to_model_cls[prm_model["kind"]]
         model = model_cls(dt=dt)
 
-        covar_w = np.diag(np.array(prm_model['sigma_w']) ** 2)
-        covar_v = np.diag(np.array(prm_model['sigma_v']) ** 2)
-        kf_behavior_cls = to_kf_behavior_cls[prm_kf['kind']]
+        covar_w = np.diag(np.array(prm_model["sigma_w"]) ** 2)
+        covar_v = np.diag(np.array(prm_model["sigma_v"]) ** 2)
+        kf_behavior_cls = to_kf_behavior_cls[prm_kf["kind"]]
         kf_behavior = kf_behavior_cls(model, covar_w, covar_v)
 
         tracker = tracker_cls(kf_behavior, PG, PD, is_parametric, clutter_density)
-        tracker.init_posterior(P=np.diag(prm_kf['initial_P']))
+        tracker.init_posterior(P=np.diag(prm_kf["initial_P"]))
         trackers.append(tracker)
 
     if is_imm:
-        mode_proba = np.array(cfg['estimator']['mode_proba'])
-        transition_mat = np.array(cfg['estimator']['transition_mat'])
+        mode_proba = np.array(cfg["estimator"]["mode_proba"])
+        transition_mat = np.array(cfg["estimator"]["transition_mat"])
         tracker = IMMPDATracker(
-            trackers, mode_proba, transition_mat, valid_region='mixture'
+            trackers, mode_proba, transition_mat, valid_region="mixture"
         )
     else:
         tracker = trackers[0]
@@ -94,19 +94,19 @@ def extract_models(cfg):
     """Extract models and parameters."""
 
     to_model_cls = {
-        'ConstantVelocity': ConstantVelocity,
-        'CoordinatedTurn': CoordinatedTurn,
+        "ConstantVelocity": ConstantVelocity,
+        "CoordinatedTurn": CoordinatedTurn,
     }
 
     models, covar_ws, covar_vs, initial_xs = [], [], [], []
 
-    for param in cfg['dynamics']['model']:
-        cls = to_model_cls[param['kind']]
-        models.append(cls(dt=cfg['sampling_period']))
+    for param in cfg["dynamics"]["model"]:
+        cls = to_model_cls[param["kind"]]
+        models.append(cls(dt=cfg["sampling_period"]))
 
-        covar_ws.append(np.diag(np.array(param['sigma_w']) ** 2))
-        covar_vs.append(np.diag(np.array(param['sigma_v']) ** 2))
-        initial_xs.append(np.array(param['initial_x']))
+        covar_ws.append(np.diag(np.array(param["sigma_w"]) ** 2))
+        covar_vs.append(np.diag(np.array(param["sigma_v"]) ** 2))
+        initial_xs.append(np.array(param["initial_x"]))
 
     return models, covar_ws, covar_vs, initial_xs
 
@@ -120,17 +120,17 @@ def generate_target_data(cfg):
 
     models, covar_ws, covar_vs, initial_xs = extract_models(cfg)
 
-    steps = cfg['steps']
-    change_interval = cfg['dynamics']['change_interval']
+    steps = cfg["steps"]
+    change_interval = cfg["dynamics"]["change_interval"]
 
-    ndim_x = max(m.NDIM['x'] for m in models)
-    ndim_z = models[0].NDIM['z']  # outputs are same dimension.
+    ndim_x = max(m.NDIM["x"] for m in models)
+    ndim_z = models[0].NDIM["z"]  # outputs are same dimension.
 
     x_hist = np.zeros((steps, ndim_x))  # history
     z_hist = np.zeros((steps, ndim_z))
     modes = np.zeros(steps, dtype=np.int32)
 
-    mode = cfg['dynamics']['initial_model_idx']
+    mode = cfg["dynamics"]["initial_model_idx"]
     initial_x = np.array(initial_xs[mode])
     x_hist[0, : initial_x.shape[0]] = initial_x
     model, covar_w, covar_v = models[mode], covar_ws[mode], covar_vs[mode]
@@ -145,7 +145,7 @@ def generate_target_data(cfg):
         w = _generate_noise(covar_w)
         v = _generate_noise(covar_v)
 
-        ndim_x = model.NDIM['x']
+        ndim_x = model.NDIM["x"]
 
         if t > 0:
             x_hist[t, :ndim_x] = model.state_equation(
@@ -163,13 +163,13 @@ def generate_target_data(cfg):
 def track_target(cfg, tracker, z_tgt_hist):
     """Track the target."""
 
-    steps = cfg['steps']
+    steps = cfg["steps"]
 
     clutter_model = PoissonClutter2D(
-        cfg['clutter']['spatial_density'], cfg['clutter']['range']
+        cfg["clutter"]["spatial_density"], cfg["clutter"]["range"]
     )
-    detector = Detector(cfg['associate']['detection_proba'])
-    is_imm = cfg['estimator']['IMM']
+    detector = Detector(cfg["associate"]["detection_proba"])
+    is_imm = cfg["estimator"]["IMM"]
 
     measurement_sets = []
     valid_regions = []
@@ -187,7 +187,7 @@ def track_target(cfg, tracker, z_tgt_hist):
 
     # for t in range(10):
     for t in range(steps):
-        print(f'\rstep : {t + 1}/{steps}', end='')
+        print(f"\rstep : {t + 1}/{steps}", end="")
 
         clutter = clutter_model.arise(z_tgt_hist[t])
 
@@ -237,8 +237,8 @@ def plot_trajectory(
 ):
     """Plot the tracking result."""
 
-    title = 'Trajectory'
-    title = title + ' (IMM-PDAF)' if cfg['estimator']['IMM'] else title + ' (PDAF)'
+    title = "Trajectory"
+    title = title + " (IMM-PDAF)" if cfg["estimator"]["IMM"] else title + " (PDAF)"
 
     fig = plt.figure(1, (8, 8))
     ax = fig.add_subplot(1, 1, 1)
@@ -247,43 +247,43 @@ def plot_trajectory(
     ax.plot(
         target_states[:, 0],
         target_states[:, 2],
-        linestyle='solid',
-        color='olive',
-        label='ground-truth',
+        linestyle="solid",
+        color="olive",
+        label="ground-truth",
     )
     ax.plot(
         target_measurements[:, 0],
         target_measurements[:, 1],
-        linestyle='None',
-        marker='s',
-        color='yellowgreen',
-        label='target (measured)',
+        linestyle="None",
+        marker="s",
+        color="yellowgreen",
+        label="target (measured)",
     )
     ax.plot(
         clutters[:, 0],
         clutters[:, 1],
-        marker='x',
-        linestyle='None',
-        color='orange',
-        label='clutter',
+        marker="x",
+        linestyle="None",
+        color="orange",
+        label="clutter",
     )
     ax.plot(
         estimations[:, 0],
         estimations[:, 2],
-        linestyle='dotted',
-        marker='o',
-        color='dodgerblue',
+        linestyle="dotted",
+        marker="o",
+        color="dodgerblue",
         alpha=0.6,
-        label='estimate (track)',
+        label="estimate (track)",
     )
     ax.plot(
         predictions[1:, 0],
         predictions[1:, 1],
-        linestyle='None',
-        marker='+',
-        color='red',
+        linestyle="None",
+        marker="+",
+        color="red",
         alpha=0.6,
-        label='predict',
+        label="predict",
     )
 
     set_label = False
@@ -291,7 +291,7 @@ def plot_trajectory(
         if elp_data is None:
             continue
 
-        label = 'validation gate' if not set_label else None
+        label = "validation gate" if not set_label else None
         set_label = True
 
         e = pat.Ellipse(
@@ -299,8 +299,8 @@ def plot_trajectory(
             width=elp_data.width,
             height=elp_data.height,
             angle=elp_data.angle,
-            ec='red',
-            fc='none',
+            ec="red",
+            fc="none",
             alpha=0.6,
             label=label,
             zorder=5,
@@ -308,52 +308,52 @@ def plot_trajectory(
         ax.add_patch(e)
 
     ax.legend()
-    ax.set_xlabel('x1')
-    ax.set_ylabel('x2')
+    ax.set_xlabel("x1")
+    ax.set_ylabel("x2")
     ax.grid(1)
 
-    fname = os.path.join(args.output_dir, 'trajectory')
+    fname = os.path.join(args.output_dir, "trajectory")
     if args.seed >= 0:
-        fname += f'_seed{args.seed}'
-    plt.savefig(fname + '.png')
+        fname += f"_seed{args.seed}"
+    plt.savefig(fname + ".png")
 
     fig = plt.figure(2, (8, 11))
 
     ax = fig.add_subplot(3, 1, 1)
-    steps = cfg['steps']
+    steps = cfg["steps"]
     ax.plot(range(steps), target_states[:, 1] * 3600 / 1000)
     ax.plot(range(steps), estimations[:, 1] * 3600 / 1000)
-    ax.legend(['truth', 'estimate'], loc='lower left')
-    ax.set_ylabel('Velocity-x [km/h]')
+    ax.legend(["truth", "estimate"], loc="lower left")
+    ax.set_ylabel("Velocity-x [km/h]")
     ax.grid(1)
 
     ax = fig.add_subplot(3, 1, 2)
     fig.subplots_adjust(bottom=0.1, top=0.95)
-    steps = cfg['steps']
+    steps = cfg["steps"]
     ax.plot(range(steps), target_states[:, 3] * 3600 / 1000)
     ax.plot(range(steps), estimations[:, 3] * 3600 / 1000)
-    ax.legend(['truth', 'estimate'], loc='lower left')
-    ax.set_ylabel('Velocity-y [km/h]')
+    ax.legend(["truth", "estimate"], loc="lower left")
+    ax.set_ylabel("Velocity-y [km/h]")
     ax.grid(1)
 
-    is_imm = cfg['estimator']['IMM']
+    is_imm = cfg["estimator"]["IMM"]
     ax = fig.add_subplot(3, 1, 3)
-    steps = cfg['steps']
+    steps = cfg["steps"]
     if is_imm:
         ax.plot(range(steps), target_states[:, 4])
         ax.plot(range(steps), estimations[:, 4])
-        ax.legend(['truth', 'estimate'], loc='lower left')
+        ax.legend(["truth", "estimate"], loc="lower left")
     else:
         ax.plot(range(steps), target_states[:, 4])
-        ax.legend(['truth'], loc='lower left')
-    ax.set_ylabel('Yaw-rate [rad/s]')
-    ax.set_xlabel('steps')
+        ax.legend(["truth"], loc="lower left")
+    ax.set_ylabel("Yaw-rate [rad/s]")
+    ax.set_xlabel("steps")
     ax.grid(1)
 
-    fname = os.path.join(args.output_dir, 'velocity')
+    fname = os.path.join(args.output_dir, "velocity")
     if args.seed >= 0:
-        fname += f'_seed{args.seed}'
-    plt.savefig(fname + '.png')
+        fname += f"_seed{args.seed}"
+    plt.savefig(fname + ".png")
 
 
 def extract_measurements(measurement_set_all):
@@ -400,5 +400,5 @@ def main():
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Collection
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
-from typing import Collection
 from typing import Generic
-from typing import Sequence
 from typing import TypeVar
 
 import numpy as np
@@ -12,8 +12,7 @@ from singledispatchmethod import singledispatchmethod
 from typing_extensions import Protocol
 from typing_extensions import runtime
 
-
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @runtime
@@ -55,7 +54,7 @@ class StateEstimator(Protocol[T]):
 class GaussParams:
     """A class for holding Gaussian parameters"""
 
-    __slots__ = ['mean', 'cov']
+    __slots__ = ["cov", "mean"]
     mean: np.ndarray  # shape=(n,)
     cov: np.ndarray  # shape=(n, n)
 
@@ -69,7 +68,7 @@ class GaussParams:
 
 @dataclass(init=False)
 class GaussParamList:
-    __slots__ = ['mean', 'cov']
+    __slots__ = ["cov", "mean"]
     mean: np.ndarray  # shape=(N, n)
     cov: np.ndarray  # shape=(N, n, n)
 
@@ -101,13 +100,13 @@ class GaussParamList:
         return theCls(self.mean[key], self.cov[key])
 
     def __setitem__(self, key, value):
-        if isinstance(value, (GaussParams, tuple)):
+        if isinstance(value, GaussParams | tuple):
             self.mean[key], self.cov[key] = value
         elif isinstance(value, GaussParamList):
             self.mean[key] = value.mean
             self.cov[key] = value.cov
         else:
-            raise NotImplementedError(f'Cannot set from type {value}')
+            raise NotImplementedError(f"Cannot set from type {value}")
 
     def __len__(self):
         return self.mean.shape[0]
@@ -118,7 +117,7 @@ class GaussParamList:
 
 @dataclass
 class MixtureParameters(Generic[T]):
-    __slots__ = ['weights', 'components']
+    __slots__ = ["components", "weights"]
     weights: np.ndarray
     components: Sequence[T]
 

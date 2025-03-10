@@ -2,15 +2,14 @@ import math
 import sys
 
 import numpy as np
+import sympy as sy
 from numpy import linalg
 from numpy import random
-import sympy as sy
 
 from .datagen import gen_particles_gaussian
 from .datagen import gen_particles_uniform
 
-
-sys.path.append('..')
+sys.path.append("..")
 from filters import kalman_ekf
 from filters import particle
 from filters import resamplers
@@ -124,7 +123,7 @@ def z_mean(sigmas, Wm):
 
 
 def robot3d_symbol(*, print_symbol=False):
-    vars_ = sy.symbols('a, x, y, v, w, θ, t')
+    vars_ = sy.symbols("a, x, y, v, w, θ, t")
     [a, x, y, v, w, θ, time] = vars_
     d = v * time
     β = (d / w) * sy.tan(a)
@@ -139,9 +138,9 @@ def robot3d_symbol(*, print_symbol=False):
     V_j = fxu.jacobian(sy.Matrix([v, a]))
 
     if print_symbol:
-        print('fxu: ', fxu)
-        print('F_j: ', fxu)
-        print('V_j: ', fxu)
+        print("fxu: ", fxu)
+        print("F_j: ", fxu)
+        print("V_j: ", fxu)
 
     return fxu, F_j, V_j, vars_
 
@@ -236,11 +235,11 @@ def robot_pf(
         xs.append(mu)
 
         if show_particles:
-            plot_pf.plot_particles(ax, particles, color='k', marker=',')
+            plot_pf.plot_particles(ax, particles, color="k", marker=",")
 
-        p1 = ax.scatter(robot_pos[0], robot_pos[1], marker='+', color='k', s=180, lw=3)
-        p2 = ax.scatter(mu[0], mu[1], marker='s', color='r')
+        p1 = ax.scatter(robot_pos[0], robot_pos[1], marker="+", color="k", s=180, lw=3)
+        p2 = ax.scatter(mu[0], mu[1], marker="s", color="r")
 
-    ax.legend([p1, p2], ['Actual', 'PF'], loc=4, numpoints=1)
+    ax.legend([p1, p2], ["Actual", "PF"], loc=4, numpoints=1)
     xs = np.array(xs)
-    print('final position error, variance:\n\t', mu - np.array([iters, iters]), var)
+    print("final position error, variance:\n\t", mu - np.array([iters, iters]), var)

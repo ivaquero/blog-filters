@@ -20,7 +20,7 @@ class IMMEstimator:
     def __init__(self, filters, mu, M):
         self.num_f = len(filters)
         if self.num_f < 2:
-            error_message = 'filters must contain at least two filters'
+            error_message = "filters must contain at least two filters"
             raise ValueError(error_message)
 
         self.filters = filters
@@ -31,7 +31,7 @@ class IMMEstimator:
         x_shape = filters[0].x.shape
         for f in filters:
             if x_shape != f.x.shape:
-                error_message = 'All filters must have the same state dimension'
+                error_message = "All filters must have the same state dimension"
                 raise ValueError(error_message)
 
         self.x = np.zeros(filters[0].x.shape)
@@ -115,20 +115,20 @@ class IMMEstimator:
             self.omega[i, j] = (self.M[i, j] * self.mu[i]) / self.cbar[j]
 
     def __repr__(self):
-        return '\n'.join([
-            'IMMEstimator object',
-            pretty_str('x', self.x),
-            pretty_str('P', self.P),
-            pretty_str('x_prior', self.x_prior),
-            pretty_str('P_prior', self.P_prior),
-            pretty_str('x_post', self.x_post),
-            pretty_str('P_post', self.P_post),
-            pretty_str('N', self.N),
-            pretty_str('mu', self.mu),
-            pretty_str('M', self.M),
-            pretty_str('cbar', self.cbar),
-            pretty_str('likelihood', self.likelihood),
-            pretty_str('omega', self.omega),
+        return "\n".join([
+            "IMMEstimator object",
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("x_prior", self.x_prior),
+            pretty_str("P_prior", self.P_prior),
+            pretty_str("x_post", self.x_post),
+            pretty_str("P_post", self.P_post),
+            pretty_str("N", self.N),
+            pretty_str("mu", self.mu),
+            pretty_str("M", self.M),
+            pretty_str("cbar", self.cbar),
+            pretty_str("likelihood", self.likelihood),
+            pretty_str("omega", self.omega),
         ])
 
 
@@ -143,11 +143,11 @@ class MMAEFilterBank:
 
     def __init__(self, filters, p, dim_x, H=None):
         if len(filters) != len(p):
-            error_message = 'length of filters and p must be the same'
+            error_message = "length of filters and p must be the same"
             raise ValueError(error_message)
 
         if dim_x < 1:
-            error_message = 'dim_x must be >= 1'
+            error_message = "dim_x must be >= 1"
             raise ValueError(error_message)
 
         self.filters = filters
@@ -227,10 +227,10 @@ class MMAEFilterBank:
         self.P_post = self.P.copy()
 
     def __repr__(self):
-        return '\n'.join([
-            'MMAEFilterBank object',
-            pretty_str('dim_x', self.dim_x),
-            pretty_str('x', self.x),
-            pretty_str('P', self.P),
-            pretty_str('log-p', self.p),
+        return "\n".join([
+            "MMAEFilterBank object",
+            pretty_str("dim_x", self.dim_x),
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("log-p", self.p),
         ])

@@ -6,8 +6,7 @@ from scipy import linalg
 from .noise import white_noise_discrete
 from .ssmodel_linear import LinearStateSpaceModel
 
-
-sys.path.append('..')
+sys.path.append("..")
 from filters.kalman import KalmanFilter
 
 
@@ -27,11 +26,11 @@ class ConstantVelocity(LinearStateSpaceModel):
 
     # # demensions
     NDIM = {
-        'x': 4,  # state
-        'z': 2,  # measurement
-        'u': 0,  # control input
-        'w': 2,  # process noise
-        'v': 2,  # observation noise
+        "x": 4,  # state
+        "z": 2,  # measurement
+        "u": 0,  # control input
+        "w": 2,  # process noise
+        "v": 2,  # observation noise
     }
 
     def __init__(self, dt=0.1):
@@ -98,7 +97,7 @@ def H(dim_x, dim_z):
     elif dim_z > 2:
         H = np.eye(dim_x)
     else:
-        ValueError('dim_z >= 1')
+        ValueError("dim_z >= 1")
     return H
 
 
@@ -115,7 +114,7 @@ def FCV(dim, dt):
     elif dim == 6:
         F = linalg.block_diag(F, F, F)
     else:
-        ValueError('dim must be 2, 4, 6')
+        ValueError("dim must be 2, 4, 6")
     return F
 
 

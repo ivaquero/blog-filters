@@ -2,12 +2,11 @@ import math
 import sys
 
 import numpy as np
+import sympy as sy
 from numpy import linalg
 from numpy import random
-import sympy as sy
 
-
-sys.path.append('..')
+sys.path.append("..")
 from plots.plot_kf import plot_kf
 from plots.plot_kf import plot_track
 
@@ -75,7 +74,7 @@ class RadarSim:
 
 def HJac3d(x):
     """Compute Jacobian of H matrix at x"""
-    if type(x) == list:
+    if isinstance(x, list):
         x = np.array(x)
 
     horiz_dist = x[0]
@@ -85,7 +84,7 @@ def HJac3d(x):
 
 
 def H2dRE(x, refpos=(0, 0)):
-    if type(x) == list | tuple:
+    if isinstance(x, tuple):
         x = np.array(x)
 
     dx = x[0] - refpos[0]
@@ -96,7 +95,7 @@ def H2dRE(x, refpos=(0, 0)):
 
 
 def H3dRE(x, refpos=(0, 0)):
-    if type(x) == list | tuple:
+    if isinstance(x, list | tuple):
         x = np.array(x)
 
     dx = x[0] - refpos[0]
@@ -107,7 +106,7 @@ def H3dRE(x, refpos=(0, 0)):
 
 
 def H4dRE(x, refpos=(0, 0)):
-    if type(x) == list | tuple:
+    if isinstance(x, list | tuple):
         x = np.array(x)
 
     dx = x[0] - refpos[0]
@@ -124,7 +123,7 @@ def hx(x):
 
 def plot_radar3d(axes, time, xs, ylabels=None, track=None):
     if ylabels is None:
-        ylabels = ['position', 'velocity', 'altitude']
+        ylabels = ["position", "velocity", "altitude"]
 
     ys_dict = dict(zip(ylabels, [xs[:, 0], xs[:, 1], xs[:, 2]]))
 
@@ -132,10 +131,10 @@ def plot_radar3d(axes, time, xs, ylabels=None, track=None):
         track_dict = dict(zip(ylabels, [track[:, 0], track[:, 1], track[:, 2]]))
 
     for ax, ylabel in zip(axes, ylabels):
-        plot_kf(ax, time, ys=ys_dict[ylabel], label=f'{ylabel} filtered')
+        plot_kf(ax, time, ys=ys_dict[ylabel], label=f"{ylabel} filtered")
         if track is not None:
-            plot_track(ax, time, ys=track_dict[ylabel], label=f'{ylabel} track')
-        ax.set(xlabel='time', ylabel=ylabel)
+            plot_track(ax, time, ys=track_dict[ylabel], label=f"{ylabel} track")
+        ax.set(xlabel="time", ylabel=ylabel)
         ax.legend()
         ax.grid(1)
 
@@ -144,15 +143,15 @@ def plot_radar3d_zs(ax, time, xs, obj, track=None, ylabels=None):
     xs = np.asarray(xs)
 
     if ylabels is None:
-        ylabels = ['position', 'velocity', 'altitude']
+        ylabels = ["position", "velocity", "altitude"]
     ys_dict = dict(
-        zip(['position', 'velocity', 'altitude'], [xs[:, 0], xs[:, 1], xs[:, 2]])
+        zip(["position", "velocity", "altitude"], [xs[:, 0], xs[:, 1], xs[:, 2]])
     )
 
-    ax.plot(time, ys_dict[obj], label=f'filtered {obj}')
+    ax.plot(time, ys_dict[obj], label=f"filtered {obj}")
     if track:
-        ax.plot(time, track, label='track', lw=2, ls='--', c='k')
-    ax.set(xlabel='time', ylabel=f'{obj}')
+        ax.plot(time, track, label="track", lw=2, ls="--", c="k")
+    ax.set(xlabel="time", ylabel=f"{obj}")
     ax.legend()
 
 
@@ -169,9 +168,9 @@ def plot_moving_target(ax):
             xs.append(d * math.cos(a))
             ys.append(d * math.sin(a))
 
-        ax.scatter(xs, ys, c='C0')
+        ax.scatter(xs, ys, c="C0")
 
-    ax.plot([5.5, pos[0]], [6, pos[1]], c='g', linestyle='--')
+    ax.plot([5.5, pos[0]], [6, pos[1]], c="g", linestyle="--")
 
 
 def plot_iscts_two_sensors(axes):
@@ -181,8 +180,8 @@ def plot_iscts_two_sensors(axes):
     Ns = [4, 5]
 
     for ax, pos, sa, sb, N in zip(axes, poss, sas, sbs, Ns):
-        ax.scatter(*sa, s=200, marker='v', c='k', label='Sensor 1')
-        ax.scatter(*sb, s=200, marker='s', c='C0', label='Sensor 2')
+        ax.scatter(*sa, s=200, marker="v", c="k", label="Sensor 1")
+        ax.scatter(*sb, s=200, marker="s", c="C0", label="Sensor 2")
         _plot_iscts(ax, pos, sa, sb, N=N)
         ax.legend()
 
@@ -212,9 +211,9 @@ def _plot_iscts(ax, pos, sa, sb, N=4):
             xs.append(x)
             ys.append(y)
 
-        ax.scatter(xs_a, ys_a, c='k', edgecolor='k')
-        ax.scatter(xs_b, ys_b, marker='v', edgecolor=None, c='C0')
-        ax.scatter(xs, ys, marker='.', c='r', alpha=0.5)
+        ax.scatter(xs_a, ys_a, c="k", edgecolor="k")
+        ax.scatter(xs_b, ys_b, marker="v", edgecolor=None, c="C0")
+        ax.scatter(xs, ys, marker=".", c="r", alpha=0.5)
 
 
 def _isct(sa, sb, aa, ab):
@@ -242,30 +241,30 @@ def _isct(sa, sb, aa, ab):
 def show_radar_chart(ax):
     ax.scatter([1, 2], [1, 2])
     ax.annotate(
-        '',
+        "",
         xy=(2, 2),
         xytext=(1, 1),
-        arrowprops={'arrowstyle': '->', 'ec': 'r', 'shrinkA': 3, 'shrinkB': 4},
+        arrowprops={"arrowstyle": "->", "ec": "r", "shrinkA": 3, "shrinkB": 4},
     )
     ax.annotate(
-        '',
+        "",
         xy=(2, 1),
         xytext=(1, 1),
-        arrowprops={'arrowstyle': '->', 'ec': 'b', 'shrinkA': 0, 'shrinkB': 0},
+        arrowprops={"arrowstyle": "->", "ec": "b", "shrinkA": 0, "shrinkB": 0},
     )
     ax.annotate(
-        '',
+        "",
         xy=(2, 2),
         xytext=(2, 1),
-        arrowprops={'arrowstyle': '->', 'ec': 'b', 'shrinkA': 0, 'shrinkB': 4},
+        arrowprops={"arrowstyle": "->", "ec": "b", "shrinkA": 0, "shrinkB": 4},
     )
 
-    ax.annotate('ϵ', xy=(1.2, 1.05), color='b')
-    ax.annotate('Aircraft', xy=(2.04, 2.0), color='b')
-    ax.annotate('altitude (y)', xy=(2.04, 1.5), color='k')
-    ax.annotate('x', xy=(1.5, 0.9))
-    ax.annotate('Radar', xy=(0.95, 0.8))
-    ax.annotate('Slant\n  (r)', xy=(1.5, 1.62), color='r')
+    ax.annotate("ϵ", xy=(1.2, 1.05), color="b")
+    ax.annotate("Aircraft", xy=(2.04, 2.0), color="b")
+    ax.annotate("altitude (y)", xy=(2.04, 1.5), color="k")
+    ax.annotate("x", xy=(1.5, 0.9))
+    ax.annotate("Radar", xy=(0.95, 0.8))
+    ax.annotate("Slant\n  (r)", xy=(1.5, 1.62), color="r")
 
     ax.set(xlim=[0.9, 2.5], ylim=[0.5, 2.5])
     ax.xaxis.set_ticks([])
@@ -276,7 +275,7 @@ def show_radar_chart(ax):
 
 
 def radar3d_symbol():
-    x, x_vel, y = sy.symbols('x, x_vel y')
+    x, x_vel, y = sy.symbols("x, x_vel y")
     H = sy.Matrix([sy.sqrt(x**2 + y**2)])
     state = sy.Matrix([x, x_vel, y])
     J = H.jacobian(state)

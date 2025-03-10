@@ -4,12 +4,11 @@ from sympy import init_printing
 from sympy import integrate
 from sympy import symbols
 
-
-init_printing(use_latex='mathjax')
+init_printing(use_latex="mathjax")
 
 
 def gen_white_noise_discrete():
-    dt, phi = symbols('Δt Φ_s')
+    dt, phi = symbols("Δt Φ_s")
     F_k = Matrix([[1, dt, dt**2 / 2], [0, 1, dt], [0, 0, 1]])
     Q_c = Matrix([[0, 0, 0], [0, 0, 0], [0, 0, 1]]) * phi
     Q = integrate(F_k * Q_c * F_k.T, (dt, 0, dt))
@@ -26,7 +25,7 @@ def get_white_noise_0d():
     Q_c = Matrix([[phi]])
     Q = integrate(F_k * Q_c * F_k.T, (dt, 0, dt))
 
-    print('0th order discrete process noise')
+    print("0th order discrete process noise")
     print(Q)
 
 
@@ -37,13 +36,13 @@ def gen_white_noise_1d():
     Q_c = Matrix([[0, 0], [0, 1]]) * phi
     Q = integrate(F_k * Q_c * F_k.T, (dt, 0, dt))
 
-    print('1st order discrete process noise')
+    print("1st order discrete process noise")
     Q = Q / phi
     print(MatMul(Q, phi))
 
 
 def gen_white_noise_1d_piecewise():
-    var = symbols('σ^2_v')
+    var = symbols("σ^2_v")
 
     dt, _ = gen_white_noise_discrete()
     v = Matrix([[dt**2 / 2], [dt]])
@@ -54,7 +53,7 @@ def gen_white_noise_1d_piecewise():
 
 
 def gen_white_noise_2d_piecewise():
-    var = symbols('σ^2_v')
+    var = symbols("σ^2_v")
 
     dt, _ = gen_white_noise_discrete()
     v = Matrix([[dt**2 / 2], [dt], [1]])

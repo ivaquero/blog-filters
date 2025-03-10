@@ -4,8 +4,7 @@ import numpy as np
 from numpy import random
 from scipy import stats
 
-
-sys.path.append('..')
+sys.path.append("..")
 from filters.kalman_ukf import unscented_transform
 from filters.sigma_points import MerweScaledSigmas
 
@@ -30,16 +29,16 @@ def plot_ekf_vs_mc(ax):
 
     norm = stats.norm(ekf_mean, ekf_std)
     xs = np.linspace(-3, 5, 200)
-    ax.plot(xs, norm.pdf(xs), lw=2, ls='--', color='b')
-    ax.hist(d_t, bins=200, density=True, histtype='step', lw=2, color='g')
+    ax.plot(xs, norm.pdf(xs), lw=2, ls="--", color="b")
+    ax.hist(d_t, bins=200, density=True, histtype="step", lw=2, color="g")
 
     actual_mean = d_t.mean()
-    ax.axvline(actual_mean, lw=2, color='g', label='Monte Carlo')
-    ax.axvline(ekf_mean, lw=2, ls='--', color='b', label='EKF')
+    ax.axvline(actual_mean, lw=2, color="g", label="Monte Carlo")
+    ax.axvline(ekf_mean, lw=2, ls="--", color="b", label="EKF")
     ax.legend()
 
-    print(f'actual mean={d_t.mean():.2f}, std={d_t.std():.2f}')
-    print(f'EKF    mean={ekf_mean:.2f}, std={ekf_std:.2f}')
+    print(f"actual mean={d_t.mean():.2f}, std={d_t.std():.2f}")
+    print(f"EKF    mean={ekf_mean:.2f}, std={ekf_std:.2f}")
 
 
 def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0):
@@ -71,16 +70,16 @@ def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0):
 
     norm = stats.norm(ukf_mean, ukf_std)
     xs = np.linspace(-3, 5, 200)
-    ax.plot(xs, norm.pdf(xs), ls='--', lw=2, color='b')
-    ax.hist(d_t, bins=200, density=True, histtype='step', lw=2, color='g')
+    ax.plot(xs, norm.pdf(xs), ls="--", lw=2, color="b")
+    ax.hist(d_t, bins=200, density=True, histtype="step", lw=2, color="g")
 
     actual_mean = d_t.mean()
-    ax.axvline(actual_mean, lw=2, color='g', label='Monte Carlo')
-    ax.axvline(ukf_mean, lw=2, ls='--', color='b', label='UKF')
+    ax.axvline(actual_mean, lw=2, color="g", label="Monte Carlo")
+    ax.axvline(ukf_mean, lw=2, ls="--", color="b", label="UKF")
     ax.legend()
 
-    print(f'actual mean={d_t.mean():.2f}, std={d_t.std():.2f}')
-    print(f'UKF    mean={ukf_mean:.2f}, std={ukf_std[0]:.2f}')
+    print(f"actual mean={d_t.mean():.2f}, std={d_t.std():.2f}")
+    print(f"UKF    mean={ukf_mean:.2f}, std={ukf_std[0]:.2f}")
 
 
 def show_linearization(ax, tan_x=1.5):
@@ -92,14 +91,14 @@ def show_linearization(ax, tan_x=1.5):
     def tan_l(x):
         return (2 * tan_x - 2) * (x - tan_x) + tan_y
 
-    ax.plot(xs, ys, label='$f(x)=x^2−2x$')
+    ax.plot(xs, ys, label="$f(x)=x^2−2x$")
     ax.plot(
         [tan_x - 0.5, tan_x + 0.5],
         [tan_l(tan_x - 0.5), tan_l(tan_x + 0.5)],
-        color='k',
-        ls='--',
-        label='linearization',
+        color="k",
+        ls="--",
+        label="linearization",
     )
-    ax.axvline(tan_x, lw=1, c='k')
-    ax.set(xlabel=f'$x={tan_x}$', title=f'Linearization of $f(x)$ at $x={tan_x}$')
+    ax.axvline(tan_x, lw=1, c="k")
+    ax.set(xlabel=f"$x={tan_x}$", title=f"Linearization of $f(x)$ at $x={tan_x}$")
     ax.legend()

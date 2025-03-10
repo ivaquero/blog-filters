@@ -5,24 +5,24 @@ from .plot_common import plot_zs
 from .plot_common import prepend_x0
 
 
-def plot_ghf(ax, data, filt, x0, vary_obj='data'):
+def plot_ghf(ax, data, filt, x0, vary_obj="data"):
     if x0:
         data = prepend_x0(x0, data)
     rng = range(len(data) + 1)
     estimates, predictions = filt.batch_filter(data, save_preds=True)
 
-    label_printed = {'dx': f' by dx={filt.dx}', 'g': f' by g={filt.g}', 'data': ''}
+    label_printed = {"dx": f" by dx={filt.dx}", "g": f" by g={filt.g}", "data": ""}
 
-    if hasattr(filt, 'h'):
-        label_printed['h'] = f' by h={filt.h}'
-        label_printed['gh'] = f' by g={filt.g}, h={filt.h}'
+    if hasattr(filt, "h"):
+        label_printed["h"] = f" by h={filt.h}"
+        label_printed["gh"] = f" by g={filt.g}, h={filt.h}"
 
     ax.plot(
         rng,
         estimates[:, 0],
         ms=4,
-        marker='o',
-        label=f'Filtered{label_printed[vary_obj]}',
+        marker="o",
+        label=f"Filtered{label_printed[vary_obj]}",
     )
     ax.legend()
     return estimates, predictions
@@ -34,7 +34,7 @@ def plot_gh_compar_param(
     filters,
     x0s,
     rng=None,
-    vary_obj='data',
+    vary_obj="data",
     figwidth=8,
     *,
     sharey=False,
@@ -44,7 +44,7 @@ def plot_gh_compar_param(
 ):
     if combined:
         if len(set(x0s)) != 1:
-            error_message = 'x0s must be uniform'
+            error_message = "x0s must be uniform"
             raise ValueError(error_message)
 
         x0 = x0s[0]

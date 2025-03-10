@@ -37,11 +37,11 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
 
     # dimensions
     NDIM = {
-        'x': 5,  # state
-        'z': 2,  # output
-        'u': 0,  # control input
-        'w': 3,  # system noise
-        'v': 2,  # observation noise
+        "x": 5,  # state
+        "z": 2,  # output
+        "u": 0,  # control input
+        "w": 3,  # system noise
+        "v": 2,  # observation noise
     }
 
     def __init__(self, dt=0.1):
@@ -84,7 +84,7 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
         x: state, [x1, vx1, x2, vx2, omega]
         """
         if w is None:
-            w = np.zeros(self.NDIM['w'])
+            w = np.zeros(self.NDIM["w"])
         dt = self.dt
         omega = x[4]
         Ft = self.compute_F(omega, dt)
@@ -107,7 +107,7 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
         z: output, [x1, x2]
         """
         if v is None:
-            v = np.zeros(self.NDIM['v'])
+            v = np.zeros(self.NDIM["v"])
         Ht = np.array([[1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0]])
         return Ht @ x + v
 

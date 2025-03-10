@@ -1,8 +1,8 @@
+import contextlib
+import inspect
 from collections import defaultdict
 from collections import deque
-import contextlib
 from copy import deepcopy
-import inspect
 
 import numpy as np
 
@@ -41,7 +41,7 @@ class KFSaver:
 
         if self._skip_private:
             for key in list(v.keys()):
-                if key.startswith('_'):
+                if key.startswith("_"):
                     del v[key]
 
         if self._skip_callable:
@@ -81,7 +81,7 @@ class KFSaver:
             except Exception as e:
                 # get back to lists so we are in a valid state
                 self.__dict__.update(self._DL)
-                error_message = f'could not convert {key} into np.array'
+                error_message = f"could not convert {key} into np.array"
                 raise ValueError(error_message) from e
         if flatten:
             self.flatten()
@@ -99,7 +99,7 @@ class KFSaver:
                     self.__dict__[key] = arr.ravel()
 
     def __repr__(self):
-        return f'<KFSaver object at {hex(id(self))}\n  Keys: {" ".join(self.keys)}>'
+        return f"<KFSaver object at {hex(id(self))}\n  Keys: {' '.join(self.keys)}>"
 
 
 def pretty_str(label, arr):
@@ -113,28 +113,28 @@ def pretty_str(label, arr):
     # display empty lists correctly
     with contextlib.suppress(TypeError):
         if len(arr) == 0:
-            return f'{label} = {str(type(arr)())}'
-    if isinstance(arr, (list, tuple, deque)):
-        return '\n'.join([
-            pretty_str(f'{label}[{str(i)}]', x) for (i, x) in enumerate(arr)
+            return f"{label} = {type(arr)()!s}"
+    if isinstance(arr, list | tuple | deque):
+        return "\n".join([
+            pretty_str(f"{label}[{i!s}]", x) for (i, x) in enumerate(arr)
         ])
 
     if label is None:
-        label = ''
+        label = ""
 
     if label:
-        label += ' = '
+        label += " = "
 
     if is_col(arr):
-        return label + str(arr.T).replace('\n', '') + '.T'
+        return label + str(arr.T).replace("\n", "") + ".T"
 
-    rows = str(arr).split('\n')
+    rows = str(arr).split("\n")
     if not rows:
-        return ''
+        return ""
 
     s = label + rows[0]
-    pad = ' ' * len(label)
+    pad = " " * len(label)
     for line in rows[1:]:
-        s = s + '\n' + pad + line
+        s = s + "\n" + pad + line
 
     return s

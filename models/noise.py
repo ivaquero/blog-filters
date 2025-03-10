@@ -84,7 +84,7 @@ def white_noise_discrete(
             [(dt**3) / 6, (dt**2) / 2, dt, 1.0],
         ]
     else:
-        error_message = 'dim must be 1, 2, 3 or 4'
+        error_message = "dim must be 1, 2, 3 or 4"
         raise ValueError(error_message)
 
     if order_by_dim:
@@ -143,7 +143,7 @@ def white_noise_continuous(
             [(dt**4) / 24.0, (dt**3) / 6.0, (dt**2 / 2.0), dt],
         ]
     else:
-        ValueError('dim must be 2, 3, 4')
+        ValueError("dim must be 2, 3, 4")
 
     if order_by_dim:
         return linalg.block_diag(*[Q] * block_size) * spectral_density

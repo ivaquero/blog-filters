@@ -12,8 +12,7 @@ from .estimators import GaussParams
 from .estimators import MixtureParameters
 from .estimators import StateEstimator
 
-
-ET = TypeVar('ET')
+ET = TypeVar("ET")
 
 
 @dataclass

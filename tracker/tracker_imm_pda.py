@@ -1,6 +1,6 @@
-from filter import IMMFilter
 import numpy as np
 import numpy.linalg as la
+from filter import IMMFilter
 from utils import gaussian_mixture_moment
 from utils import inner_elipsoide_data
 
@@ -9,7 +9,7 @@ class IMMPDATracker(IMMFilter):
     """IMM PDA Tracker."""
 
     def __init__(
-        self, pda_trackers, mode_proba, transition_mat, valid_region='mixture'
+        self, pda_trackers, mode_proba, transition_mat, valid_region="mixture"
     ):
         super().__init__(pda_trackers, mode_proba, transition_mat)
 
@@ -24,7 +24,7 @@ class IMMPDATracker(IMMFilter):
     def extract_measurement(self, z):
         """Extract measurements."""
 
-        if self.valid_region_type == 'max_det':
+        if self.valid_region_type == "max_det":
             dets = [np.linalg.det(pdaf.Pz_prior) for pdaf in self.kalman_filters]
 
             self.valid_region_idx = np.argmax(dets)
@@ -35,7 +35,7 @@ class IMMPDATracker(IMMFilter):
                 z, pdaf.z_prior, pdaf.Pz_prior, pdaf.gate_thresh
             )
 
-        elif self.valid_region_type == 'mixture':
+        elif self.valid_region_type == "mixture":
             zs = [pdaf.z_prior for pdaf in self.kalman_filters]
             Pzs = [pdaf.Pz_prior for pdaf in self.kalman_filters]
             self.z_prior, self.Pz_prior = gaussian_mixture_moment(
@@ -78,11 +78,11 @@ class IMMPDATracker(IMMFilter):
         else:
             raise NotImplementedError
 
-        if self.valid_region_type == 'max_det':
+        if self.valid_region_type == "max_det":
             pdaf = self.kalman_filters[self.valid_region_idx]
             volume = c * np.sqrt(la.det(pdaf.gate_thresh * pdaf.Pz_prior))
 
-        elif self.valid_region_type == 'mixture':
+        elif self.valid_region_type == "mixture":
             pdaf = self.kalman_filters[0]
             volume = c * np.sqrt(la.det(pdaf.gate_thresh * self.Pz_prior))
 
@@ -104,9 +104,9 @@ class IMMPDATracker(IMMFilter):
 
     @property
     def gate_thresh(self):
-        if self.valid_region_type == 'max_det':
+        if self.valid_region_type == "max_det":
             return self.kalman_filters[self.valid_region_idx].gate_thresh
-        elif self.valid_region_type == 'mixture':
+        elif self.valid_region_type == "mixture":
             return self.kalman_filters[0].gate_thresh
 
     def estimate(self, t, z, u_prev):

@@ -1,12 +1,12 @@
 import math
 
-from matplotlib import patches
 import numpy as np
+from matplotlib import patches
 
 
 def prepend_x0(x0, data):
     if isinstance(x0, list):
-        data = [x0] + data.tolist()
+        data = [x0, *data.tolist()]
     if isinstance(x0, np.ndarray):
         data = np.concatenate([x0], data)
     return data
@@ -16,18 +16,18 @@ def gen_data_by_only_x(xs, dt):
     return np.arange(0, len(xs) * dt, dt), xs
 
 
-def plot_zs(ax, xs, ys=None, x0=None, dt=1, label='Measured', **scatter_kwargs):
+def plot_zs(ax, xs, ys=None, x0=None, dt=1, label="Measured", **scatter_kwargs):
     if x0:
         xs = prepend_x0(x0, xs)
     if ys is None:
         xs, ys = gen_data_by_only_x(xs, dt)
 
-    ax.scatter(xs, ys, label=label, marker='x', color='k', **scatter_kwargs)
+    ax.scatter(xs, ys, label=label, marker="x", color="k", **scatter_kwargs)
     # ax.set(xlim=[-1, len(xs) + 1], ylim=[-1, len(ys) + 1])
     ax.grid(1)
 
 
-def plot_track(ax, xs, ys=None, dt=None, label='Track', c='k', lw=2, ls=':', **kwargs):
+def plot_track(ax, xs, ys=None, dt=None, label="Track", c="k", lw=2, ls=":", **kwargs):
     if ys is None and dt is not None:
         xs, ys = gen_data_by_only_x(xs, dt)
     if ys is not None:
@@ -38,17 +38,17 @@ def plot_track(ax, xs, ys=None, dt=None, label='Track', c='k', lw=2, ls=':', **k
 
 def plot_preds(ax, priors, kind=None):
     rng = range(len(priors))
-    if kind == 'scatter':
-        ax.scatter(rng, priors, marker='d', label='Predicted', color='r')
+    if kind == "scatter":
+        ax.scatter(rng, priors, marker="d", label="Predicted", color="r")
     else:
-        ax.plot(rng, priors, ls='-.', label='Predicted', color='r')
+        ax.plot(rng, priors, ls="-.", label="Predicted", color="r")
     ax.legend()
 
 
 def plot_cov2d(axes, cov):
-    axes[0].set(title=r'$σ^2_x$')
+    axes[0].set(title=r"$σ^2_x$")
     plot_covariance(axes[0], cov, (0, 0))
-    axes[1].set(title=r'$σ^2_ẋ$')
+    axes[1].set(title=r"$σ^2_ẋ$")
     plot_covariance(axes[1], cov, (1, 1))
 
 
@@ -64,8 +64,8 @@ def plot_track_ellipses(ax, N, zs, xs, cov, title):
             (i + 1, xs[i]),
             cov=p,
             stds=[2] * N,
-            edgecolor='darkslateblue',
-            facecolor='white',
+            edgecolor="darkslateblue",
+            facecolor="white",
         )
 
     ax.set(title=title)
@@ -79,7 +79,7 @@ def cal_cov_ellipse(cov, deviations=1):
     height_radius = deviations * np.sqrt(s[1])
 
     if height_radius > width_radius:
-        error_message = 'width_radius must be greater than height_radius'
+        error_message = "width_radius must be greater than height_radius"
         raise ValueError(error_message)
 
     return (orientation, width_radius, height_radius)
@@ -94,10 +94,10 @@ def plot_cov_ellipse(
     show_semiaxis=False,
     show_center=True,
     angle=1,
-    edgecolor='darkslateblue',
-    facecolor='green',
+    edgecolor="darkslateblue",
+    facecolor="green",
     alpha=0.2,
-    label='',
+    label="",
     show_title=True,
     **line_kwargs,
 ):
@@ -122,7 +122,7 @@ def plot_cov_ellipse(
 
     x, y = mean
     if show_center:
-        ax.scatter(x, y, marker='+', color=edgecolor)
+        ax.scatter(x, y, marker="+", color=edgecolor)
     if show_semiaxis:
         a = ellipse[0]
         h, w = height / 4, width / 4
@@ -132,15 +132,15 @@ def plot_cov_ellipse(
         )
         ax.plot([x, x + w * math.cos(a)], [y, y + w * math.sin(a)])
     if show_title:
-        ax.set(title=f'[{cov[0]}\n   {cov[1]}]')
+        ax.set(title=f"[{cov[0]}\n   {cov[1]}]")
 
 
 def plot_resids_lims(ax, Ps, stds=1.0):
     std = np.sqrt(Ps) * stds
 
-    ax.plot(-std, color='k', ls=':', lw=2)
-    ax.plot(std, color='k', ls=':', lw=2)
-    ax.fill_between(range(len(std)), -std, std, facecolor='#ffff00', alpha=0.3)
+    ax.plot(-std, color="k", ls=":", lw=2)
+    ax.plot(std, color="k", ls=":", lw=2)
+    ax.fill_between(range(len(std)), -std, std, facecolor="#ffff00", alpha=0.3)
 
 
 def plot_resids(ax, xs, data, col, ylabel, stds=1, title=None, *, limits=True):
@@ -149,4 +149,4 @@ def plot_resids(ax, xs, data, col, ylabel, stds=1, title=None, *, limits=True):
     if limits:
         Ps = data.P[:, col, col]
         plot_resids_lims(ax, Ps, stds=stds)
-    ax.set(title=title, xlabel='time', ylabel=ylabel)
+    ax.set(title=title, xlabel="time", ylabel=ylabel)

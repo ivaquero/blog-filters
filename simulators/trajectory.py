@@ -4,8 +4,7 @@ import sys
 import numpy as np
 from numpy import random
 
-
-sys.path.append('..')
+sys.path.append("..")
 from filters.solvers import rk4
 
 
