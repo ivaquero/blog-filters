@@ -27,9 +27,9 @@ def gh_packed_pc(x, fmm_param):
     if len(fmm_param) >= 4:
         param = fmm_param[3]
 
-    if type(f) == str or callable(f):
+    if isinstance(f, str | callable):
         F = f(x) if "param" not in locals() else f(x, param)
-    elif type(f) == np.ndarray:
+    elif isinstance(f, np.ndarray):
         F = f @ x
     else:
         F = f(x) if "param" not in locals() else f(x, param)

@@ -492,10 +492,7 @@ def etf_smooth1(
         else:
             IA = linalg.inv(A(fm, aparams))
 
-        if W is None:
-            B = np.eye(M.shape[1]) if Q is not None else np.eye(M.shape[1])
-
-        elif isinstance(W, np.ndarray):
+        if isinstance(W, np.ndarray):
             B = W
         elif isinstance(W, str | callable):
             B = W(fm, aparams)

@@ -899,7 +899,7 @@ def uimm_smooth(
             a_j[i2] = np.sum(p_ijb[k][i2] * mu_bp)
             mu_bijp[:, i2] = p_ijb[k][:, i2] * mu_bp / a_j[i2]
 
-            if type(A[i2]) == np.ndarray:
+            if isinstance(A[i2], np.ndarray):
                 A2 = A[i2]
             elif type(A[i2]) or callable(A[i2]):
                 A2 = A[i2](x_bki[i2][ind[i2]], a_param[i2])

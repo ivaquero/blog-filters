@@ -226,8 +226,8 @@ class SimplexSigmas:
             row = np.ones((1, Istar.shape[1] + 1)) * 1.0 / np.sqrt(λ * d * (d + 1))
             row[0, -1] = -d / np.sqrt(λ * d * (d + 1))
 
-        _I = np.sqrt(n) * Istar
-        scaled_unitary = U.T @ _I
+        I_ = np.sqrt(n) * Istar
+        scaled_unitary = U.T @ I_
 
         sigmas = self.subtract(x, -scaled_unitary)
         return sigmas.T
