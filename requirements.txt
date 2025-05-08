@@ -1,6 +1,6 @@
 jupyter-book
 matplotlib
 numpy
-pandas
+polars
 scipy
 sympy
