@@ -17,7 +17,8 @@ class LeastSquaresFilter:
 
     def __init__(self, dt, order, noise_sigma=0.0):
         if order < 0 or order > 2:
-            raise ValueError("order must be between 0 and 2")
+            error_message = "order must be between 0 and 2"
+            raise ValueError(error_message)
 
         self.dt = dt
 
@@ -125,13 +126,11 @@ class LeastSquaresFilter:
         return error, std
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "LeastSquaresFilter object",
-                pretty_str("dt", self.dt),
-                pretty_str("sigma", self.sigma),
-                pretty_str("_order", self._order),
-                pretty_str("x", self.x),
-                pretty_str("K", self.K),
-            ]
-        )
+        return "\n".join([
+            "LeastSquaresFilter object",
+            pretty_str("dt", self.dt),
+            pretty_str("sigma", self.sigma),
+            pretty_str("_order", self._order),
+            pretty_str("x", self.x),
+            pretty_str("K", self.K),
+        ])

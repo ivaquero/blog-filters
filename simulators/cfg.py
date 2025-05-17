@@ -11,6 +11,7 @@ from filter import (
     LinearKalmanBehavior,
     UnscentedendKalmanBehavior,
 )
+
 from models import ConstantVelocity, CoordinatedTurn
 
 
@@ -99,8 +100,8 @@ def generate_time_series_data(cfg):
     steps = cfg["steps"]
     change_interval = cfg["dynamics"]["change_interval"]
 
-    dim_x = max([m.NDIM["x"] for m in models])
-    dim_z = max([m.NDIM["z"] for m in models])
+    dim_x = max(m.NDIM["x"] for m in models)
+    dim_z = max(m.NDIM["z"] for m in models)
 
     x_hist = np.zeros((steps, dim_x))
     z_hist = np.zeros((steps, dim_z))
@@ -163,7 +164,7 @@ def plot_result(args, x_est, mode_proba, x_real, z_real, mode_real):
     plt.ylabel("y [m]")
     plt.title("Trajectory")
     plt.legend(["measurment", "state (truth)", "state (estimate)"])
-    plt.grid(True)
+    plt.grid(1)
     fname = os.path.join(args.output_dir, "trajectory")
     if args.seed >= 0:
         fname += f"_seed{args.seed}"
@@ -176,7 +177,7 @@ def plot_result(args, x_est, mode_proba, x_real, z_real, mode_real):
     plt.plot(range(steps), mode_proba[:, 1])
     plt.legend(["mode (truth)", "mode (estimate)"], loc="upper left")
     plt.ylabel("Mode")
-    plt.grid(True)
+    plt.grid(1)
 
     plt.subplot(312)
     plt.plot(range(steps), np.array(x_real[:, 1]) * 3600 / 1000)
@@ -184,7 +185,7 @@ def plot_result(args, x_est, mode_proba, x_real, z_real, mode_real):
     plt.legend(["truth", "estimate"], loc="upper left")
     plt.legend(["vx (truth)", "vx (estimate)"], loc="lower left")
     plt.ylabel("Velocity-x [km/h]")
-    plt.grid(True)
+    plt.grid(1)
 
     plt.subplot(313)
     plt.plot(range(steps), np.array(x_real[:, 3]) * 3600 / 1000)
@@ -192,7 +193,7 @@ def plot_result(args, x_est, mode_proba, x_real, z_real, mode_real):
     plt.legend(["vy (truth)", "vy (estimate)"], loc="lower left")
     plt.xlabel("Steps")
     plt.ylabel("Velocity-y [km/h]")
-    plt.grid(True)
+    plt.grid(1)
     plt.subplots_adjust(bottom=0.1, top=0.95)
     fname = os.path.join(args.output_dir, "mode-velocity")
     if args.seed >= 0:

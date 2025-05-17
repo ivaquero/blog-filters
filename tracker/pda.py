@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 import numpy as np
 from scipy import special
@@ -26,8 +28,8 @@ class PDA(Generic[ET]):
         Z: np.ndarray,
         filter_state: ET,
         *,
-        sensor_state: Optional[Dict[str, Any]] = None,
-    ) -> List[bool]:  # gated (m x 1): gated(j) = true if measurement j is within gate
+        sensor_state: dict[str, Any] | None = None,
+    ) -> list[bool]:  # gated (m x 1): gated(j) = true if measurement j is within gate
         """Gate/validate measurements: (z-h(x))'S^(-1)(z-h(x)) <= g^2."""
 
         # M = Z.shape[0]
@@ -36,10 +38,7 @@ class PDA(Generic[ET]):
         # The loop can be done using ether of these: normal loop, list comprehension or map
         return [
             self.state_filter.gate(
-                z,
-                filter_state,
-                gate_size_square=g_squared,
-                sensor_state=sensor_state,
+                z, filter_state, gate_size_square=g_squared, sensor_state=sensor_state
             )
             for z in Z
         ]
@@ -53,7 +52,7 @@ class PDA(Generic[ET]):
         Z: np.ndarray,
         filter_state: ET,
         *,
-        sensor_state: Optional[Dict[str, Any]] = None,
+        sensor_state: dict[str, Any] | None = None,
     ) -> np.ndarray:  # shape=(M + 1,), first element for no detection
         """Calculates the posterior event loglikelihood ratios."""
 
@@ -80,7 +79,7 @@ class PDA(Generic[ET]):
         Z: np.ndarray,
         filter_state: ET,
         *,
-        sensor_state: Optional[Dict[str, Any]] = None,
+        sensor_state: dict[str, Any] | None = None,
     ) -> np.ndarray:  # beta, shape=(M + 1,): the association probabilities (normalized likelihood ratios)
         """calculate the poseterior event/association probabilities."""
 
@@ -101,20 +100,18 @@ class PDA(Generic[ET]):
         Z: np.ndarray,
         filter_state: ET,
         *,
-        sensor_state: Optional[Dict[str, Any]] = None,
-    ) -> List[
+        sensor_state: dict[str, Any] | None = None,
+    ) -> list[
         ET
     ]:  # Updated filter_state for all association events, first element is no detection
         """Update the state with all possible measurement associations."""
 
         conditional_update = []
         conditional_update.append(filter_state)
-        conditional_update.extend(
-            [
-                self.state_filter.update(z, filter_state, sensor_state=sensor_state)
-                for z in Z
-            ]
-        )
+        conditional_update.extend([
+            self.state_filter.update(z, filter_state, sensor_state=sensor_state)
+            for z in Z
+        ])
 
         return conditional_update
 
@@ -130,7 +127,7 @@ class PDA(Generic[ET]):
         Z: np.ndarray,
         filter_state: ET,
         *,
-        sensor_state: Optional[Dict[str, Any]] = None,
+        sensor_state: dict[str, Any] | None = None,
     ) -> ET:  # The filter_state updated by approximating the data association
         """
         Perform the PDA update cycle.
@@ -166,7 +163,7 @@ class PDA(Generic[ET]):
         filter_state: ET,
         Ts: float,
         *,
-        sensor_state: Optional[Dict[str, Any]] = None,
+        sensor_state: dict[str, Any] | None = None,
     ) -> ET:
         """Perform a predict update cycle with Ts time units and measurements Z in sensor_state"""
         filter_state_predicted = self.predict(

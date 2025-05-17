@@ -9,7 +9,7 @@ from .kalman_ukf import UnscentedKalmanFilter
 from .sigma_points import JulierSigmas
 
 sys.path.append("..")
-from models.constant_velocity import FCV
+from models.const_vel import FCV
 
 
 def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=1123):

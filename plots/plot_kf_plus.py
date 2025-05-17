@@ -30,14 +30,7 @@ def plot_ekf_vs_mc(ax):
     norm = stats.norm(ekf_mean, ekf_std)
     xs = np.linspace(-3, 5, 200)
     ax.plot(xs, norm.pdf(xs), lw=2, ls="--", color="b")
-    ax.hist(
-        d_t,
-        bins=200,
-        density=True,
-        histtype="step",
-        lw=2,
-        color="g",
-    )
+    ax.hist(d_t, bins=200, density=True, histtype="step", lw=2, color="g")
 
     actual_mean = d_t.mean()
     ax.axvline(actual_mean, lw=2, color="g", label="Monte Carlo")
@@ -78,14 +71,7 @@ def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0):
     norm = stats.norm(ukf_mean, ukf_std)
     xs = np.linspace(-3, 5, 200)
     ax.plot(xs, norm.pdf(xs), ls="--", lw=2, color="b")
-    ax.hist(
-        d_t,
-        bins=200,
-        density=True,
-        histtype="step",
-        lw=2,
-        color="g",
-    )
+    ax.hist(d_t, bins=200, density=True, histtype="step", lw=2, color="g")
 
     actual_mean = d_t.mean()
     ax.axvline(actual_mean, lw=2, color="g", label="Monte Carlo")
@@ -114,8 +100,5 @@ def show_linearization(ax, tan_x=1.5):
         label="linearization",
     )
     ax.axvline(tan_x, lw=1, c="k")
-    ax.set(
-        xlabel=f"$x={tan_x}$",
-        title=f"Linearization of $f(x)$ at $x={tan_x}$",
-    )
+    ax.set(xlabel=f"$x={tan_x}$", title=f"Linearization of $f(x)$ at $x={tan_x}$")
     ax.legend()

@@ -1,9 +1,9 @@
-# 滤波仿真教学工具箱
+# Kalman 滤波仿真教程
 
-![code size](https://img.shields.io/github/languages/code-size/ivaquero/book-filters.svg)
-![repo size](https://img.shields.io/github/repo-size/ivaquero/book-filters.svg)
+![code size](https://img.shields.io/github/languages/code-size/ivaquero/blog-filters.svg)
+![repo size](https://img.shields.io/github/repo-size/ivaquero/blog-filters.svg)
 
-本工程是 [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python) 一书中代码的整合和再组织，并借鉴了 [EKF/UKF Toolbox for Matlab](https://github.com/EEA-sensors/ekfukf) 中的部分内容。
+本工程是 [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python) 一书中代码的整合和再组织，并借鉴了 [EKF/UKF Toolbox for MATLAB](https://github.com/EEA-sensors/ekfukf) 中的部分内容。
 
 <p align="left">
 <a href="README.md">English</a> |
@@ -12,10 +12,55 @@
 
 ## 工程目标
 
-- 构建一个对入门者友好的滤波仿真试验工具
-- 形成一套通俗易懂的入门教程
+- 提供一套通俗易懂的入门教程
+- 构建一个对入门者友好的滤波仿真工具箱
 
-## 工程结构
+## 要求
+
+对于构建环境，有 3 个选项
+
+- 安装 [Anaconda](https://mirrors.tuna.tsinghua.edu.cn/anaconda/archive/)
+- 安装 [Miniconda](https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/)
+- 安装 [Miniforge](https://mirrors.tuna.tsinghua.edu.cn/github-release/conda-forge/miniforge/LatestRelease/)
+
+对于选项 2 和 3，你需要在安装后运行以下命令
+
+```bash
+# 使用镜像
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
+conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+conda config --set show_channel_urls yes
+# 安装包
+conda install matplotlib polars scipy sympy jupyterlab
+```
+
+然后，克隆本仓库
+
+```bash
+git clone https://github.com/ivaquero/blog-filters.git
+```
+
+最后，启动 `jupyterlab` 运行代码
+
+```bash
+cd [本仓库路径] && jupyter lab
+```
+
+## 工程示例
+
+- [filters-ghk.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-ghk.ipynb): α-β-γ 滤波
+- [filters-bayes.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-bayes.ipynb): Bayes 统计基础
+- [filters-kf-basic.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-basic.ipynb): Kalman 滤波基础
+- [filters-kf-design.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-design.ipynb): Kalman 滤波设计
+- [filters-kf-plus.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-kf-plus.ipynb): 非线性 Kalman 滤波
+- [filters-maneuver.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-maneuver.ipynb): 机动目标跟踪
+- [filters-pf.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-pf.ipynb): 粒子滤波
+- [filters-smoothers.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-smoothers.ipynb): 平滑器
+- [filters-task-fusion.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-task-fusion.ipynb): 数据融合
+- [filters-task-tracking.ipynb](https://nbviewer.org/github/ivaquero/blog-filters/blob/main/filters-task-tracking.ipynb): 目标跟踪
+
+## 工具箱结构
 
 - `filters`：滤波相关模块
   - `bayes`：Bayes 统计
@@ -74,16 +119,3 @@
 - `symbol`：符号推导模块
   - `datagen`：数据生成
   - `models`：运动模型
-
-## 工程示例
-
-- `filters-abcf.ipynb`：α-β-γ 滤波
-- `filters-bayes.ipynb`：Bayes 统计基础
-- `filters-kf-basic.ipynb`：Kalman 滤波基础
-- `filters-kf-design.ipynb`：Kalman 滤波设计
-- `filters-kf-plus.ipynb`：非线性 Kalman 滤波
-- `filters-maneuver.ipynb`：机动目标跟踪
-- `filters-pf.ipynb`：粒子滤波
-- `filters-smoothers.ipynb`：平滑器
-- `filters-task-fusion.ipynb`：数据融合
-- `filters-task-tracking.ipynb`：目标跟踪

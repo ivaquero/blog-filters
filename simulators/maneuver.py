@@ -5,7 +5,7 @@ import numpy as np
 from numpy import random
 
 sys.path.append("..")
-from models import constant_velocity
+from models.const_vel import FCV
 
 
 def angle_between(x, y):
@@ -92,11 +92,9 @@ def simulate_turning(N=600, turn_start=400):
 
     # r = 1.
     dt = 1.0
-    phi_sim = constant_velocity.FCV(4, dt)
+    phi_sim = FCV(4, dt)
 
-    γ = np.array(
-        [[dt**2 / 2, 0], [dt, 0], [0, dt**2 / 2], [0, dt]],
-    )
+    γ = np.array([[dt**2 / 2, 0], [dt, 0], [0, dt**2 / 2], [0, dt]])
 
     x = np.array([[2000, 0, 10000, -15.0]]).T
 

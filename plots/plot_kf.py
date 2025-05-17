@@ -4,14 +4,7 @@ from .plot_common import gen_data_by_only_x, plot_track, plot_zs
 
 
 def plot_kf(
-    ax,
-    xs,
-    ys=None,
-    dt=1,
-    var=None,
-    label="Filter",
-    band_color="blue",
-    **kwargs,
+    ax, xs, ys=None, dt=1, var=None, label="Filter", band_color="blue", **kwargs
 ):
     if ys is None:
         xs, ys = gen_data_by_only_x(xs, dt)
@@ -21,13 +14,7 @@ def plot_kf(
         std = np.sqrt(var)
         ax.plot(xs, ys + std, linestyle=":", color="k", lw=2)
         ax.plot(xs, ys - std, linestyle=":", color="k", lw=2)
-        ax.fill_between(
-            xs,
-            ys - std,
-            ys + std,
-            facecolor=band_color,
-            alpha=0.1,
-        )
+        ax.fill_between(xs, ys - std, ys + std, facecolor=band_color, alpha=0.1)
 
 
 def plot_kf_track(ax, xs, filter_xs, zs, label=None, title=None):
@@ -37,12 +24,7 @@ def plot_kf_track(ax, xs, filter_xs, zs, label=None, title=None):
     if zs is not None:
         plot_zs(ax, zs, label=label)
 
-    ax.set(
-        title=title,
-        xlabel="time",
-        ylabel="meters",
-        xlim=(-1, len(xs)),
-    )
+    ax.set(title=title, xlabel="time", ylabel="meters", xlim=(-1, len(xs)))
     ax.legend()
 
 
@@ -96,11 +78,7 @@ def plot_kf_with_resids(axes, dt, xs, z_xs, res):
     if z_xs is not None:
         plot_zs(axes[0], xs=t, ys=z_xs, dt=dt, label="z")
     plot_kf(axes[0], xs=t, ys=xs, dt=dt)
-    axes[0].set(
-        xlabel="time",
-        ylabel="X",
-        title="estimates vs measurements",
-    )
+    axes[0].set(xlabel="time", ylabel="X", title="estimates vs measurements")
     axes[0].legend()
 
     axes[1].plot(t, res)

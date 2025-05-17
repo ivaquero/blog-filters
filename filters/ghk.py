@@ -6,7 +6,7 @@ from .helpers import pretty_str
 def print_steps(estims, preds):
     for ind in range(1, len(estims)):
         print(
-            f"previous x: {estims[ind-1]:0.2f}, current x: {estims[ind]:0.2f}, predicted x̂: {preds[ind-1]:0.2f}"
+            f"previous x: {estims[ind - 1]:0.2f}, current x: {estims[ind]:0.2f}, predicted x̂: {preds[ind - 1]:0.2f}"
         )
 
 
@@ -72,7 +72,7 @@ class GFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, save_preds=False, saver=None):
+    def batch_filter(self, data, saver=None, *, save_preds=False):
         """Performs g-h filter with a fixed g and h.
 
         Parameters
@@ -141,19 +141,17 @@ class GFilter:
         return (2 * g**2) / den
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "GHFilter object",
-                pretty_str("dt", self.dt),
-                pretty_str("g", self.g),
-                pretty_str("x", self.x),
-                pretty_str("dx", self.dx),
-                pretty_str("x_pred", self.x_pred),
-                pretty_str("dx_pred", self.dx_pred),
-                pretty_str("y", self.y),
-                pretty_str("z", self.z),
-            ]
-        )
+        return "\n".join([
+            "GHFilter object",
+            pretty_str("dt", self.dt),
+            pretty_str("g", self.g),
+            pretty_str("x", self.x),
+            pretty_str("dx", self.dx),
+            pretty_str("x_pred", self.x_pred),
+            pretty_str("dx_pred", self.dx_pred),
+            pretty_str("y", self.y),
+            pretty_str("z", self.z),
+        ])
 
 
 class GHFilter:
@@ -203,7 +201,7 @@ class GHFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, save_preds=False, saver=None):
+    def batch_filter(self, data, saver=None, *, save_preds=False):
         """Performs g-h filter with a fixed g and h."""
 
         x = self.x
@@ -268,20 +266,18 @@ class GHFilter:
         return (vx, vdx)
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "GHFilter object",
-                pretty_str("dt", self.dt),
-                pretty_str("g", self.g),
-                pretty_str("h", self.h),
-                pretty_str("x", self.x),
-                pretty_str("dx", self.dx),
-                pretty_str("x_pred", self.x_pred),
-                pretty_str("dx_pred", self.dx_pred),
-                pretty_str("y", self.y),
-                pretty_str("z", self.z),
-            ]
-        )
+        return "\n".join([
+            "GHFilter object",
+            pretty_str("dt", self.dt),
+            pretty_str("g", self.g),
+            pretty_str("h", self.h),
+            pretty_str("x", self.x),
+            pretty_str("dx", self.dx),
+            pretty_str("x_pred", self.x_pred),
+            pretty_str("dx_pred", self.dx_pred),
+            pretty_str("y", self.y),
+            pretty_str("z", self.z),
+        ])
 
 
 class GHKFilter:
@@ -343,7 +339,7 @@ class GHKFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, save_preds=False):
+    def batch_filter(self, data, *, save_preds=False):
         """Performs g-h filter with a fixed g and h."""
 
         x = self.x
@@ -429,23 +425,21 @@ class GHKFilter:
         return (vx, vdx, vddx)
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "GHFilter object",
-                pretty_str("dt", self.dt),
-                pretty_str("g", self.g),
-                pretty_str("h", self.h),
-                pretty_str("k", self.k),
-                pretty_str("x", self.x),
-                pretty_str("dx", self.dx),
-                pretty_str("ddx", self.ddx),
-                pretty_str("x_pred", self.x_pred),
-                pretty_str("dx_pred", self.dx_pred),
-                pretty_str("ddx_pred", self.dx_pred),
-                pretty_str("y", self.y),
-                pretty_str("z", self.z),
-            ]
-        )
+        return "\n".join([
+            "GHFilter object",
+            pretty_str("dt", self.dt),
+            pretty_str("g", self.g),
+            pretty_str("h", self.h),
+            pretty_str("k", self.k),
+            pretty_str("x", self.x),
+            pretty_str("dx", self.dx),
+            pretty_str("ddx", self.ddx),
+            pretty_str("x_pred", self.x_pred),
+            pretty_str("dx_pred", self.dx_pred),
+            pretty_str("ddx_pred", self.dx_pred),
+            pretty_str("y", self.y),
+            pretty_str("z", self.z),
+        ])
 
 
 def optimal_noise_smoothing(g):
@@ -496,7 +490,8 @@ def critical_damping_params(theta, order=2):
     """
 
     if theta < 0 or theta > 1:
-        raise ValueError("theta must be between 0 and 1")
+        error_message = "theta must be between 0 and 1"
+        raise ValueError(error_message)
 
     if order == 2:
         return (1.0 - theta**2, (1.0 - theta) ** 2)
@@ -508,10 +503,11 @@ def critical_damping_params(theta, order=2):
             0.5 * (1 - theta) ** 3,
         )
 
-    raise ValueError(f"bad order specified: {order}")
+    error_message = f"bad order specified: {order}"
+    raise ValueError(error_message)
 
 
-def benedict_bornder_constants(g, critical=False):
+def benedict_bornder_constants(g, *, critical=False):
     """Computes the g,h constants for a Benedict-Bordner filter, which
     minimizes transient errors for a g-h filter.
 

@@ -123,25 +123,23 @@ class EnsembleKalmanFilter:
         self.P_prior = np.copy(self.P)
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "EnsembleKalmanFilter object",
-                pretty_str("dim_x", self.dim_x),
-                pretty_str("dim_z", self.dim_z),
-                pretty_str("dt", self.dt),
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("x_prior", self.x_prior),
-                pretty_str("P_prior", self.P_prior),
-                pretty_str("Q", self.Q),
-                pretty_str("R", self.R),
-                pretty_str("K", self.K),
-                pretty_str("S", self.S),
-                pretty_str("sigmas", self.sigmas),
-                pretty_str("hx", self.hx),
-                pretty_str("fx", self.fx),
-            ]
-        )
+        return "\n".join([
+            "EnsembleKalmanFilter object",
+            pretty_str("dim_x", self.dim_x),
+            pretty_str("dim_z", self.dim_z),
+            pretty_str("dt", self.dt),
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("x_prior", self.x_prior),
+            pretty_str("P_prior", self.P_prior),
+            pretty_str("Q", self.Q),
+            pretty_str("R", self.R),
+            pretty_str("K", self.K),
+            pretty_str("S", self.S),
+            pretty_str("sigmas", self.sigmas),
+            pretty_str("hx", self.hx),
+            pretty_str("fx", self.fx),
+        ])
 
 
 def outer_product_sum(A, B=None):

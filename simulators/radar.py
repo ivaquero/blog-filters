@@ -72,7 +72,7 @@ class RadarSim:
 
 def HJac3d(x):
     """Compute Jacobian of H matrix at x"""
-    if type(x) == list:
+    if isinstance(x, list):
         x = np.array(x)
 
     horiz_dist = x[0]
@@ -82,7 +82,7 @@ def HJac3d(x):
 
 
 def H2dRE(x, refpos=(0, 0)):
-    if type(x) == list | tuple:
+    if isinstance(x, tuple):
         x = np.array(x)
 
     dx = x[0] - refpos[0]
@@ -93,7 +93,7 @@ def H2dRE(x, refpos=(0, 0)):
 
 
 def H3dRE(x, refpos=(0, 0)):
-    if type(x) == list | tuple:
+    if isinstance(x, list | tuple):
         x = np.array(x)
 
     dx = x[0] - refpos[0]
@@ -104,7 +104,7 @@ def H3dRE(x, refpos=(0, 0)):
 
 
 def H4dRE(x, refpos=(0, 0)):
-    if type(x) == list | tuple:
+    if isinstance(x, list | tuple):
         x = np.array(x)
 
     dx = x[0] - refpos[0]
@@ -134,7 +134,7 @@ def plot_radar3d(axes, time, xs, ylabels=None, track=None):
             plot_track(ax, time, ys=track_dict[ylabel], label=f"{ylabel} track")
         ax.set(xlabel="time", ylabel=ylabel)
         ax.legend()
-        ax.grid(True)
+        ax.grid(1)
 
 
 def plot_radar3d_zs(ax, time, xs, obj, track=None, ylabels=None):
@@ -242,19 +242,19 @@ def show_radar_chart(ax):
         "",
         xy=(2, 2),
         xytext=(1, 1),
-        arrowprops=dict(arrowstyle="->", ec="r", shrinkA=3, shrinkB=4),
+        arrowprops={"arrowstyle": "->", "ec": "r", "shrinkA": 3, "shrinkB": 4},
     )
     ax.annotate(
         "",
         xy=(2, 1),
         xytext=(1, 1),
-        arrowprops=dict(arrowstyle="->", ec="b", shrinkA=0, shrinkB=0),
+        arrowprops={"arrowstyle": "->", "ec": "b", "shrinkA": 0, "shrinkB": 0},
     )
     ax.annotate(
         "",
         xy=(2, 2),
         xytext=(2, 1),
-        arrowprops=dict(arrowstyle="->", ec="b", shrinkA=0, shrinkB=4),
+        arrowprops={"arrowstyle": "->", "ec": "b", "shrinkA": 0, "shrinkB": 4},
     )
 
     ax.annotate("ϵ", xy=(1.2, 1.05), color="b")

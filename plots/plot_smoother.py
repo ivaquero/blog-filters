@@ -9,7 +9,7 @@ sys.path.append("..")
 from filters.kalman import KalmanFilter
 
 
-def plot_rts(ax, R, Q=0.001, seed=123, show_velocity=False):
+def plot_rts(ax, R, Q=0.001, seed=123, *, show_velocity=False):
     random.seed(seed)
     kf = KalmanFilter(dim_x=2, dim_z=1)
     kf.x = np.array([0.0, 1.0])
@@ -22,7 +22,7 @@ def plot_rts(ax, R, Q=0.001, seed=123, show_velocity=False):
     zs = np.asarray([t + random.randn() * R for t in range(40)])
     # filter data with Kalman filter, than run smoother on it
     mu, cov, _, _ = kf.batch_filter(zs)
-    M, P, C, _ = kf.rts_smoother(mu, cov)
+    M, _, _, _ = kf.rts_smoother(mu, cov)
     # plot data
     if show_velocity:
         index = 1

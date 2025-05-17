@@ -35,6 +35,7 @@ def white_noise_discrete(
     dt: float = 1.0,
     var: float = 1.0,
     block_size: int = 1,
+    *,
     order_by_dim: bool = True,
     seed: int = 1123,
 ):
@@ -68,10 +69,7 @@ def white_noise_discrete(
     np.random.seed(seed)
 
     if dim == 2:
-        Q = [
-            [0.25 * dt**4, 0.5 * dt**3],
-            [0.5 * dt**3, dt**2],
-        ]
+        Q = [[0.25 * dt**4, 0.5 * dt**3], [0.5 * dt**3, dt**2]]
     elif dim == 3:
         Q = [
             [0.25 * dt**4, 0.5 * dt**3, 0.5 * dt**2],
@@ -86,7 +84,8 @@ def white_noise_discrete(
             [(dt**3) / 6, (dt**2) / 2, dt, 1.0],
         ]
     else:
-        raise ValueError("dim must be 1, 2, 3, 4")
+        error_message = "dim must be 1, 2, 3 or 4"
+        raise ValueError(error_message)
 
     if order_by_dim:
         return linalg.block_diag(*[Q] * block_size) * var
@@ -98,6 +97,7 @@ def white_noise_continuous(
     dt: float = 1.0,
     spectral_density: float = 1.0,
     block_size: int = 1,
+    *,
     order_by_dim: bool = True,
 ):
     """Generate white noise with continuous time steps

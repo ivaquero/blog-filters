@@ -31,7 +31,7 @@ def show_markov_chain(figsize=(4, 4), facecolor="w"):
         xytext=(6, 4.5),
         textcoords="data",
         size=10,
-        arrowprops=dict(arrowstyle="->", ec="k", connectionstyle="arc3,rad=-0.5"),
+        arrowprops={"arrowstyle": "->", "ec": "k", "connectionstyle": "arc3,rad=-0.5"},
     )
     # top
     ax.text(5, 6.1, ".03", ha="center", va="center", fontsize="large")
@@ -42,7 +42,7 @@ def show_markov_chain(figsize=(4, 4), facecolor="w"):
         xytext=(4.1, 5.5),
         textcoords="data",
         size=10,
-        arrowprops=dict(arrowstyle="->", ec="k", connectionstyle="arc3,rad=-0.5"),
+        arrowprops={"arrowstyle": "->", "ec": "k", "connectionstyle": "arc3,rad=-0.5"},
     )
 
     ax.text(3.5, 5.6, ".97", ha="center", va="center", fontsize="large")
@@ -53,9 +53,11 @@ def show_markov_chain(figsize=(4, 4), facecolor="w"):
         xytext=(3.55, 5.2),
         textcoords="data",
         size=10,
-        arrowprops=dict(
-            arrowstyle="->", ec="k", connectionstyle="angle3,angleA=150,angleB=0"
-        ),
+        arrowprops={
+            "arrowstyle": "->",
+            "ec": "k",
+            "connectionstyle": "angle3,angleA=150,angleB=0",
+        },
     )
 
     ax.text(6.5, 5.6, ".95", ha="center", va="center", fontsize="large")
@@ -66,19 +68,19 @@ def show_markov_chain(figsize=(4, 4), facecolor="w"):
         xytext=(6.45, 5.2),
         textcoords="data",
         size=10,
-        arrowprops=dict(
-            arrowstyle="->",
-            fc="0.2",
-            ec="k",
-            connectionstyle="angle3,angleA=-150,angleB=2",
-        ),
+        arrowprops={
+            "arrowstyle": "->",
+            "fc": "0.2",
+            "ec": "k",
+            "connectionstyle": "angle3,angleA=-150,angleB=2",
+        },
     )
 
     ax.axis("equal")
 
 
 def plot_adkf_2d(
-    axes, xs, z_xs2, dt, Q_scale_factor, std_scale, std_title=False, Q_title=False
+    axes, xs, z_xs2, dt, Q_scale_factor, std_scale, *, std_title=False, Q_title=False
 ):
     plot_zs(axes[0], z_xs2, dt=dt, label="z")
     plot_kf(axes[0], xs[:, 0], dt=dt, lw=1.5)

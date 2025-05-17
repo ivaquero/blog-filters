@@ -98,7 +98,7 @@ class HInfinityFilter:
         # x = Fx + Gu
         self.x = self.F @ self.x + self.G @ u
 
-    def batch_filter(self, Zs, update_first=False, saver=False):
+    def batch_filter(self, Zs, *, update_first=False, saver=False):
         """Batch processes a sequences of measurements.
 
         Parameters
@@ -186,20 +186,18 @@ class HInfinityFilter:
         self._VI = linalg.inv(self._V)
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "HInfinityFilter object",
-                pretty_str("dim_x", self.dim_x),
-                pretty_str("dim_z", self.dim_z),
-                pretty_str("dim_u", self.dim_u),
-                pretty_str("gamma", self.dim_u),
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("F", self.F),
-                pretty_str("Q", self.Q),
-                pretty_str("V", self.V),
-                pretty_str("W", self.W),
-                pretty_str("K", self.K),
-                pretty_str("y", self.y),
-            ]
-        )
+        return "\n".join([
+            "HInfinityFilter object",
+            pretty_str("dim_x", self.dim_x),
+            pretty_str("dim_z", self.dim_z),
+            pretty_str("dim_u", self.dim_u),
+            pretty_str("gamma", self.dim_u),
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("F", self.F),
+            pretty_str("Q", self.Q),
+            pretty_str("V", self.V),
+            pretty_str("W", self.W),
+            pretty_str("K", self.K),
+            pretty_str("y", self.y),
+        ])

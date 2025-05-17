@@ -88,9 +88,7 @@ def gen_sensor_data(time, pos_std, vel_std, seed=1123):
     for _ in range(time * 3):
         dt += 1 / 3.0
         time_jittered = dt + random.randn() * 0.01
-        pos_data.append(
-            [time_jittered, time_jittered + random.randn() * pos_std],
-        )
+        pos_data.append([time_jittered, time_jittered + random.randn() * pos_std])
 
     dt = 0.0
     for _ in range(time * 7):

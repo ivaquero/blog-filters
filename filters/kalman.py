@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import math
 import sys
 from copy import deepcopy
-from typing import Union
 
 import numpy as np
 from numpy import linalg
@@ -12,13 +13,7 @@ from .transformers import reshape_z
 
 
 class KalmanFilter:
-    def __init__(
-        self,
-        dim_x: int,
-        dim_z: int,
-        dim_u: int = 0,
-        _alpha_sq: float = 1.0,
-    ):
+    def __init__(self, dim_x: int, dim_z: int, dim_u: int = 0, _alpha_sq: float = 1.0):
         """Implementation of Kalman Filter.
 
         Parameters
@@ -71,11 +66,14 @@ class KalmanFilter:
         Dan Simon. "Optimal State Estimation." John Wiley & Sons. p. 208-212. (2006)
         """
         if dim_x < 1:
-            raise ValueError("dim_x ≥ 1")
+            error_message = "dim_x ≥ 1"
+            raise ValueError(error_message)
         if dim_z < 1:
-            raise ValueError("dim_z ≥ 1")
+            error_message = "dim_z ≥ 1"
+            raise ValueError(error_message)
         if dim_u < 0:
-            raise ValueError("dim_u ≥ 0")
+            error_message = "dim_u ≥ 0"
+            raise ValueError(error_message)
 
         self.dim_x = dim_x
         self.dim_z = dim_z
@@ -128,10 +126,10 @@ class KalmanFilter:
 
     def predict(
         self,
-        F: Union[bool, np.ndarray] = None,
-        G: Union[bool, np.ndarray] = None,
-        u: Union[bool, np.array] = None,
-        Q: Union[bool, np.ndarray] = None,
+        F: bool | np.ndarray = None,
+        G: bool | np.ndarray = None,
+        u: bool | np.array = None,
+        Q: bool | np.ndarray = None,
     ):
         """Predict next state using the Kalman filter state propagation equations.
 
@@ -281,7 +279,7 @@ class KalmanFilter:
             Rs = [self.R] * n
 
         # mean estimates from Kalman Filter
-        if self.x.ndim == 1:
+        if np.ndim(self.x) == 1:
             means = np.zeros((n, self.dim_x))
             means_p = np.zeros((n, self.dim_x))
         else:
@@ -299,6 +297,8 @@ class KalmanFilter:
                 cov[i, :, :] = self.P
 
                 self.predict(u=u, G=G, F=F, Q=Q)
+                print()
+
                 means_p[i, :] = self.x
                 cov_p[i, :, :] = self.P
 
@@ -324,7 +324,8 @@ class KalmanFilter:
         means and covariances computed by a Kalman filter. The usual input would come from the output of `batch_filter()`.
         """
         if len(Xs) != len(Ps):
-            raise ValueError("length of Xs and Ps must be the same")
+            error_message = "length of Xs and Ps must be the same"
+            raise ValueError(error_message)
 
         n = Xs.shape[0]
         dim_x = Xs.shape[1]
@@ -408,7 +409,8 @@ class KalmanFilter:
     @alpha.setter
     def alpha(self, value):
         if not np.isscalar(value) or value < 1:
-            raise ValueError("alpha must be a float greater than 1")
+            error_message = "alpha must be a float greater than 1"
+            raise ValueError(error_message)
 
         self._alpha_sq = value**2
 
@@ -423,34 +425,32 @@ class KalmanFilter:
         return stats.multivariate_normal.logpdf(z, self.H @ self.x, self.S)
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "KalmanFilter object",
-                pretty_str("dim_x", self.dim_x),
-                pretty_str("dim_z", self.dim_z),
-                pretty_str("dim_u", self.dim_u),
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("x_prior", self.x_prior),
-                pretty_str("P_prior", self.P_prior),
-                pretty_str("x_post", self.x_post),
-                pretty_str("P_post", self.P_post),
-                pretty_str("F", self.F),
-                pretty_str("Q", self.Q),
-                pretty_str("R", self.R),
-                pretty_str("H", self.H),
-                pretty_str("K", self.K),
-                pretty_str("y", self.y),
-                pretty_str("S", self.S),
-                pretty_str("M", self.M),
-                pretty_str("B", self.B),
-                pretty_str("z", self.z),
-                pretty_str("log-likelihood", self.log_likelihood),
-                pretty_str("likelihood", self.likelihood),
-                pretty_str("mahalanobis", self.mahalanobis),
-                pretty_str("alpha", self.alpha),
-            ]
-        )
+        return "\n".join([
+            "KalmanFilter object",
+            pretty_str("dim_x", self.dim_x),
+            pretty_str("dim_z", self.dim_z),
+            pretty_str("dim_u", self.dim_u),
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("x_prior", self.x_prior),
+            pretty_str("P_prior", self.P_prior),
+            pretty_str("x_post", self.x_post),
+            pretty_str("P_post", self.P_post),
+            pretty_str("F", self.F),
+            pretty_str("Q", self.Q),
+            pretty_str("R", self.R),
+            pretty_str("H", self.H),
+            pretty_str("K", self.K),
+            pretty_str("y", self.y),
+            pretty_str("S", self.S),
+            pretty_str("M", self.M),
+            pretty_str("B", self.B),
+            pretty_str("z", self.z),
+            pretty_str("log-likelihood", self.log_likelihood),
+            pretty_str("likelihood", self.likelihood),
+            pretty_str("mahalanobis", self.mahalanobis),
+            pretty_str("alpha", self.alpha),
+        ])
 
 
 def imm_update(X_p, P_p, c_j, ind, dims, Y, H, R, nargout=5):
@@ -817,9 +817,10 @@ def imm_smooth(MM, PP, MM_i, PP_i, MU, p_ij, mu_0j, ind, dims, A, Q, R, H, Y):
             # Initialize with default values
             x_sik[k, i2] = MM_def.copy()
             P_sik[k, i2] = PP_def.copy()
-            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros(
-                (len(ind[i2]), len(ind[i2]))
-            )
+            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros((
+                len(ind[i2]),
+                len(ind[i2]),
+            ))
 
             # Mixed mean
             for i1 in range(m):

@@ -8,7 +8,13 @@ import numpy as np
 
 class KFSaver:
     def __init__(
-        self, kf, save_current=False, skip_private=False, skip_callable=False, ignore=()
+        self,
+        kf,
+        ignore=(),
+        *,
+        save_current=False,
+        skip_private=False,
+        skip_callable=False,
     ):
         self._kf = kf
         self._DL = defaultdict(list)
@@ -67,14 +73,15 @@ class KFSaver:
         """list of all keys"""
         return list(self._DL.keys())
 
-    def to_array(self, flatten=False):
+    def to_array(self, *, flatten=False):
         for key in self.keys:
             try:
                 self.__dict__[key] = np.array(self._DL[key])
             except Exception as e:
                 # get back to lists so we are in a valid state
                 self.__dict__.update(self._DL)
-                raise ValueError(f"could not convert {key} into np.array") from e
+                error_message = f"could not convert {key} into np.array"
+                raise ValueError(error_message) from e
         if flatten:
             self.flatten()
 
@@ -91,7 +98,7 @@ class KFSaver:
                     self.__dict__[key] = arr.ravel()
 
     def __repr__(self):
-        return f'<KFSaver object at {hex(id(self))}\n  Keys: {" ".join(self.keys)}>'
+        return f"<KFSaver object at {hex(id(self))}\n  Keys: {' '.join(self.keys)}>"
 
 
 def pretty_str(label, arr):
@@ -105,11 +112,11 @@ def pretty_str(label, arr):
     # display empty lists correctly
     with contextlib.suppress(TypeError):
         if len(arr) == 0:
-            return f"{label} = {str(type(arr)())}"
-    if isinstance(arr, (list, tuple, deque)):
-        return "\n".join(
-            [pretty_str(f"{label}[{str(i)}]", x) for (i, x) in enumerate(arr)]
-        )
+            return f"{label} = {type(arr)()!s}"
+    if isinstance(arr, list | tuple | deque):
+        return "\n".join([
+            pretty_str(f"{label}[{i!s}]", x) for (i, x) in enumerate(arr)
+        ])
 
     if label is None:
         label = ""

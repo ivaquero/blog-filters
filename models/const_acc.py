@@ -41,8 +41,8 @@ def FCA(dim, dt):
     return F
 
 
-def KFCA3d(P, R, Q=0, dt=1, x=[0, 0, 0]):
-    if type(x) == list:
+def KFCA3d(P, R, Q=0, dt=1, x=(0, 0, 0)):
+    if isinstance(x, list):
         x = np.array(x)
     dim_x = len(x)
     kf_ca = KalmanFilter(dim_x=dim_x, dim_z=1)

@@ -14,19 +14,13 @@ def plot_sigmas(ax, sigmas, x, cov):
     pts = sigmas.sigma_points(x=x, P=cov)
     ax.scatter(pts[:, 0], pts[:, 1], s=sigmas.Wm * 1000)
     ax.axis("equal")
-    ax.grid(True, linestyle="--")
+    ax.grid(1, linestyle="--")
 
 
 def _plot_sigmas(ax, s, w, alpha=0.5, **kwargs):
     min_w = min(abs(w))
     scale_factor = 100 / min_w
-    ax.scatter(
-        s[:, 0],
-        s[:, 1],
-        s=abs(w) * scale_factor,
-        alpha=alpha,
-        **kwargs,
-    )
+    ax.scatter(s[:, 0], s[:, 1], s=abs(w) * scale_factor, alpha=alpha, **kwargs)
 
 
 def plot_sigmas_selection(ax, kappas=None, alphas=None, betas=None, var=None):
@@ -47,13 +41,7 @@ def plot_sigmas_selection(ax, kappas=None, alphas=None, betas=None, var=None):
         sigmas = points.sigma_points(x, P)
         _plot_sigmas(ax, sigmas, points.Wc, alpha=1.0, facecolor="k")
         plot_cov_ellipse(
-            ax,
-            x,
-            P,
-            stds=np.sqrt(var),
-            facecolor="b",
-            alpha=0.3,
-            title=False,
+            ax, x, P, stds=np.sqrt(var), facecolor="b", alpha=0.3, show_title=False
         )
 
     ax.axis("equal")

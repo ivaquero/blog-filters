@@ -9,27 +9,13 @@ def FCT(dim, dt):
     """State transition matrix for a constant turn model"""
     dθ = math.pi / 180  # degrees to radians
     if dim == 5:
-        F = np.array(
-            [
-                [
-                    1.0,
-                    math.sin(dθ * dt) / dθ,
-                    0.0,
-                    -(1 - math.cos(dθ * dt)) / dθ,
-                    0.0,
-                ],
-                [0.0, math.cos(dθ * dt), 0.0, -math.sin(dθ * dt), 0.0],
-                [
-                    0.0,
-                    (1 - math.cos(dθ * dt)) / dθ,
-                    1.0,
-                    math.sin(dθ * dt) / dθ,
-                    0.0,
-                ],
-                [0.0, math.sin(dθ * dt), 0.0, math.cos(dθ * dt), 0.0],
-                [0.0, 0.0, 0.0, 0.0, 1.0],
-            ]
-        )
+        F = np.array([
+            [1.0, math.sin(dθ * dt) / dθ, 0.0, -(1 - math.cos(dθ * dt)) / dθ, 0.0],
+            [0.0, math.cos(dθ * dt), 0.0, -math.sin(dθ * dt), 0.0],
+            [0.0, (1 - math.cos(dθ * dt)) / dθ, 1.0, math.sin(dθ * dt) / dθ, 0.0],
+            [0.0, math.sin(dθ * dt), 0.0, math.cos(dθ * dt), 0.0],
+            [0.0, 0.0, 0.0, 0.0, 1.0],
+        ])
     return F
 
 
@@ -64,15 +50,13 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
 
     def compute_F(self, omega, dt):
         if np.abs(omega) < self.eps:
-            return np.array(
-                [
-                    [1.0, dt, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, dt, 0.0],
-                    [0.0, 0.0, 0.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0, 1.0],
-                ]
-            )
+            return np.array([
+                [1.0, dt, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, dt, 0.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0],
+            ])
 
         Ft = np.zeros((5, 5))
         Ft[0, 0] = 1
@@ -93,36 +77,37 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
 
         return Ft
 
-    def state_equation(self, t, x, u=0, w=np.zeros(NDIM["w"])):
+    def state_equation(self, t, x, u=0, w=None):
         """Calculate the state equation.
 
         x[t+1] = f(t, x[t], u[t], w[t])
         x: state, [x1, vx1, x2, vx2, omega]
         """
-
+        if w is None:
+            w = np.zeros(self.NDIM["w"])
         dt = self.dt
         omega = x[4]
         Ft = self.compute_F(omega, dt)
 
-        Lt = np.array(
-            [
-                [0.5 * (dt**2), 0.0, 0.0],
-                [dt, 0.0, 0.0],
-                [0.0, 0.5 * (dt**2), 0.0],
-                [0.0, dt, 0.0],
-                [0.0, 0.0, dt],
-            ]
-        )
+        Lt = np.array([
+            [0.5 * (dt**2), 0.0, 0.0],
+            [dt, 0.0, 0.0],
+            [0.0, 0.5 * (dt**2), 0.0],
+            [0.0, dt, 0.0],
+            [0.0, 0.0, dt],
+        ])
 
         return Ft @ x + Lt @ w
 
-    def observation_equation(self, t, x, v=np.zeros(NDIM["v"])):
+    def observation_equation(self, t, x, v=None):
         """Calculate the observation equation.
 
         y[t] = h(t, x[t], v[t])
         x: state, [x1, vx1, x2, vx2, omega]
         z: output, [x1, x2]
         """
+        if v is None:
+            v = np.zeros(self.NDIM["v"])
         Ht = np.array([[1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0]])
         return Ht @ x + v
 
@@ -136,15 +121,13 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
         vx, vy, omega = x[1], x[3], x[4]
 
         if np.abs(omega) < self.eps:
-            return np.array(
-                [
-                    [1.0, dt, 0.0, 0.0, -0.5 * (dt**2) * vy],
-                    [0.0, 1.0, 0.0, 0.0, -dt * vy],
-                    [0.0, 0.0, 1.0, dt, 0.5 * (dt**2) * vx],
-                    [0.0, 0.0, 0.0, 1.0, dt * vx],
-                    [0.0, 0.0, 0.0, 0.0, 1.0],
-                ]
-            )
+            return np.array([
+                [1.0, dt, 0.0, 0.0, -0.5 * (dt**2) * vy],
+                [0.0, 1.0, 0.0, 0.0, -dt * vy],
+                [0.0, 0.0, 1.0, dt, 0.5 * (dt**2) * vx],
+                [0.0, 0.0, 0.0, 1.0, dt * vx],
+                [0.0, 0.0, 0.0, 0.0, 1.0],
+            ])
 
         J = np.zeros((5, 5))
         J[0, 0] = 1
@@ -209,15 +192,13 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
         In case of system noise is additive, return L[t].
         """
         dt = self.dt
-        return np.array(
-            [
-                [0.5 * (dt**2), 0.0, 0.0],
-                [dt, 0.0, 0.0],
-                [0.0, 0.5 * (dt**2), 0.0],
-                [0.0, dt, 0.0],
-                [0.0, 0.0, dt],
-            ]
-        )
+        return np.array([
+            [0.5 * (dt**2), 0.0, 0.0],
+            [dt, 0.0, 0.0],
+            [0.0, 0.5 * (dt**2), 0.0],
+            [0.0, dt, 0.0],
+            [0.0, 0.0, dt],
+        ])
 
     def Mt(self, t):
         """z[t] = h(x[t], t) + M[t] * v[t]

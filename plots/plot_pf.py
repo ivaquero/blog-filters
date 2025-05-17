@@ -9,13 +9,7 @@ sys.path.append("..")
 from filters.resamplers import residual_resample
 
 
-def plot_particles(
-    ax,
-    particles,
-    marker="o",
-    markersize=1,
-    color="g",
-):
+def plot_particles(ax, particles, marker="o", markersize=1, color="g"):
     N = len(particles)
     alpha = 0.20
     if N > 5000:
@@ -30,7 +24,7 @@ def plot_particles(
     )
 
 
-def plot_pf(axes, pf, xlim=100, ylim=100, weights=True):
+def plot_pf(axes, pf, xlim=100, ylim=100, *, weights=True):
     if weights:
         axes[1].set(yticklabels="", xlim=(0, ylim), ylim=(0, xlim))
         axes[1].scatter(pf.particles[:, 0], pf.weights, marker=".", s=1, color="k")
@@ -44,15 +38,8 @@ def plot_pf(axes, pf, xlim=100, ylim=100, weights=True):
 
 def plot_hbar(a, N, figsize):
     cmap = mpl.colors.ListedColormap(
-        (
-            [
-                [0.0, 0.4, 1.0],
-                [0.0, 0.8, 1.0],
-                [1.0, 0.8, 0.0],
-                [1.0, 0.4, 0.0],
-            ]
-            * (N // 4 + 1)
-        )
+        [[0.0, 0.4, 1.0], [0.0, 0.8, 1.0], [1.0, 0.8, 0.0], [1.0, 0.4, 0.0]]
+        * (N // 4 + 1)
     )
     cumsum = np.cumsum(np.asarray(a) / np.sum(a))
     cumsum = np.insert(cumsum, 0, 0)

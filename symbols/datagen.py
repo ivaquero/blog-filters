@@ -40,7 +40,7 @@ def gen_white_noise_1d():
 def gen_white_noise_1d_piecewise():
     var = symbols("σ^2_v")
 
-    dt, phi = gen_white_noise_discrete()
+    dt, _ = gen_white_noise_discrete()
     v = Matrix([[dt**2 / 2], [dt]])
     Q = v * var * v.T
 
@@ -51,7 +51,7 @@ def gen_white_noise_1d_piecewise():
 def gen_white_noise_2d_piecewise():
     var = symbols("σ^2_v")
 
-    dt, phi = gen_white_noise_discrete()
+    dt, _ = gen_white_noise_discrete()
     v = Matrix([[dt**2 / 2], [dt], [1]])
     Q = v * var * v.T
 

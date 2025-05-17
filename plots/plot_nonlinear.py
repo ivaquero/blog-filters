@@ -1,16 +1,10 @@
-import matplotlib.pyplot as ax
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import stats
 
 
 def plot_transferred_gaussian(
-    data,
-    func,
-    func_name="f(x)",
-    out_lim=None,
-    num_bins=300,
-    figsize=(8, 6),
+    data, func, func_name="f(x)", out_lim=None, num_bins=300, figsize=(8, 6)
 ):
     ys = func(data)
     std = np.std(ys)
@@ -23,7 +17,7 @@ def plot_transferred_gaussian(
     if out_lim is None:
         out_lim = [y - std * 3, y + std * 3]
 
-    _, axes = ax.subplots(2, 2, figsize=figsize, constrained_layout=True)
+    _, axes = plt.subplots(2, 2, figsize=figsize, constrained_layout=True)
 
     # plot output
     h = np.histogram(ys, num_bins, density=False)
@@ -55,7 +49,7 @@ def plot_transferred_gaussian(
 
 
 def plot_distributed_scatters(data, f, N, figsize=(6, 3)):
-    _, axes = ax.subplots(1, 2, figsize=figsize, constrained_layout=True)
+    _, axes = plt.subplots(1, 2, figsize=figsize, constrained_layout=True)
 
     axes[0].scatter(data[:N], range(N), alpha=0.2, s=1)
     axes[0].set(title="Input")
@@ -78,13 +72,13 @@ def plot_bivariate_colormap(ax, xs, ys):
 
 
 def plot_monte_carlo_mean(
-    axes, xs, ys, f, mean_fx, label, figsize=(8, 4), plot_colormap=True
+    axes, xs, ys, f, mean_fx, label, figsize=(8, 4), *, plot_colormap=True
 ):
     plot_bivariate_colormap(axes[0], xs, ys)
 
     axes[0].scatter(xs, ys, marker=".", alpha=0.02, color="k")
     axes[0].set(xlim=(-20, 20), ylim=(-20, 20))
-    axes[0].grid(False)
+    axes[0].grid(0)
 
     fxs, fys = f(xs, ys)
     computed_mean_x = np.average(fxs)
@@ -106,7 +100,7 @@ def plot_monte_carlo_mean(
     )
 
     axes[1].set(xlim=[-100, 100], ylim=[-10, 200])
-    axes[1].grid(False)
+    axes[1].grid(0)
     axes[1].legend()
     print(
         f"Difference in mean x={computed_mean_x - mean_fx[0]:.3f}, y={computed_mean_y - mean_fx[1]:.3f}"

@@ -1,0 +1,20 @@
+# Table of contents
+# Learn more at https://jupyterbook.org/customize/toc.html
+
+format: jb-book
+root: README
+parts:
+  - caption: Filter Implementation
+    chapters:
+      - file: filters-ghk
+      - file: filters-kf-basic
+      - file: filters-kf-design
+      - file: filters-kf-plus
+      - file: filters-smoothers
+      - file: filters-pf
+      - file: filters-bayes
+  - caption: Real Scenario Simulation
+    chapters:
+      - file: filters-maneuver
+      - file: filters-task-tracking
+      - file: filters-task-fusion

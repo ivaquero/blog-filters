@@ -6,7 +6,7 @@ from matplotlib import patches
 
 def prepend_x0(x0, data):
     if isinstance(x0, list):
-        data = [x0] + data.tolist()
+        data = [x0, *data.tolist()]
     if isinstance(x0, np.ndarray):
         data = np.concatenate([x0], data)
     return data
@@ -16,28 +16,13 @@ def gen_data_by_only_x(xs, dt):
     return np.arange(0, len(xs) * dt, dt), xs
 
 
-def plot_zs(
-    ax,
-    xs,
-    ys=None,
-    x0=None,
-    dt=1,
-    label="Measured",
-    **scatter_kwargs,
-):
+def plot_zs(ax, xs, ys=None, x0=None, dt=1, label="Measured", **scatter_kwargs):
     if x0:
         xs = prepend_x0(x0, xs)
     if ys is None:
         xs, ys = gen_data_by_only_x(xs, dt)
 
-    ax.scatter(
-        xs,
-        ys,
-        label=label,
-        marker="x",
-        color="k",
-        **scatter_kwargs,
-    )
+    ax.scatter(xs, ys, label=label, marker="x", color="k", **scatter_kwargs)
     # ax.set(xlim=[-1, len(xs) + 1], ylim=[-1, len(ys) + 1])
     ax.grid(1)
 
@@ -51,7 +36,7 @@ def plot_track(ax, xs, ys=None, dt=None, label="Track", c="k", lw=2, ls=":", **k
     return ax.plot(xs, color=c, lw=lw, ls=ls, label=label, **kwargs)
 
 
-def plot_preds(ax, priors, kind=None, scatter=False):
+def plot_preds(ax, priors, kind=None):
     rng = range(len(priors))
     if kind == "scatter":
         ax.scatter(rng, priors, marker="d", label="Predicted", color="r")
@@ -94,7 +79,8 @@ def cal_cov_ellipse(cov, deviations=1):
     height_radius = deviations * np.sqrt(s[1])
 
     if height_radius > width_radius:
-        raise ValueError("width_radius must be greater than height_radius")
+        error_message = "width_radius must be greater than height_radius"
+        raise ValueError(error_message)
 
     return (orientation, width_radius, height_radius)
 
@@ -104,6 +90,7 @@ def plot_cov_ellipse(
     mean,
     cov,
     stds=None,
+    *,
     show_semiaxis=False,
     show_center=True,
     angle=1,
@@ -111,7 +98,7 @@ def plot_cov_ellipse(
     facecolor="green",
     alpha=0.2,
     label="",
-    title=True,
+    show_title=True,
     **line_kwargs,
 ):
     if stds is None:
@@ -144,7 +131,7 @@ def plot_cov_ellipse(
             [y, y + h * math.sin(a + math.pi / 2)],
         )
         ax.plot([x, x + w * math.cos(a)], [y, y + w * math.sin(a)])
-    if title:
+    if show_title:
         ax.set(title=f"[{cov[0]}\n   {cov[1]}]")
 
 
@@ -156,7 +143,7 @@ def plot_resids_lims(ax, Ps, stds=1.0):
     ax.fill_between(range(len(std)), -std, std, facecolor="#ffff00", alpha=0.3)
 
 
-def plot_resids(ax, xs, data, col, ylabel, title=None, limits=True, stds=1):
+def plot_resids(ax, xs, data, col, ylabel, stds=1, title=None, *, limits=True):
     res = xs - data.x[:, col]
     ax.plot(res)
     if limits:

@@ -17,7 +17,8 @@ class FadingMemoryFilter:
 
     def __init__(self, x0, dt, order, beta):
         if order < 0 or order > 2:
-            raise ValueError("order must be between 0 and 2")
+            error_message = "order must be between 0 and 2"
+            raise ValueError(error_message)
 
         if np.isscalar(x0):
             self.x = np.zeros(order + 1)
@@ -63,17 +64,15 @@ class FadingMemoryFilter:
             self.e = np.array([e, de, dde], dtype=float)
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "FadingMemoryFilter object",
-                pretty_str("dt", self.dt),
-                pretty_str("order", self.order),
-                pretty_str("beta", self.beta),
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("e", self.e),
-            ]
-        )
+        return "\n".join([
+            "FadingMemoryFilter object",
+            pretty_str("dt", self.dt),
+            pretty_str("order", self.order),
+            pretty_str("beta", self.beta),
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("e", self.e),
+        ])
 
     def update(self, z):
         """Update the filter with measurement z. z must be the same type

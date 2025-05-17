@@ -6,15 +6,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 import yaml
-from clutter import PoissonClutter2D
 from filter import (
     ExtendedKalmanBehavior,
     LinearKalmanBehavior,
     UnscentedendKalmanBehavior,
 )
+from utils import Detector, EllipseShape
+
+from clutter import PoissonClutter2D
 from models import ConstantVelocity, CoordinatedTurn
 from tracker import IMMPDATracker, PDATracker
-from utils import Detector, EllipseShape
 
 
 def parse_arguments():
@@ -45,9 +46,7 @@ def make_target_tracker(cfg):
         "UKF": UnscentedendKalmanBehavior,
     }
 
-    to_tracker_cls = {
-        "pda": PDATracker,
-    }
+    to_tracker_cls = {"pda": PDATracker}
 
     trackers = []
     dt = cfg["sampling_period"]
@@ -123,7 +122,7 @@ def generate_target_data(cfg):
     steps = cfg["steps"]
     change_interval = cfg["dynamics"]["change_interval"]
 
-    ndim_x = max([m.NDIM["x"] for m in models])
+    ndim_x = max(m.NDIM["x"] for m in models)
     ndim_z = models[0].NDIM["z"]  # outputs are same dimension.
 
     x_hist = np.zeros((steps, ndim_x))  # history
@@ -187,7 +186,7 @@ def track_target(cfg, tracker, z_tgt_hist):
 
     # for t in range(10):
     for t in range(steps):
-        print(f"\rstep : {t+1}/{steps}", end="")
+        print(f"\rstep : {t + 1}/{steps}", end="")
 
         clutter = clutter_model.arise(z_tgt_hist[t])
 
@@ -287,7 +286,7 @@ def plot_trajectory(
     )
 
     set_label = False
-    for i, elp_data in enumerate(valid_regions):
+    for _, elp_data in enumerate(valid_regions):
         if elp_data is None:
             continue
 
@@ -310,7 +309,7 @@ def plot_trajectory(
     ax.legend()
     ax.set_xlabel("x1")
     ax.set_ylabel("x2")
-    ax.grid(True)
+    ax.grid(1)
 
     fname = os.path.join(args.output_dir, "trajectory")
     if args.seed >= 0:
@@ -325,7 +324,7 @@ def plot_trajectory(
     ax.plot(range(steps), estimations[:, 1] * 3600 / 1000)
     ax.legend(["truth", "estimate"], loc="lower left")
     ax.set_ylabel("Velocity-x [km/h]")
-    ax.grid(True)
+    ax.grid(1)
 
     ax = fig.add_subplot(3, 1, 2)
     fig.subplots_adjust(bottom=0.1, top=0.95)
@@ -334,7 +333,7 @@ def plot_trajectory(
     ax.plot(range(steps), estimations[:, 3] * 3600 / 1000)
     ax.legend(["truth", "estimate"], loc="lower left")
     ax.set_ylabel("Velocity-y [km/h]")
-    ax.grid(True)
+    ax.grid(1)
 
     is_imm = cfg["estimator"]["IMM"]
     ax = fig.add_subplot(3, 1, 3)
@@ -348,7 +347,7 @@ def plot_trajectory(
         ax.legend(["truth"], loc="lower left")
     ax.set_ylabel("Yaw-rate [rad/s]")
     ax.set_xlabel("steps")
-    ax.grid(True)
+    ax.grid(1)
 
     fname = os.path.join(args.output_dir, "velocity")
     if args.seed >= 0:
@@ -386,9 +385,9 @@ def main():
         cfg = yaml.safe_load(f)
 
     tracker = make_target_tracker(cfg)
-    x_tgt_hist, z_tgt_hist, modes_tgt = generate_target_data(cfg)
+    x_tgt_hist, z_tgt_hist, _ = generate_target_data(cfg)
 
-    measurement_sets, x_posts, z_priors, valid_regions, mode_proba = track_target(
+    measurement_sets, x_posts, z_priors, valid_regions, _ = track_target(
         cfg, tracker, z_tgt_hist
     )
 

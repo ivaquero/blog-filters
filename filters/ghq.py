@@ -26,9 +26,9 @@ def gh_packed_pc(x, fmm_param):
     if len(fmm_param) >= 4:
         param = fmm_param[3]
 
-    if type(f) == str or callable(f):
+    if isinstance(f, str | callable):
         F = f(x) if "param" not in locals() else f(x, param)
-    elif type(f) == np.ndarray:
+    elif isinstance(f, np.ndarray):
         F = f @ x
     else:
         F = f(x) if "param" not in locals() else f(x, param)
@@ -147,9 +147,9 @@ def gh_nd_scaled(f, n, m, P, param=None):
     W = np.prod(W[ind], axis=0)  # ND weights
 
     # Evaluate the function at the sigma points
-    if type(f) == str or callable(f):
+    if isinstance(f, str | callable):
         F = f(SX) if param is None else f(SX, param)
-    elif type(f) == np.ndarray:
+    elif isinstance(f, np.ndarray):
         F = f @ SX
     else:
         F = f(SX) if param is None else f(SX, param)
@@ -313,7 +313,7 @@ def gh_kf_update(M, P, Y, h, R=None, h_param=None, p=3):
     return M, P, K, MU, S
 
 
-def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, same_p=True):
+def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
     """
     GHRTS_SMOOTH - Additive form Gauss-Hermite Rauch-Tung-Striebel smoother
 

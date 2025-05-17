@@ -172,28 +172,26 @@ class FixedLagSmoother:
         return xSmooth, xhat
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "FixedLagSmoother object",
-                pretty_str("dim_x", self.x),
-                pretty_str("dim_z", self.x),
-                pretty_str("N", self.N),
-                pretty_str("x", self.x),
-                pretty_str("x_s", self.x_s),
-                pretty_str("P", self.P),
-                pretty_str("F", self.F),
-                pretty_str("Q", self.Q),
-                pretty_str("R", self.R),
-                pretty_str("H", self.H),
-                pretty_str("K", self.K),
-                pretty_str("y", self.y),
-                pretty_str("S", self.S),
-                pretty_str("B", self.G),
-            ]
-        )
+        return "\n".join([
+            "FixedLagSmoother object",
+            pretty_str("dim_x", self.x),
+            pretty_str("dim_z", self.x),
+            pretty_str("N", self.N),
+            pretty_str("x", self.x),
+            pretty_str("x_s", self.x_s),
+            pretty_str("P", self.P),
+            pretty_str("F", self.F),
+            pretty_str("Q", self.Q),
+            pretty_str("R", self.R),
+            pretty_str("H", self.H),
+            pretty_str("K", self.K),
+            pretty_str("y", self.y),
+            pretty_str("S", self.S),
+            pretty_str("B", self.G),
+        ])
 
 
-def tf_smooth(M, P, Y, A, Q, H, R, use_inf=True):
+def tf_smooth(M, P, Y, A, Q, H, R, *, use_inf=True):
     """
     Two filter based Smoother
 

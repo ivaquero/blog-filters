@@ -3,21 +3,17 @@ import numpy as np
 from .plot_common import plot_preds, plot_zs, prepend_x0
 
 
-def plot_ghf(ax, data, filter, x0, vary_obj="data"):
+def plot_ghf(ax, data, filt, x0, vary_obj="data"):
     if x0:
         data = prepend_x0(x0, data)
     rng = range(len(data) + 1)
-    estimates, predictions = filter.batch_filter(data, save_preds=True)
+    estimates, predictions = filt.batch_filter(data, save_preds=True)
 
-    label_printed = {
-        "dx": f" by dx={filter.dx}",
-        "g": f" by g={filter.g}",
-        "data": "",
-    }
+    label_printed = {"dx": f" by dx={filt.dx}", "g": f" by g={filt.g}", "data": ""}
 
-    if hasattr(filter, "h"):
-        label_printed["h"] = f" by h={filter.h}"
-        label_printed["gh"] = f" by g={filter.g}, h={filter.h}"
+    if hasattr(filt, "h"):
+        label_printed["h"] = f" by h={filt.h}"
+        label_printed["gh"] = f" by g={filt.g}, h={filt.h}"
 
     ax.plot(
         rng,
@@ -38,6 +34,7 @@ def plot_gh_compar_param(
     rng=None,
     vary_obj="data",
     figwidth=8,
+    *,
     sharey=False,
     combined=True,
     show_preds=False,
@@ -45,46 +42,28 @@ def plot_gh_compar_param(
 ):
     if combined:
         if len(set(x0s)) != 1:
-            raise ValueError("x0s must be uniform")
+            error_message = "x0s must be uniform"
+            raise ValueError(error_message)
 
         x0 = x0s[0]
         ax = axes
         plot_zs(ax, xs=data, x0=x0, **scatter_kwargs)
-        for filter in filters:
-            _, preds = plot_ghf(
-                ax,
-                data,
-                filter,
-                x0,
-                vary_obj=vary_obj,
-            )
+        for filt in filters:
+            _, preds = plot_ghf(ax, data, filt, x0, vary_obj=vary_obj)
             if show_preds:
                 plot_preds(ax, np.r_[x0, preds])
 
     else:
-        for filter, x0, ax in zip(filters, x0s, axes.flatten()):
+        for filt, x0, ax in zip(filters, x0s, axes.flatten()):
             plot_zs(ax, xs=data, x0=x0, **scatter_kwargs)
-            _, preds = plot_ghf(
-                ax,
-                data,
-                filter,
-                x0,
-                vary_obj=vary_obj,
-            )
+            _, preds = plot_ghf(ax, data, filt, x0, vary_obj=vary_obj)
             if show_preds:
                 plot_preds(ax, np.r_[x0, preds])
 
 
-def plot_gh_compar_data(
-    axes,
-    data_ls,
-    filter,
-    x0,
-    show_preds=False,
-    **scatter_kwargs,
-):
+def plot_gh_compar_data(axes, data_ls, filt, x0, *, show_preds=False, **scatter_kwargs):
     for ax, data in zip(axes.flatten(), data_ls):
         plot_zs(ax, xs=data, x0=x0, **scatter_kwargs)
-        _, preds = plot_ghf(ax, data, filter, x0)
+        _, preds = plot_ghf(ax, data, filt, x0)
         if show_preds:
             plot_preds(ax, np.r_[x0, preds])

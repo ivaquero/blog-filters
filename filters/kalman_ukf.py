@@ -10,14 +10,7 @@ from .helpers import pretty_str
 from .kalman import KalmanFilter
 
 
-def unscented_transform(
-    sigmas,
-    Wm,
-    Wc,
-    noise_cov=None,
-    mean_fn=None,
-    residual_fn=None,
-):
+def unscented_transform(sigmas, Wm, Wc, noise_cov=None, mean_fn=None, residual_fn=None):
     """Computes unscented transform of a set of sigma points and weights.
 
     Parameters
@@ -123,7 +116,7 @@ class UnscentedKalmanFilter:
         self.sigmas_h = np.zeros((self._num_sigmas, self._dim_z))
 
         self.K = np.zeros((dim_x, dim_z))
-        self.y = np.zeros((dim_z))
+        self.y = np.zeros((dim_z, dim_z))
         self.z = np.array([[None] * dim_z]).T
         self.S = np.zeros((dim_z, dim_z))
         self.SI = np.zeros((dim_z, dim_z))
@@ -230,15 +223,18 @@ class UnscentedKalmanFilter:
         try:
             z = zs[0]
         except TypeError as e:
-            raise TypeError("zs must be list-like") from e
+            error_message = "zs must be list-like"
+            raise TypeError(error_message) from e
 
         if self._dim_z == 1:
             if not np.isscalar(z) and (z.ndim != 1 or len(z) != 1):
-                raise TypeError("zs must be a list of scalars or 1D, 1 element arrays")
+                error_message = "zs must be a list of scalars or 1D, 1 element arrays"
+                raise TypeError(error_message)
         elif len(z) != self._dim_z:
-            raise TypeError(
+            error_message = (
                 f"each element in zs must be a 1D array of length {self._dim_z}"
             )
+            raise TypeError(error_message)
 
         z_n = len(zs)
 
@@ -275,7 +271,8 @@ class UnscentedKalmanFilter:
         """
 
         if len(Xs) != len(Ps):
-            raise ValueError("Xs and Ps must have the same length")
+            error_message = "Xs and Ps must have the same length"
+            raise ValueError(error_message)
 
         n, dim_x = Xs.shape
 
@@ -352,34 +349,32 @@ class UnscentedKalmanFilter:
         return self._mahalanobis
 
     def __repr__(self):
-        return "\n".join(
-            [
-                "UnscentedKalmanFilter object",
-                pretty_str("x", self.x),
-                pretty_str("P", self.P),
-                pretty_str("x_prior", self.x_prior),
-                pretty_str("P_prior", self.P_prior),
-                pretty_str("Q", self.Q),
-                pretty_str("R", self.R),
-                pretty_str("S", self.S),
-                pretty_str("K", self.K),
-                pretty_str("y", self.y),
-                pretty_str("log-likelihood", self.log_likelihood),
-                pretty_str("likelihood", self.likelihood),
-                pretty_str("mahalanobis", self.mahalanobis),
-                pretty_str("sigmas_f", self.sigmas_f),
-                pretty_str("h", self.sigmas_h),
-                pretty_str("Wm", self.Wm),
-                pretty_str("Wc", self.Wc),
-                pretty_str("residual_x", self.residual_x),
-                pretty_str("residual_z", self.residual_z),
-                pretty_str("msqrt", self.msqrt),
-                pretty_str("hx", self.hx),
-                pretty_str("fx", self.fx),
-                pretty_str("x_mean", self.x_mean),
-                pretty_str("z_mean", self.z_mean),
-            ]
-        )
+        return "\n".join([
+            "UnscentedKalmanFilter object",
+            pretty_str("x", self.x),
+            pretty_str("P", self.P),
+            pretty_str("x_prior", self.x_prior),
+            pretty_str("P_prior", self.P_prior),
+            pretty_str("Q", self.Q),
+            pretty_str("R", self.R),
+            pretty_str("S", self.S),
+            pretty_str("K", self.K),
+            pretty_str("y", self.y),
+            pretty_str("log-likelihood", self.log_likelihood),
+            pretty_str("likelihood", self.likelihood),
+            pretty_str("mahalanobis", self.mahalanobis),
+            pretty_str("sigmas_f", self.sigmas_f),
+            pretty_str("h", self.sigmas_h),
+            pretty_str("Wm", self.Wm),
+            pretty_str("Wc", self.Wc),
+            pretty_str("residual_x", self.residual_x),
+            pretty_str("residual_z", self.residual_z),
+            pretty_str("msqrt", self.msqrt),
+            pretty_str("hx", self.hx),
+            pretty_str("fx", self.fx),
+            pretty_str("x_mean", self.x_mean),
+            pretty_str("z_mean", self.z_mean),
+        ])
 
 
 def utf_smooth2(
@@ -904,7 +899,7 @@ def uimm_smooth(
             a_j[i2] = np.sum(p_ijb[k][i2] * mu_bp)
             mu_bijp[:, i2] = p_ijb[k][:, i2] * mu_bp / a_j[i2]
 
-            if type(A[i2]) == np.ndarray:
+            if isinstance(A[i2], np.ndarray):
                 A2 = A[i2]
             elif type(A[i2]) or callable(A[i2]):
                 A2 = A[i2](x_bki[i2][ind[i2]], a_param[i2])
@@ -1032,9 +1027,10 @@ def uimm_smooth(
         for i2 in range(m):
             x_sik[k, i2] = MM_def.copy()
             P_sik[k, i2] = PP_def.copy()
-            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros(
-                (len(ind[i2]), len(ind[i2]))
-            )
+            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros((
+                len(ind[i2]),
+                len(ind[i2]),
+            ))
 
             for i1 in range(m):
                 x_sik[k, i2] += mu_ijsp[i1, i2] * x_jis[i2, i1]
