@@ -105,8 +105,9 @@ class IMMPDATracker(IMMFilter):
     def gate_thresh(self):
         if self.valid_region_type == "max_det":
             return self.kalman_filters[self.valid_region_idx].gate_thresh
-        elif self.valid_region_type == "mixture":
+        if self.valid_region_type == "mixture":
             return self.kalman_filters[0].gate_thresh
+        return None
 
     def estimate(self, t, z, u_prev):
         """Estimate the state."""

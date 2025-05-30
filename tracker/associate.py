@@ -15,7 +15,7 @@ class AssociateMixin(ABC):
         PG: float,
         PD: float,
         gamma: float,
-        clutter_density: float = None,
+        clutter_density: float | None = None,
         *,
         parametric=False,
     ):
