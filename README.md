@@ -19,7 +19,7 @@ This project is the reorganization of the code in the book [Kalman-and-Bayesian-
 
 To build the environment, there are 3 options
 
-- Install [Anaconda](https://www.anaconda.com/download/success)
+- Install [Anaconda](https://anaconda.com/download/success)
 - Install [Miniconda](https://docs.anaconda.com/free/miniconda/miniconda-install/)
 - Install [Miniforge](https://conda-forge.org/miniforge/)
 
