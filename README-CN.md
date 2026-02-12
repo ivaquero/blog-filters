@@ -32,7 +32,7 @@ conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
 conda config --set show_channel_urls yes
 # 安装包
-conda install matplotlib polars scipy sympy jupyterlab
+conda install matplotlib pandas scipy sympy jupyterlab
 ```
 
 然后，克隆本仓库

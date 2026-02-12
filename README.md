@@ -26,7 +26,7 @@ To build the environment, there are 3 options
 For option 2&3, you need to run the following command after installation
 
 ```sh
-conda install matplotlib polars scipy sympy jupyterlab
+conda install matplotlib pandas scipy sympy jupyterlab
 ```
 
 Then, clone this repo
