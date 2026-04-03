@@ -25,19 +25,19 @@ To build the environment, there are 3 options
 
 For option 2&3, you need to run the following command after installation
 
-```sh
+```shell
 conda install matplotlib pandas scipy sympy jupyterlab
 ```
 
 Then, clone this repo
 
-```sh
+```shell
 git clone https://github.com/ivaquero/blog-filters.git
 ```
 
 Finally, launch jupyterlab to run the code
 
-```sh
+```shell
 cd [this repo] && jupyter lab
 ```
 

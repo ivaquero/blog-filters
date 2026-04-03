@@ -25,7 +25,7 @@
 
 对于选项 2 和 3，你需要在安装后运行以下命令
 
-```sh
+```shell
 # 使用镜像
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/msys2/
 conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge/
@@ -37,13 +37,13 @@ conda install matplotlib pandas scipy sympy jupyterlab
 
 然后，克隆本仓库
 
-```sh
+```shell
 git clone https://github.com/ivaquero/blog-filters.git
 ```
 
 最后，启动 `jupyterlab` 运行代码
 
-```sh
+```shell
 cd [本仓库路径] && jupyter lab
 ```
 
