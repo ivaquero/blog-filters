@@ -125,11 +125,13 @@ def robot3d_symbol(*, print_symbol=False):
     β = (d / w) * sy.tan(a)
     r = w / sy.tan(a)
 
-    fxu = sy.Matrix([
-        [x - r * sy.sin(θ) + r * sy.sin(θ + β)],
-        [y + r * sy.cos(θ) - r * sy.cos(θ + β)],
-        [θ + β],
-    ])
+    fxu = sy.Matrix(
+        [
+            [x - r * sy.sin(θ) + r * sy.sin(θ + β)],
+            [y + r * sy.cos(θ) - r * sy.cos(θ + β)],
+            [θ + β],
+        ]
+    )
     F_j = fxu.jacobian(sy.Matrix([x, y, θ]))
     V_j = fxu.jacobian(sy.Matrix([v, a]))
 
@@ -182,11 +184,13 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         if abs(steering_angle) > 0.001:
             β = (dist / self.wheelbase) * math.tan(steering_angle)
             r = self.wheelbase / math.tan(steering_angle)
-            dx = np.array([
-                [-r * math.sin(hdg) + r * math.sin(hdg + β)],
-                [r * math.cos(hdg) - r * math.cos(hdg + β)],
-                [β],
-            ])
+            dx = np.array(
+                [
+                    [-r * math.sin(hdg) + r * math.sin(hdg + β)],
+                    [r * math.cos(hdg) - r * math.cos(hdg + β)],
+                    [β],
+                ]
+            )
         else:
             dx = np.array([[dist * math.cos(hdg)], [dist * math.sin(hdg)], [0]])
         return x + dx

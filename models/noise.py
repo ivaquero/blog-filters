@@ -37,7 +37,6 @@ def white_noise_discrete(
     block_size: int = 1,
     *,
     order_by_dim: bool = True,
-    seed: int = 1123,
 ):
     """Generate white noise with discrete time steps
 
@@ -66,7 +65,6 @@ def white_noise_discrete(
     ValueError
         _description_
     """
-    np.random.seed(seed)
 
     if dim == 2:
         Q = [[0.25 * dt**4, 0.5 * dt**3], [0.5 * dt**3, dt**2]]

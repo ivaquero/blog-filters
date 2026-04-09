@@ -12,11 +12,12 @@ class PoissonClutter2D:
         self.dentity = density
         self.range_ = range_
 
-    def arise(self, center):
-        num_clutter = np.random.poisson(lam=self.dentity * (self.range_**2))
+    def arise(self, center, seed=42):
+        rng = np.random.default_rng(seed)
+        num_clutter = rng.poisson(lam=self.dentity * (self.range_**2))
         if num_clutter == 0:
             return np.empty((0, 2))
 
-        return center + np.random.uniform(
+        return center + rng.uniform(
             low=-self.range_, high=self.range_, size=(num_clutter, 2)
         )

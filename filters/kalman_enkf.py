@@ -15,7 +15,7 @@ class EnsembleKalmanFilter:
     John L Crassidis and John L. Junkins. "Optimal Estimation of Dynamic Systems. CRC Press, second edition. 2012. pp, 257-9.
     """
 
-    def __init__(self, x, P, dim_z, dt, N, hx, fx):
+    def __init__(self, x, P, dim_z, dt, N, hx, fx, seed=42):
         if dim_z <= 0:
             raise ValueError("dim_z must be greater than zero")
         if N <= 0:
@@ -42,6 +42,8 @@ class EnsembleKalmanFilter:
         self._mean = np.zeros(dim_x)
         self._mean_z = np.zeros(dim_z)
 
+        self.seed = seed
+
     def initialize(self, x, P):
         """Initializes the filter with the specified mean and covariance. Only need to call this when using the filter
         to filter more than one set of data.
@@ -50,7 +52,8 @@ class EnsembleKalmanFilter:
         if x.ndim != 1:
             raise ValueError("x must be a 1D np.array")
 
-        self.sigmas = random.multivariate_normal(mean=x, cov=P, size=self.N)
+        rng = random.default_rng(self.seed)
+        self.sigmas = rng.multivariate_normal(mean=x, cov=P, size=self.N)
         self.x = x
         self.P = P
 
@@ -93,7 +96,8 @@ class EnsembleKalmanFilter:
         self.SI = linalg.inv(self.S)
         self.K = P_xz @ self.SI
 
-        e_r = random.multivariate_normal(self._mean_z, R, N)
+        rng = random.default_rng(self.seed)
+        e_r = rng.multivariate_normal(self._mean_z, R, N)
         for i in range(N):
             self.sigmas[i] += self.K @ (z + e_r[i] - sigmas_h[i])
 
@@ -112,7 +116,8 @@ class EnsembleKalmanFilter:
         for i, s in enumerate(self.sigmas):
             self.sigmas[i] = self.fx(s, self.dt)
 
-        e = random.multivariate_normal(self._mean, self.Q, N)
+        rng = random.default_rng(self.seed)
+        e = rng.multivariate_normal(self._mean, self.Q, N)
         self.sigmas += e
 
         self.x = np.mean(self.sigmas, axis=0)
@@ -123,23 +128,25 @@ class EnsembleKalmanFilter:
         self.P_prior = np.copy(self.P)
 
     def __repr__(self):
-        return "\n".join([
-            "EnsembleKalmanFilter object",
-            pretty_str("dim_x", self.dim_x),
-            pretty_str("dim_z", self.dim_z),
-            pretty_str("dt", self.dt),
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("x_prior", self.x_prior),
-            pretty_str("P_prior", self.P_prior),
-            pretty_str("Q", self.Q),
-            pretty_str("R", self.R),
-            pretty_str("K", self.K),
-            pretty_str("S", self.S),
-            pretty_str("sigmas", self.sigmas),
-            pretty_str("hx", self.hx),
-            pretty_str("fx", self.fx),
-        ])
+        return "\n".join(
+            [
+                "EnsembleKalmanFilter object",
+                pretty_str("dim_x", self.dim_x),
+                pretty_str("dim_z", self.dim_z),
+                pretty_str("dt", self.dt),
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("x_prior", self.x_prior),
+                pretty_str("P_prior", self.P_prior),
+                pretty_str("Q", self.Q),
+                pretty_str("R", self.R),
+                pretty_str("K", self.K),
+                pretty_str("S", self.S),
+                pretty_str("sigmas", self.sigmas),
+                pretty_str("hx", self.hx),
+                pretty_str("fx", self.fx),
+            ]
+        )
 
 
 def outer_product_sum(A, B=None):

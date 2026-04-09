@@ -36,7 +36,7 @@ def plot_sigmas_selection(ax, kappas=None, alphas=None, betas=None, var=None):
 
     xs = np.array([[2, 5], [5, 5], [8, 5]])
 
-    for x, κ, α, β in zip(xs, kappas, alphas, betas):
+    for x, κ, α, β in zip(xs, kappas, alphas, betas, strict=True):
         points = MerweScaledSigmas(2, κ, α, β)
         sigmas = points.sigma_points(x, P)
         _plot_sigmas(ax, sigmas, points.Wc, alpha=1.0, facecolor="k")
@@ -62,7 +62,7 @@ def plot_sigmas_compar_param(axes, obj, kappas=None, alphas=None, betas=None, va
     x = np.array([0, 0])
     P = np.array([[4, 2], [2, 4]])
 
-    for ax, κ, α, β in zip(axes, kappas, alphas, betas):
+    for ax, κ, α, β in zip(axes, kappas, alphas, betas, strict=True):
         sigmas = MerweScaledSigmas(n=2, kappa=κ, alpha=α, beta=β)
         _plot_sigmas(ax, sigmas.sigma_points(x, P), sigmas.Wc, c="b")
         plot_cov_ellipse(ax, x, P, stds=np.sqrt(var), facecolor="g", alpha=0.2)

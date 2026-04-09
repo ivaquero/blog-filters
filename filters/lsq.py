@@ -126,11 +126,13 @@ class LeastSquaresFilter:
         return error, std
 
     def __repr__(self):
-        return "\n".join([
-            "LeastSquaresFilter object",
-            pretty_str("dt", self.dt),
-            pretty_str("sigma", self.sigma),
-            pretty_str("_order", self._order),
-            pretty_str("x", self.x),
-            pretty_str("K", self.K),
-        ])
+        return "\n".join(
+            [
+                "LeastSquaresFilter object",
+                pretty_str("dt", self.dt),
+                pretty_str("sigma", self.sigma),
+                pretty_str("_order", self._order),
+                pretty_str("x", self.x),
+                pretty_str("K", self.K),
+            ]
+        )

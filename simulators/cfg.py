@@ -90,10 +90,11 @@ def extract_models(cfg):
 
 def generate_time_series_data(cfg):
     """Generate time series data."""
+    rng = np.random.default_rng(cfg["seed"])
 
     def _generate_noise(covar):
         mean = np.zeros(covar.shape[0])
-        return np.random.multivariate_normal(mean, covar)
+        return rng.multivariate_normal(mean, covar)
 
     models, covar_ws, covar_vs, initial_xs = extract_models(cfg)
 
@@ -203,9 +204,6 @@ def plot_result(args, x_est, mode_proba, x_real, z_real, mode_real):
 
 def main():
     args = parse_arguments()
-
-    if args.seed >= 0:
-        np.random.seed(args.seed)
 
     with open(args.cfg) as f:
         cfg = yaml.safe_load(f)

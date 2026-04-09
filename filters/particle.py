@@ -1,10 +1,9 @@
 import numpy as np
-from numpy import random
 from scipy import stats
 
 
 class ParticleFilter:
-    def __init__(self, N, x_dim, y_dim):
+    def __init__(self, N, x_dim, y_dim, seed=42):
         self.particles = np.empty((N, 3))  # x, y, heading
         self.N = N
         self.x_dim = x_dim
@@ -13,20 +12,25 @@ class ParticleFilter:
         # distribute particles randomly with uniform weight
         self.weights = np.empty(N)
         self.weights.fill(1.0 / N)
-        self.particles[:, 0] = random.uniform(0, x_dim, size=N)
-        self.particles[:, 1] = random.uniform(0, y_dim, size=N)
-        self.particles[:, 2] = random.uniform(0, 2 * np.pi, size=N)
+
+        rng = np.random.default_rng()
+        self.particles[:, 0] = rng.uniform(0, x_dim, size=N)
+        self.particles[:, 1] = rng.uniform(0, y_dim, size=N)
+        self.particles[:, 2] = rng.uniform(0, 2 * np.pi, size=N)
+
+        self.seed = seed
 
     def predict(self, u, std, dt=1):
         """Move according to control input u with noise std"""
-        self.particles[:, 2] += u[0] + random.randn(self.N) * std[0]
+        rng = np.random.default_rng(self.seed)
+        self.particles[:, 2] += u[0] + rng.randn(self.N) * std[0]
         self.particles[:, 2] %= 2 * np.pi
 
-        dist = (u[1] * dt) + (random.randn(self.N) * std[1])
+        dist = (u[1] * dt) + (rng.standard_normal(self.N) * std[1])
         self.particles[:, 0] += np.cos(self.particles[:, 2]) * dist
         self.particles[:, 1] += np.sin(self.particles[:, 2]) * dist
 
-        self.particles[:, 0:2] += u + random.randn(self.N, 2) * std
+        self.particles[:, 0:2] += u + rng.standard_normal(self.N, 2) * std
 
     def weight(self, z, var):
         dist = np.sqrt(
@@ -50,8 +54,9 @@ class ParticleFilter:
         w = np.zeros(self.N)
 
         cumsum = np.cumsum(self.weights)
+        rng = np.random.default_rng(self.seed)
         for i in range(self.N):
-            index = np.searchsorted(cumsum, random.random())
+            index = np.searchsorted(cumsum, rng.random())
             p[i] = self.particles[index]
             w[i] = self.weights[index]
 
@@ -87,16 +92,17 @@ def pf_update(particles, weights, z, R, landmarks):
         weights /= sum(weights)  # normalize
 
 
-def pf_predict(particles, u, std, dt=1.0):
+def pf_predict(particles, u, std, dt=1.0, seed=42):
     """Move according to control input u (heading change, velocity)
     with noise Q (std heading change, std velocity)"""
     N = len(particles)
+    rng = np.random.default_rng(seed)
 
     # update heading
-    particles[:, 2] += u[0] + (random.randn(N) * std[0])
+    particles[:, 2] += u[0] + (rng.standard_normal(N) * std[0])
     particles[:, 2] %= 2 * np.pi
 
     # move in the (noisy) commanded direction
-    dist = (u[1] * dt) + (random.randn(N) * std[1])
+    dist = (u[1] * dt) + (rng.standard_normal(N) * std[1])
     particles[:, 0] += np.cos(particles[:, 2]) * dist
     particles[:, 1] += np.sin(particles[:, 2]) * dist

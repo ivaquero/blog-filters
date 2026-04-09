@@ -253,7 +253,7 @@ class UnscentedKalmanFilter:
         # state covariances from Kalman Filter
         covariances = np.zeros((z_n, self._dim_x, self._dim_x))
 
-        for i, (z, r, dt) in enumerate(zip(zs, Rs, dts)):
+        for i, (z, r, dt) in enumerate(zip(zs, Rs, dts, strict=True)):
             self.predict(dt=dt, UT=UT)
             self.update(z, r, UT=UT)
             means[i, :] = self.x
@@ -349,32 +349,34 @@ class UnscentedKalmanFilter:
         return self._mahalanobis
 
     def __repr__(self):
-        return "\n".join([
-            "UnscentedKalmanFilter object",
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("x_prior", self.x_prior),
-            pretty_str("P_prior", self.P_prior),
-            pretty_str("Q", self.Q),
-            pretty_str("R", self.R),
-            pretty_str("S", self.S),
-            pretty_str("K", self.K),
-            pretty_str("y", self.y),
-            pretty_str("log-likelihood", self.log_likelihood),
-            pretty_str("likelihood", self.likelihood),
-            pretty_str("mahalanobis", self.mahalanobis),
-            pretty_str("sigmas_f", self.sigmas_f),
-            pretty_str("h", self.sigmas_h),
-            pretty_str("Wm", self.Wm),
-            pretty_str("Wc", self.Wc),
-            pretty_str("residual_x", self.residual_x),
-            pretty_str("residual_z", self.residual_z),
-            pretty_str("msqrt", self.msqrt),
-            pretty_str("hx", self.hx),
-            pretty_str("fx", self.fx),
-            pretty_str("x_mean", self.x_mean),
-            pretty_str("z_mean", self.z_mean),
-        ])
+        return "\n".join(
+            [
+                "UnscentedKalmanFilter object",
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("x_prior", self.x_prior),
+                pretty_str("P_prior", self.P_prior),
+                pretty_str("Q", self.Q),
+                pretty_str("R", self.R),
+                pretty_str("S", self.S),
+                pretty_str("K", self.K),
+                pretty_str("y", self.y),
+                pretty_str("log-likelihood", self.log_likelihood),
+                pretty_str("likelihood", self.likelihood),
+                pretty_str("mahalanobis", self.mahalanobis),
+                pretty_str("sigmas_f", self.sigmas_f),
+                pretty_str("h", self.sigmas_h),
+                pretty_str("Wm", self.Wm),
+                pretty_str("Wc", self.Wc),
+                pretty_str("residual_x", self.residual_x),
+                pretty_str("residual_z", self.residual_z),
+                pretty_str("msqrt", self.msqrt),
+                pretty_str("hx", self.hx),
+                pretty_str("fx", self.fx),
+                pretty_str("x_mean", self.x_mean),
+                pretty_str("z_mean", self.z_mean),
+            ]
+        )
 
 
 def utf_smooth2(
@@ -1027,10 +1029,9 @@ def uimm_smooth(
         for i2 in range(m):
             x_sik[k, i2] = MM_def.copy()
             P_sik[k, i2] = PP_def.copy()
-            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros((
-                len(ind[i2]),
-                len(ind[i2]),
-            ))
+            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros(
+                (len(ind[i2]), len(ind[i2]))
+            )
 
             for i1 in range(m):
                 x_sik[k, i2] += mu_ijsp[i1, i2] * x_jis[i2, i1]

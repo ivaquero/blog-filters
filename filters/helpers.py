@@ -114,9 +114,9 @@ def pretty_str(label, arr):
         if len(arr) == 0:
             return f"{label} = {type(arr)()!s}"
     if isinstance(arr, list | tuple | deque):
-        return "\n".join([
-            pretty_str(f"{label}[{i!s}]", x) for (i, x) in enumerate(arr)
-        ])
+        return "\n".join(
+            [pretty_str(f"{label}[{i!s}]", x) for (i, x) in enumerate(arr)]
+        )
 
     if label is None:
         label = ""

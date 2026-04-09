@@ -19,7 +19,7 @@ def gaussian_sum(g1, g2):
 
 def NEES(xs, est_xs, ps):
     est_err = xs - est_xs
-    return [x.T @ linalg.inv(p) @ x for x, p in zip(est_err, ps)]
+    return [x.T @ linalg.inv(p) @ x for x, p in zip(est_err, ps, strict=True)]
 
 
 def multi_gaussian_product(mean1, cov1, mean2, cov2):

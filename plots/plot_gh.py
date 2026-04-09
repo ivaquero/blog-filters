@@ -54,7 +54,7 @@ def plot_gh_compar_param(
                 plot_preds(ax, np.r_[x0, preds])
 
     else:
-        for filt, x0, ax in zip(filters, x0s, axes.flatten()):
+        for filt, x0, ax in zip(filters, x0s, axes.flatten(), strict=True):
             plot_zs(ax, xs=data, x0=x0, **scatter_kwargs)
             _, preds = plot_ghf(ax, data, filt, x0, vary_obj=vary_obj)
             if show_preds:
@@ -62,7 +62,7 @@ def plot_gh_compar_param(
 
 
 def plot_gh_compar_data(axes, data_ls, filt, x0, *, show_preds=False, **scatter_kwargs):
-    for ax, data in zip(axes.flatten(), data_ls):
+    for ax, data in zip(axes.flatten(), data_ls, strict=True):
         plot_zs(ax, xs=data, x0=x0, **scatter_kwargs)
         _, preds = plot_ghf(ax, data, filt, x0)
         if show_preds:

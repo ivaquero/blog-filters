@@ -141,17 +141,19 @@ class GFilter:
         return (2 * g**2) / den
 
     def __repr__(self):
-        return "\n".join([
-            "GHFilter object",
-            pretty_str("dt", self.dt),
-            pretty_str("g", self.g),
-            pretty_str("x", self.x),
-            pretty_str("dx", self.dx),
-            pretty_str("x_pred", self.x_pred),
-            pretty_str("dx_pred", self.dx_pred),
-            pretty_str("y", self.y),
-            pretty_str("z", self.z),
-        ])
+        return "\n".join(
+            [
+                "GHFilter object",
+                pretty_str("dt", self.dt),
+                pretty_str("g", self.g),
+                pretty_str("x", self.x),
+                pretty_str("dx", self.dx),
+                pretty_str("x_pred", self.x_pred),
+                pretty_str("dx_pred", self.dx_pred),
+                pretty_str("y", self.y),
+                pretty_str("z", self.z),
+            ]
+        )
 
 
 class GHFilter:
@@ -266,18 +268,20 @@ class GHFilter:
         return (vx, vdx)
 
     def __repr__(self):
-        return "\n".join([
-            "GHFilter object",
-            pretty_str("dt", self.dt),
-            pretty_str("g", self.g),
-            pretty_str("h", self.h),
-            pretty_str("x", self.x),
-            pretty_str("dx", self.dx),
-            pretty_str("x_pred", self.x_pred),
-            pretty_str("dx_pred", self.dx_pred),
-            pretty_str("y", self.y),
-            pretty_str("z", self.z),
-        ])
+        return "\n".join(
+            [
+                "GHFilter object",
+                pretty_str("dt", self.dt),
+                pretty_str("g", self.g),
+                pretty_str("h", self.h),
+                pretty_str("x", self.x),
+                pretty_str("dx", self.dx),
+                pretty_str("x_pred", self.x_pred),
+                pretty_str("dx_pred", self.dx_pred),
+                pretty_str("y", self.y),
+                pretty_str("z", self.z),
+            ]
+        )
 
 
 class GHKFilter:
@@ -425,21 +429,23 @@ class GHKFilter:
         return (vx, vdx, vddx)
 
     def __repr__(self):
-        return "\n".join([
-            "GHFilter object",
-            pretty_str("dt", self.dt),
-            pretty_str("g", self.g),
-            pretty_str("h", self.h),
-            pretty_str("k", self.k),
-            pretty_str("x", self.x),
-            pretty_str("dx", self.dx),
-            pretty_str("ddx", self.ddx),
-            pretty_str("x_pred", self.x_pred),
-            pretty_str("dx_pred", self.dx_pred),
-            pretty_str("ddx_pred", self.dx_pred),
-            pretty_str("y", self.y),
-            pretty_str("z", self.z),
-        ])
+        return "\n".join(
+            [
+                "GHFilter object",
+                pretty_str("dt", self.dt),
+                pretty_str("g", self.g),
+                pretty_str("h", self.h),
+                pretty_str("k", self.k),
+                pretty_str("x", self.x),
+                pretty_str("dx", self.dx),
+                pretty_str("ddx", self.ddx),
+                pretty_str("x_pred", self.x_pred),
+                pretty_str("dx_pred", self.dx_pred),
+                pretty_str("ddx_pred", self.dx_pred),
+                pretty_str("y", self.y),
+                pretty_str("z", self.z),
+            ]
+        )
 
 
 def optimal_noise_smoothing(g):

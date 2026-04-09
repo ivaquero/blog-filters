@@ -1,7 +1,6 @@
 import sys
 
 import numpy as np
-from numpy import random
 
 from .helpers import KFSaver
 from .kalman import KalmanFilter
@@ -12,7 +11,7 @@ sys.path.append("..")
 from models.const_vel import FCV
 
 
-def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=1123):
+def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=123):
     kf = KalmanFilter(dim_x=2, dim_z=2)
     kf.x = np.array([[0.0], [1.0]])
     kf.F = FCV(2, dt)
@@ -22,10 +21,10 @@ def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=1123):
     kf.R = [[sensor1_sigma**2, 0], [0, sensor2_sigma**2]]
     saver = KFSaver(kf)
 
-    random.seed(seed)
+    rng = np.random.default_rng(seed)
     for i in range(1, 100):
-        m0 = i + random.randn() * sensor1_sigma
-        m1 = i + random.randn() * sensor2_sigma
+        m0 = i + rng.standard_normal() * sensor1_sigma
+        m1 = i + rng.standard_normal() * sensor2_sigma
         kf.predict()
         kf.update(np.array([[m0], [m1]]))
         saver.save()

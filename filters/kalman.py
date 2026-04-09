@@ -291,7 +291,9 @@ class KalmanFilter:
         cov_p = np.zeros((n, self.dim_x, self.dim_x))
 
         if update_first:
-            for i, (z, F, Q, H, R, G, u) in enumerate(zip(zs, Fs, Qs, Hs, Rs, Gs, us)):
+            for i, (z, F, Q, H, R, G, u) in enumerate(
+                zip(zs, Fs, Qs, Hs, Rs, Gs, us, strict=True)
+            ):
                 self.update(z, H=H, R=R)
                 means[i, :] = self.x
                 cov[i, :, :] = self.P
@@ -305,7 +307,9 @@ class KalmanFilter:
                 if saver is not None:
                     saver.save()
         else:
-            for i, (z, F, Q, H, R, G, u) in enumerate(zip(zs, Fs, Qs, Hs, Rs, Gs, us)):
+            for i, (z, F, Q, H, R, G, u) in enumerate(
+                zip(zs, Fs, Qs, Hs, Rs, Gs, us, strict=True)
+            ):
                 self.predict(u=u, G=G, F=F, Q=Q)
                 means_p[i, :] = self.x
                 cov_p[i, :, :] = self.P
@@ -425,32 +429,34 @@ class KalmanFilter:
         return stats.multivariate_normal.logpdf(z, self.H @ self.x, self.S)
 
     def __repr__(self):
-        return "\n".join([
-            "KalmanFilter object",
-            pretty_str("dim_x", self.dim_x),
-            pretty_str("dim_z", self.dim_z),
-            pretty_str("dim_u", self.dim_u),
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("x_prior", self.x_prior),
-            pretty_str("P_prior", self.P_prior),
-            pretty_str("x_post", self.x_post),
-            pretty_str("P_post", self.P_post),
-            pretty_str("F", self.F),
-            pretty_str("Q", self.Q),
-            pretty_str("R", self.R),
-            pretty_str("H", self.H),
-            pretty_str("K", self.K),
-            pretty_str("y", self.y),
-            pretty_str("S", self.S),
-            pretty_str("M", self.M),
-            pretty_str("B", self.B),
-            pretty_str("z", self.z),
-            pretty_str("log-likelihood", self.log_likelihood),
-            pretty_str("likelihood", self.likelihood),
-            pretty_str("mahalanobis", self.mahalanobis),
-            pretty_str("alpha", self.alpha),
-        ])
+        return "\n".join(
+            [
+                "KalmanFilter object",
+                pretty_str("dim_x", self.dim_x),
+                pretty_str("dim_z", self.dim_z),
+                pretty_str("dim_u", self.dim_u),
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("x_prior", self.x_prior),
+                pretty_str("P_prior", self.P_prior),
+                pretty_str("x_post", self.x_post),
+                pretty_str("P_post", self.P_post),
+                pretty_str("F", self.F),
+                pretty_str("Q", self.Q),
+                pretty_str("R", self.R),
+                pretty_str("H", self.H),
+                pretty_str("K", self.K),
+                pretty_str("y", self.y),
+                pretty_str("S", self.S),
+                pretty_str("M", self.M),
+                pretty_str("B", self.B),
+                pretty_str("z", self.z),
+                pretty_str("log-likelihood", self.log_likelihood),
+                pretty_str("likelihood", self.likelihood),
+                pretty_str("mahalanobis", self.mahalanobis),
+                pretty_str("alpha", self.alpha),
+            ]
+        )
 
 
 def imm_update(X_p, P_p, c_j, ind, dims, Y, H, R, nargout=5):
@@ -817,10 +823,9 @@ def imm_smooth(MM, PP, MM_i, PP_i, MU, p_ij, mu_0j, ind, dims, A, Q, R, H, Y):
             # Initialize with default values
             x_sik[k, i2] = MM_def.copy()
             P_sik[k, i2] = PP_def.copy()
-            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros((
-                len(ind[i2]),
-                len(ind[i2]),
-            ))
+            P_sik[k, i2][np.ix_(ind[i2], ind[i2])] = np.zeros(
+                (len(ind[i2]), len(ind[i2]))
+            )
 
             # Mixed mean
             for i1 in range(m):

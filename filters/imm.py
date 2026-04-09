@@ -72,14 +72,14 @@ class IMMEstimator:
 
         # compute mixed initial conditions
         xs, Ps = [], []
-        for _, (_, w) in enumerate(zip(self.filters, self.omega.T)):
+        for _, (_, w) in enumerate(zip(self.filters, self.omega.T, strict=True)):
             x = np.zeros(self.x.shape)
-            for kf, wj in zip(self.filters, w):
+            for kf, wj in zip(self.filters, w, strict=True):
                 x += kf.x * wj
             xs.append(x)
 
             P = np.zeros(self.P.shape)
-            for kf, wj in zip(self.filters, w):
+            for kf, wj in zip(self.filters, w, strict=True):
                 y = kf.x - x
                 P += wj * (np.outer(y, y) + kf.P)
             Ps.append(P)
@@ -99,11 +99,11 @@ class IMMEstimator:
     def _update_state_estimate(self):
         """Computes the IMM's mixed state estimate from each filter using the the mode probability self.mu to weight the estimates."""
         self.x.fill(0)
-        for f, mu in zip(self.filters, self.mu):
+        for f, mu in zip(self.filters, self.mu, strict=True):
             self.x += f.x * mu
 
         self.P.fill(0)
-        for f, mu in zip(self.filters, self.mu):
+        for f, mu in zip(self.filters, self.mu, strict=True):
             y = f.x - self.x
             self.P += mu * (np.outer(y, y) + f.P)
 
@@ -115,21 +115,23 @@ class IMMEstimator:
             self.omega[i, j] = (self.M[i, j] * self.mu[i]) / self.cbar[j]
 
     def __repr__(self):
-        return "\n".join([
-            "IMMEstimator object",
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("x_prior", self.x_prior),
-            pretty_str("P_prior", self.P_prior),
-            pretty_str("x_post", self.x_post),
-            pretty_str("P_post", self.P_post),
-            pretty_str("N", self.N),
-            pretty_str("mu", self.mu),
-            pretty_str("M", self.M),
-            pretty_str("cbar", self.cbar),
-            pretty_str("likelihood", self.likelihood),
-            pretty_str("omega", self.omega),
-        ])
+        return "\n".join(
+            [
+                "IMMEstimator object",
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("x_prior", self.x_prior),
+                pretty_str("P_prior", self.P_prior),
+                pretty_str("x_post", self.x_post),
+                pretty_str("P_post", self.P_post),
+                pretty_str("N", self.N),
+                pretty_str("mu", self.mu),
+                pretty_str("M", self.M),
+                pretty_str("cbar", self.cbar),
+                pretty_str("likelihood", self.likelihood),
+                pretty_str("omega", self.omega),
+            ]
+        )
 
 
 class MMAEFilterBank:
@@ -215,9 +217,9 @@ class MMAEFilterBank:
         # state can be in form [x,y,z,...] or [[x, y, z,...]].T
         is_row_vector = self.filters[0].x.ndim == 1
         self.x = np.zeros(self.dim_x) if is_row_vector else np.zeros((self.dim_x, 1))
-        for f, p in zip(self.filters, self.p):
+        for f, p in zip(self.filters, self.p, strict=True):
             self.x += f.x @ p
-        for x, f, p in zip(self.x, self.filters, self.p):
+        for x, f, p in zip(self.x, self.filters, self.p, strict=True):
             y = f.x - x
             self.P += p * (np.outer(y, y) + f.P)
 
@@ -227,10 +229,12 @@ class MMAEFilterBank:
         self.P_post = self.P.copy()
 
     def __repr__(self):
-        return "\n".join([
-            "MMAEFilterBank object",
-            pretty_str("dim_x", self.dim_x),
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("log-p", self.p),
-        ])
+        return "\n".join(
+            [
+                "MMAEFilterBank object",
+                pretty_str("dim_x", self.dim_x),
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("log-p", self.p),
+            ]
+        )

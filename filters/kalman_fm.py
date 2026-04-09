@@ -64,15 +64,17 @@ class FadingMemoryFilter:
             self.e = np.array([e, de, dde], dtype=float)
 
     def __repr__(self):
-        return "\n".join([
-            "FadingMemoryFilter object",
-            pretty_str("dt", self.dt),
-            pretty_str("order", self.order),
-            pretty_str("beta", self.beta),
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("e", self.e),
-        ])
+        return "\n".join(
+            [
+                "FadingMemoryFilter object",
+                pretty_str("dt", self.dt),
+                pretty_str("order", self.order),
+                pretty_str("beta", self.beta),
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("e", self.e),
+            ]
+        )
 
     def update(self, z):
         """Update the filter with measurement z. z must be the same type
