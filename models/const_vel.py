@@ -1,33 +1,25 @@
-"""Compatibility exports for the constant-velocity linear state-space model."""
+"""Constant-velocity linear state-space model exports."""
 
 from .ssmodel_linear import (
-    FCV,
-    HCV as H,
-    KFCV,
     ConstantVelocity,
-    FxCV,
-    KFCV1d,
-    KFCV2d,
-    constant_velocity_F,
-    constant_velocity_H,
     constant_velocity_filter,
     constant_velocity_filter_1d,
     constant_velocity_filter_2d,
-    constant_velocity_fx,
+    constant_velocity_measurement_matrix,
+    constant_velocity_measurement_noise_matrix,
+    constant_velocity_process_noise_input,
+    constant_velocity_transition_function,
+    constant_velocity_transition_matrix,
 )
 
 __all__ = [
-    "FCV",
-    "KFCV",
     "ConstantVelocity",
-    "FxCV",
-    "H",
-    "KFCV1d",
-    "KFCV2d",
-    "constant_velocity_F",
-    "constant_velocity_H",
     "constant_velocity_filter",
     "constant_velocity_filter_1d",
     "constant_velocity_filter_2d",
-    "constant_velocity_fx",
+    "constant_velocity_measurement_matrix",
+    "constant_velocity_measurement_noise_matrix",
+    "constant_velocity_process_noise_input",
+    "constant_velocity_transition_function",
+    "constant_velocity_transition_matrix",
 ]

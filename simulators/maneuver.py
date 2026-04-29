@@ -5,7 +5,7 @@ import numpy as np
 from numpy import random
 
 sys.path.append("..")
-from models.const_vel import FCV
+from models.const_vel import constant_velocity_transition_matrix
 
 
 def angle_between(x, y):
@@ -92,7 +92,7 @@ def simulate_turning(N=600, turn_start=400):
 
     # r = 1.
     dt = 1.0
-    phi_sim = FCV(4, dt)
+    phi_sim = constant_velocity_transition_matrix(4, dt)
 
     γ = np.array([[dt**2 / 2, 0], [dt, 0], [0, dt**2 / 2], [0, dt]])
 

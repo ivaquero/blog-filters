@@ -8,13 +8,13 @@ from .kalman_ukf import UnscentedKalmanFilter
 from .sigma_points import JulierSigmas
 
 sys.path.append("..")
-from models.const_vel import FCV
+from models.const_vel import constant_velocity_transition_matrix
 
 
 def fusion_kf2d(sensor1_sigma, sensor2_sigma, dt=0.1, P=100, seed=123):
     kf = KalmanFilter(dim_x=2, dim_z=2)
     kf.x = np.array([[0.0], [1.0]])
-    kf.F = FCV(2, dt)
+    kf.F = constant_velocity_transition_matrix(2, dt)
     kf.H = np.array([[1.0, 0.0], [1.0, 0.0]])
     kf.P *= P
     kf.Q *= np.array([[(dt**3) / 3, (dt**2) / 2], [(dt**2) / 2, dt]]) * 0.02
