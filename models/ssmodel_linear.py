@@ -209,8 +209,6 @@ class ConstantVelocity(LinearStateSpaceModel):
     2D model with state ``[x, vx, y, vy]`` and measurement ``[x, y]``.
     """
 
-    NDIM = {"x": 4, "z": 2, "u": 0, "w": 2, "v": 2}
-
     def __init__(self, dt=0.1, axes: int = 2, dim_z: int | None = None):
         if axes < 1:
             raise ValueError("axes must be at least 1")
@@ -221,6 +219,7 @@ class ConstantVelocity(LinearStateSpaceModel):
         self.dt = dt
         self.axes = axes
         self.dim_z = dim_z
+        self.NDIM = {"x": 4, "z": 2, "u": 0, "w": 2, "v": 2}
         self.ndim = {"x": dim_x, "z": dim_z, "u": 0, "w": axes, "v": dim_z}
         self.F = constant_velocity_transition_matrix(dim_x, dt)
         self.L = constant_velocity_process_noise_input(dim_x, dt)

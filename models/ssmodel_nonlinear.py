@@ -319,18 +319,17 @@ class CoordinatedTurn(NonlinearStateSpaceModel):
     ``[x, y]``.
     """
 
-    NDIM = {
-        "x": CT_STATE_DIM,
-        "z": CT_MEASUREMENT_DIM,
-        "u": 0,
-        "w": CT_PROCESS_NOISE_DIM,
-        "v": CT_MEASUREMENT_DIM,
-    }
-
     def __init__(self, dt=0.1, eps=1e-14, dim_z: int = CT_MEASUREMENT_DIM):
         self.dt = dt
         self.eps = eps
         self.dim_z = dim_z
+        self.NDIM = {
+            "x": CT_STATE_DIM,
+            "z": CT_MEASUREMENT_DIM,
+            "u": 0,
+            "w": CT_PROCESS_NOISE_DIM,
+            "v": CT_MEASUREMENT_DIM,
+        }
         self.ndim = {**self.NDIM, "z": dim_z, "v": dim_z}
         self.H = coordinated_turn_H(dim_z)
         self.M = coordinated_turn_M(dim_z)
