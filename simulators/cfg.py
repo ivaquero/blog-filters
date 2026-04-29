@@ -4,14 +4,14 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from filter import (
+
+from filters import (
     ExtendedKalmanBehavior,
     IMMFilter,
     KalmanFilter,
     LinearKalmanBehavior,
     UnscentedendKalmanBehavior,
 )
-
 from models import ConstantVelocity, CoordinatedTurn
 
 
