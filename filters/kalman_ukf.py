@@ -10,6 +10,10 @@ from .helpers import pretty_str
 from .kalman import KalmanFilter
 
 
+def _as_covariance(value, dim):
+    return np.eye(dim) * value if np.isscalar(value) else value
+
+
 def unscented_transform(sigmas, Wm, Wc, noise_cov=None, mean_fn=None, residual_fn=None):
     """Computes unscented transform of a set of sigma points and weights.
 
@@ -39,19 +43,14 @@ def unscented_transform(sigmas, Wm, Wc, noise_cov=None, mean_fn=None, residual_f
     """
 
     kmax, n = sigmas.shape
-
-    try:
-        x = Wm @ sigmas if mean_fn is None else mean_fn(sigmas, Wm)
-    except:
-        print(sigmas)
-        raise
+    x = Wm @ sigmas if mean_fn is None else mean_fn(sigmas, Wm)
 
     # new covariance is the sum of the outer product of the residuals
     # times the weights
     # the fast way: for linear cases
     if residual_fn is np.subtract or residual_fn is None:
-        y = sigmas - x[np.newaxis, :]
-        P = y.T @ np.diag(Wc) @ y
+        y = sigmas - x
+        P = (y.T * Wc) @ y
     else:
         # the slow way: for nonlinear cases, like angles
         P = np.zeros((n, n))
@@ -160,24 +159,19 @@ class UnscentedKalmanFilter:
         if UT is None:
             UT = unscented_transform
 
-        if R is None:
-            R = self.R
-        elif np.isscalar(R):
-            R = np.eye(self._dim_z) * R
+        R = self.R if R is None else _as_covariance(R, self._dim_z)
 
-        sigmas_h = [hx(s, **hx_args) for s in self.sigmas_f]
-        self.sigmas_h = np.atleast_2d(sigmas_h)
+        for i, sigma in enumerate(self.sigmas_f):
+            self.sigmas_h[i] = hx(sigma, **hx_args)
 
         # mean and covariance of prediction passed through unscented transform
         zp, self.S = UT(
             self.sigmas_h, self.Wm, self.Wc, R, self.z_mean, self.residual_z
         )
-        self.SI = linalg.inv(self.S)
-
         # compute cross variance of the state and the measurements
         Pxz = self.cross_variance(self.x, zp, self.sigmas_f, self.sigmas_h)
 
-        self.K = Pxz @ self.SI  # Kalman gain
+        self.K = linalg.solve(self.S.T, Pxz.T).T  # Kalman gain
         self.y = self.residual_z(z, zp)  # residual
 
         # update Gaussian state estimate (x, P)
@@ -198,10 +192,13 @@ class UnscentedKalmanFilter:
         """
         Compute cross variance of the state `x` and measurement `z`.
         """
+        if self.residual_x is np.subtract and self.residual_z is np.subtract:
+            dx = sigmas_f - x
+            dz = sigmas_h - z
+            return (dx.T * self.Wc) @ dz
 
         Pxz = np.zeros((sigmas_f.shape[1], sigmas_h.shape[1]))
-        N = sigmas_f.shape[0]
-        for i in range(N):
+        for i in range(sigmas_f.shape[0]):
             dx = self.residual_x(sigmas_f[i], x)
             dz = self.residual_z(sigmas_h[i], z)
             Pxz += self.Wc[i] * np.outer(dx, dz)
@@ -216,8 +213,8 @@ class UnscentedKalmanFilter:
         # calculate sigma points for given mean and covariance
         sigmas = self.points_fn.sigma_points(self.x, self.P)
 
-        for i, s in enumerate(sigmas):
-            self.sigmas_f[i] = fx(s, dt, **fx_args)
+        for i, sigma in enumerate(sigmas):
+            self.sigmas_f[i] = fx(sigma, dt, **fx_args)
 
     def batch_filter(self, zs, Rs=None, dts=None, UT=None, saver=None):
         try:
@@ -238,11 +235,8 @@ class UnscentedKalmanFilter:
 
         z_n = len(zs)
 
-        if Rs is None:
-            Rs = [self.R] * z_n
-
-        if dts is None:
-            dts = [self._dt] * z_n
+        Rs = [self.R] * z_n if Rs is None else Rs
+        dts = [self._dt] * z_n if dts is None else dts
 
         # mean estimates from Kalman Filter
         if self.x.ndim == 1:
@@ -298,22 +292,27 @@ class UnscentedKalmanFilter:
         for k in reversed(range(n - 1)):
             # create sigma points from state estimate, pass through state func
             sigmas = self.points_fn.sigma_points(xs[k], ps[k])
-            for i in range(num_sigmas):
-                sigmas_f[i] = self.fx(sigmas[i], dts[k])
+            for i, sigma in enumerate(sigmas):
+                sigmas_f[i] = self.fx(sigma, dts[k])
 
             xb, Pb = UT(
                 sigmas_f, self.Wm, self.Wc, self.Q, self.x_mean, self.residual_x
             )
 
             # compute cross variance
-            Pxb = 0
-            for i in range(num_sigmas):
-                y = self.residual_x(sigmas_f[i], xb)
-                z = self.residual_x(sigmas[i], Xs[k])
-                Pxb += self.Wc[i] * np.outer(z, y)
+            if self.residual_x is np.subtract:
+                y = sigmas_f - xb
+                z = sigmas - Xs[k]
+                Pxb = (z.T * self.Wc) @ y
+            else:
+                Pxb = np.zeros((dim_x, dim_x))
+                for i in range(num_sigmas):
+                    y = self.residual_x(sigmas_f[i], xb)
+                    z = self.residual_x(sigmas[i], Xs[k])
+                    Pxb += self.Wc[i] * np.outer(z, y)
 
             # compute gain
-            K = Pxb @ linalg(Pb)
+            K = linalg.solve(Pb.T, Pxb.T).T
 
             # update the smoothed estimates
             xs[k] += K @ self.residual_x(xs[k + 1], xb)
@@ -345,7 +344,7 @@ class UnscentedKalmanFilter:
     @property
     def mahalanobis(self):
         if self._mahalanobis is None:
-            self._mahalanobis = np.sqrt(float(self.y.T @ self.SI @ self.y))
+            self._mahalanobis = np.sqrt(float(self.y.T @ linalg.solve(self.S, self.y)))
         return self._mahalanobis
 
     def __repr__(self):

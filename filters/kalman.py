@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import sys
-from copy import deepcopy
 
 import numpy as np
 from numpy import linalg
@@ -10,6 +9,14 @@ from scipy import stats
 
 from .helpers import pretty_str
 from .transformers import reshape_z
+
+
+def _default_sequence(value, n: int) -> list:
+    return [value] * n
+
+
+def _as_covariance(value, dim: int):
+    return np.eye(dim) * value if np.isscalar(value) else value
 
 
 class KalmanFilter:
@@ -109,27 +116,35 @@ class KalmanFilter:
         # identity matrix.
         self._I = np.eye(dim_x)
 
-        self.compute_log_likelihood = False
-        # only computed only if requested via property
-        if self.compute_log_likelihood:
-            self._log_likelihood = math.log(sys.float_info.min)
-            self._likelihood = sys.float_info.min
-            self._mahalanobis = None
+        self._log_likelihood = None
+        self._likelihood = None
+        self._mahalanobis = None
 
-        # save the priors so that in case to inspect them for various purposes
+        # save the priors/posts so they can be inspected after each step
+        self.x_prior = self.x.copy()
+        self.P_prior = self.P.copy()
+        self.x_post = self.x.copy()
+        self.P_post = self.P.copy()
+
+    def _reset_likelihood(self) -> None:
+        self._log_likelihood = None
+        self._likelihood = None
+        self._mahalanobis = None
+
+    def _save_prior(self) -> None:
         self.x_prior = self.x.copy()
         self.P_prior = self.P.copy()
 
-        # save the posts so that in case to inspect them for various purposes
+    def _save_posterior(self) -> None:
         self.x_post = self.x.copy()
         self.P_post = self.P.copy()
 
     def predict(
         self,
-        F: bool | np.ndarray = None,
-        G: bool | np.ndarray = None,
-        u: bool | np.array = None,
-        Q: bool | np.ndarray = None,
+        F: np.ndarray | None = None,
+        G: np.ndarray | None = None,
+        u: np.ndarray | None = None,
+        Q: float | np.ndarray | None = None,
     ):
         """Predict next state using the Kalman filter state propagation equations.
 
@@ -140,26 +155,20 @@ class KalmanFilter:
         u : np.array, default 0, optional.
         Q : np.ndarray(dim_x, dim_x), scalar, or None, optional.
         """
-        if F is None:
-            F = self.F
+        F = self.F if F is None else F
         if G is None and u is not None:
             G = self.G
-        if Q is None:
-            Q = self.Q
-        elif np.isscalar(Q):
-            Q = np.eye(self.dim_x) * Q
+        Q = self.Q if Q is None else _as_covariance(Q, self.dim_x)
 
         # x = Fx + Gu
+        self.x = F @ self.x
         if G is not None and u is not None:
-            self.x = F @ self.x + G @ u
-        else:
-            self.x = F @ self.x
+            self.x += G @ u
+
         # P = αFPF' + Q
         self.P = self._alpha_sq * (F @ self.P @ F.T) + Q
 
-        # save prior
-        self.x_prior = self.x.copy()
-        self.P_prior = self.P.copy()
+        self._save_prior()
 
     def update(self, z, H=None, R=None):
         """Add a new measurement (z) to the Kalman filter.
@@ -170,37 +179,28 @@ class KalmanFilter:
         R : np.array, scalar, or None, optional.
         H : np.array, or None
         """
-        self._log_likelihood = None
-        self._likelihood = None
-        self._mahalanobis = None
+        self._reset_likelihood()
 
         if z is None:
             self.z = np.array([[None] * self.dim_z]).T
-            self.x_post = self.x.copy()
-            self.P_post = self.P.copy()
             self.y = np.zeros((self.dim_z, 1))
-        else:
-            z = reshape_z(z, self.dim_z, self.x.ndim)
+            self._save_posterior()
+            return
 
-        if H is None:
-            H = self.H
-
+        z = reshape_z(z, self.dim_z, self.x.ndim)
+        H = self.H if H is None else H
+        R = self.R if R is None else _as_covariance(R, self.dim_z)
         # y = z - Hx
         self.y = z - H @ self.x
-
-        if R is None:
-            R = self.R
-        elif np.isscalar(R):
-            R = np.eye(self.dim_z) * R
 
         # common subexpression for speed
         Pxz = self.P @ H.T
         # S = HPH' + R
         # project system uncertainty into measurement space
         self.S = H @ Pxz + R  # S = Pzz
-        # K = PH'S^(-1)
+        # K = PH'S^(-1). Solve the transposed system to avoid forming S^(-1).
         # map system uncertainty into Kalman gain
-        self.K = Pxz @ linalg.inv(self.S)
+        self.K = linalg.solve(self.S.T, Pxz.T).T
 
         # x = x + Ky
         # predict new x with residual scaled by the Kalman gain
@@ -212,9 +212,8 @@ class KalmanFilter:
         self.P = I_KH @ self.P @ I_KH.T + self.K @ R @ self.K.T
 
         # save measurement and posterior state
-        self.z = deepcopy(z)
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.z = z.copy()
+        self._save_posterior()
 
     def batch_filter(
         self,
@@ -265,61 +264,38 @@ class KalmanFilter:
             array of the covariances for each time step after the prediction. In other words `covariance[k,:,:]` is the covariance at step `k`.
         """
         n = np.size(zs, 0)
-        if Fs is None:
-            Fs = [self.F] * n
-        if Qs is None:
-            Qs = [self.Q] * n
-        if Hs is None:
-            Hs = [self.H] * n
-        if Gs is None:
-            Gs = [self.G] * n
-        if us is None:
-            us = [0] * n
-        if Rs is None:
-            Rs = [self.R] * n
+        Fs = _default_sequence(self.F, n) if Fs is None else Fs
+        Qs = _default_sequence(self.Q, n) if Qs is None else Qs
+        Hs = _default_sequence(self.H, n) if Hs is None else Hs
+        Gs = _default_sequence(self.G, n) if Gs is None else Gs
+        us = _default_sequence(None, n) if us is None else us
+        Rs = _default_sequence(self.R, n) if Rs is None else Rs
 
-        # mean estimates from Kalman Filter
-        if np.ndim(self.x) == 1:
-            means = np.zeros((n, self.dim_x))
-            means_p = np.zeros((n, self.dim_x))
-        else:
-            means = np.zeros((n, self.dim_x, self.dim_z))
-            means_p = np.zeros((n, self.dim_x, self.dim_z))
-
-        # state covariances from Kalman Filter
+        mean_shape = (n, self.dim_x) if self.x.ndim == 1 else (n, self.dim_x, 1)
+        means = np.zeros(mean_shape)
+        means_p = np.zeros(mean_shape)
         cov = np.zeros((n, self.dim_x, self.dim_x))
         cov_p = np.zeros((n, self.dim_x, self.dim_x))
 
-        if update_first:
-            for i, (z, F, Q, H, R, G, u) in enumerate(
-                zip(zs, Fs, Qs, Hs, Rs, Gs, us, strict=True)
-            ):
+        steps = zip(zs, Fs, Qs, Hs, Rs, Gs, us, strict=True)
+        for i, (z, F, Q, H, R, G, u) in enumerate(steps):
+            if update_first:
                 self.update(z, H=H, R=R)
                 means[i, :] = self.x
                 cov[i, :, :] = self.P
-
-                self.predict(u=u, G=G, F=F, Q=Q)
-                print()
-
-                means_p[i, :] = self.x
-                cov_p[i, :, :] = self.P
-
-                if saver is not None:
-                    saver.save()
-        else:
-            for i, (z, F, Q, H, R, G, u) in enumerate(
-                zip(zs, Fs, Qs, Hs, Rs, Gs, us, strict=True)
-            ):
                 self.predict(u=u, G=G, F=F, Q=Q)
                 means_p[i, :] = self.x
                 cov_p[i, :, :] = self.P
-
+            else:
+                self.predict(u=u, G=G, F=F, Q=Q)
+                means_p[i, :] = self.x
+                cov_p[i, :, :] = self.P
                 self.update(z, R=R, H=H)
                 means[i, :] = self.x
                 cov[i, :, :] = self.P
 
-                if saver is not None:
-                    saver.save()
+            if saver is not None:
+                saver.save()
 
         return (means, cov, means_p, cov_p)
 
@@ -334,18 +310,22 @@ class KalmanFilter:
         n = Xs.shape[0]
         dim_x = Xs.shape[1]
 
-        if Fs is None:
-            Fs = [self.F] * n
-        if Qs is None:
-            Qs = [self.Q] * n
+        Fs = _default_sequence(self.F, n) if Fs is None else Fs
+        Qs = _default_sequence(self.Q, n) if Qs is None else Qs
 
         K = np.zeros((n, dim_x, dim_x))
 
         x, P, Pp = Xs.copy(), Ps.copy(), Ps.copy()
         for k in range(n - 2, -1, -1):
-            Pp[k] = Fs[k + 1] @ P[k] @ Fs[k + 1].T + Qs[k + 1]
-            K[k] = P[k] @ Fs[k + 1].T @ inv(Pp[k])
-            x[k] += K[k] @ (x[k + 1] - Fs[k + 1] @ x[k])
+            F = Fs[k + 1]
+            Pp[k] = F @ P[k] @ F.T + Qs[k + 1]
+            PFt = P[k] @ F.T
+            K[k] = (
+                linalg.solve(Pp[k].T, PFt.T).T
+                if inv is linalg.inv
+                else PFt @ inv(Pp[k])
+            )
+            x[k] += K[k] @ (x[k + 1] - F @ x[k])
             P[k] += K[k] @ (P[k + 1] - Pp[k]) @ K[k].T
 
         return (x, P, K, Pp)
@@ -368,25 +348,16 @@ class KalmanFilter:
         return z - self.H @ self.x_prior
 
     def measurement_of_state(self, x):
-        """_summary_
-
-        Parameters
-        ----------
-        x : _type_
-            _description_
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-
+        """Return the expected measurement for state ``x``."""
         return self.H @ x
 
     @property
     def log_likelihood(self):
         """log-likelihood of the last measurement."""
         if self._log_likelihood is None:
+            if not np.any(self.S):
+                self._log_likelihood = math.log(sys.float_info.min)
+                return self._log_likelihood
             self._log_likelihood = stats.multivariate_normal.logpdf(
                 x=self.y, cov=self.S
             )
@@ -402,6 +373,20 @@ class KalmanFilter:
             if self._likelihood == 0:
                 self._likelihood = sys.float_info.min
         return self._likelihood
+
+    @property
+    def mahalanobis(self):
+        """Mahalanobis distance of the innovation."""
+        if self._mahalanobis is None:
+            if not np.any(self.S):
+                self._mahalanobis = 0.0
+                return self._mahalanobis
+            try:
+                distance = self.y.T @ linalg.solve(self.S, self.y)
+            except linalg.LinAlgError:
+                distance = self.y.T @ linalg.pinv(self.S) @ self.y
+            self._mahalanobis = math.sqrt(float(np.squeeze(distance)))
+        return self._mahalanobis
 
     @property
     def alpha(self):
@@ -449,7 +434,7 @@ class KalmanFilter:
                 pretty_str("y", self.y),
                 pretty_str("S", self.S),
                 pretty_str("M", self.M),
-                pretty_str("B", self.B),
+                pretty_str("G", self.G),
                 pretty_str("z", self.z),
                 pretty_str("log-likelihood", self.log_likelihood),
                 pretty_str("likelihood", self.likelihood),

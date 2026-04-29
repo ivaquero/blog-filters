@@ -1,2 +1,2 @@
-from .const_vel import ConstantVelocity
-from .coord_turn import CoordinatedTurn
+from .ssmodel_linear import ConstantVelocity
+from .ssmodel_nonlinear import CoordinatedTurn
