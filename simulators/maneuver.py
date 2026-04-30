@@ -82,7 +82,7 @@ def simulate_maneuver(steady_count, std):
         ys.append(y)
 
     ns = NoisySensor(std)
-    pos = np.array(list(zip(xs, ys)))
+    pos = np.array(list(zip(xs, ys, strict=True)))
     zs = np.array([ns.sense(p) for p in pos])
     return pos, zs
 
