@@ -123,18 +123,19 @@ def plot_radar3d(axes, time, xs, ylabels=None, track=None):
     if ylabels is None:
         ylabels = ["position", "velocity", "altitude"]
 
-    ys_dict = dict(zip(ylabels, [xs[:, 0], xs[:, 1], xs[:, 2]], strict=True))
+    ys_dict = dict(zip([xs[:, 0], xs[:, 1], xs[:, 2]], ylabels, strict=True))
 
     for ax, ylabel in zip(axes, ylabels, strict=True):
         plot_kf(ax, time, ys=ys_dict[ylabel], label=f"{ylabel} filtered")
         if track is not None:
             track_dict = dict(
-                zip(ylabels, [track[:, 0], track[:, 1], track[:, 2]], strict=True)
+                zip([track[:, 0], track[:, 1], track[:, 2]], ylabels, strict=True)
             )
             plot_track(ax, time, ys=track_dict[ylabel], label=f"{ylabel} track")
         ax.set(xlabel="time", ylabel=ylabel)
-        ax.legend()
+        ax.legend(fontsize="small")
         ax.grid(1)
+        ax.tick_params(labelsize="small")
 
 
 def plot_radar3d_zs(ax, time, xs, obj, track=None, ylabels=None):
