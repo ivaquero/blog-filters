@@ -68,7 +68,7 @@ def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0):
     # Pass through unscented transform
     ukf_mean, ukf_cov = unscented_transform(sigmas_f, points.Wm, points.Wc)
     ukf_mean = ukf_mean[0]
-    ukf_std = np.sqrt(ukf_cov[0])
+    ukf_std = np.sqrt(ukf_cov[0])[0]
 
     _plot_comparison(ax, data, transformed, ukf_mean, ukf_std, "UKF", "b")
 

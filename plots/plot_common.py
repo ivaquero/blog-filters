@@ -48,7 +48,7 @@ def plot_preds(ax, priors, kind=None):
         rng,
         priors,
         marker="d" if kind == "scatter" else None,
-        ls="-." if kind != "scatter" else None,
+        ls="-.",
         label="Predicted",
         color="r",
     )
@@ -81,6 +81,7 @@ def plot_track_ellipses(ax, N, zs, xs, cov, title):
             facecolor="white",
         )
     ax.set(title=title)
+    return p
 
 
 def cal_cov_ellipse(cov, deviations=1):

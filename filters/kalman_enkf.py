@@ -42,9 +42,7 @@ class EnsembleKalmanFilter:
         self._mean = np.zeros(dim_x)
         self._mean_z = np.zeros(dim_z)
 
-        self.seed = seed
-
-    def initialize(self, x, P):
+    def initialize(self, x, P, seed=42):
         """Initializes the filter with the specified mean and covariance. Only need to call this when using the filter
         to filter more than one set of data.
         """
@@ -52,6 +50,7 @@ class EnsembleKalmanFilter:
         if x.ndim != 1:
             raise ValueError("x must be a 1D np.array")
 
+        self.seed = seed
         rng = random.default_rng(self.seed)
         self.sigmas = rng.multivariate_normal(mean=x, cov=P, size=self.N)
         self.x = x
