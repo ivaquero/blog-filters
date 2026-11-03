@@ -15,14 +15,14 @@ dependencies = [
 book = [
   "jupyter-book<2",
 ]
-sim = [
-  "pandas>=2.2",
-  "PyYAML>=6.0",
-]
 dev = [
   "ruff>=0.14",
   "pytest>=8.3",
   "ty>=0.0.9",
+]
+sim = [
+  "pandas>=2.2",
+  "PyYAML>=6.0",
 ]
 
 [build-system]
@@ -39,6 +39,11 @@ packages = ["filters", "models", "plots", "simulators", "symbols"]
 "simulators/py.typed" = "simulators/py.typed"
 "symbols/py.typed" = "symbols/py.typed"
 
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+pythonpath = ["."]
+testpaths = ["tests"]
+
 [tool.ruff]
 fix = true
 target-version = "py314"
@@ -52,15 +57,15 @@ skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
 extend-select = [
-  "ANN",       # type annotations (PEP 484 / 695)
+  "ANN",  # type annotations (PEP 484 / 695)
   "ASYNC",
-  "B",         # bugbear
-  "C4",        # comprehensions
+  "B",  # bugbear
+  "C4",  # comprehensions
   "DTZ",
   "E",
   "F",
-  "FA",        # future-annotations cleanup
-  "FURB",      # refurbisher (idiom modernization)
+  "FA",  # future-annotations cleanup
+  "FURB",  # refurbisher (idiom modernization)
   "I",
   "ICN",
   "ISC",
@@ -69,7 +74,7 @@ extend-select = [
   "PERF",
   "PGH",
   "PIE",
-  "PT",        # flake8-pytest-style
+  "PT",  # flake8-pytest-style
   "PTH",
   "PYI",
   "Q",
@@ -79,9 +84,8 @@ extend-select = [
   "S",
   "SIM",
   "SLF",
-  "TCH",
   "TID",
-  "TRY",       # exception handling patterns
+  "TRY",  # exception handling patterns
   "UP",
   "W",
 ]
@@ -130,7 +134,7 @@ ignore = [
 "simulators/*" = ["ANN"]
 "symbols/*" = ["ANN"]
 "tests/*" = [
-  "ANN",        # fixtures + test bodies stay un-annotated for readability
+  "ANN",  # fixtures + test bodies stay un-annotated for readability
   "ARG",
   "S101",
   "SLF001",
@@ -150,11 +154,6 @@ force-wrap-aliases = false
 split-on-trailing-comma = false
 order-by-type = true
 known-first-party = ["filters", "models", "plots", "simulators", "symbols"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["."]
-addopts = "-ra --strict-markers"
 
 [tool.ty.src]
 respect-ignore-files = true
