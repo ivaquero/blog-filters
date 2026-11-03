@@ -6,6 +6,7 @@ import numpy as np
 from numpy import linalg
 from scipy import stats
 
+from ._typing import Batch2Output, UkfRtsOutput
 from .helpers import pretty_str
 
 
@@ -255,7 +256,7 @@ class UnscentedKalmanFilter:
             if saver is not None:
                 saver.save()
 
-        return (means, covariances)
+        return Batch2Output(means, covariances)
 
     def rts_smoother(self, Xs, Ps, Qs=None, dts=None, UT=None):
         """Runs the Rauch-Tung-Striebel Kalman smoother on a set of
@@ -318,7 +319,7 @@ class UnscentedKalmanFilter:
             ps[k] += K @ (ps[k + 1] - Pb) @ K.T
             Ks[k] = K
 
-        return (xs, ps, Ks)
+        return UkfRtsOutput(xs, ps, Ks)
 
     @property
     def log_likelihood(self):

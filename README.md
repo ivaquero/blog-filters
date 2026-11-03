@@ -15,22 +15,22 @@ into a Jupyter Book plus a small Python package (`filters`, `models`, `plots`,
 
 ## Run locally
 
+The toolkit targets **Python 3.14** and is managed with [uv](https://docs.astral.sh/uv/):
+
 ```bash
-# 1. Create an environment with the pinned dependencies
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pip install -e .                 # so `from filters import ...` resolves
+# 1. Create the pinned environment and install every package in editable mode
+uv sync                     # fallback: python -m venv .venv && pip install -e ".[dev]"
 
 # 2. Build the book (executes every notebook via jupyter-book)
-jupyter-book build .
+uv run jupyter-book build .
 
 # 3. Open the rendered HTML
 open _build/html/index.html      # Windows: start _build/html/index.html
 ```
 
-The GitHub Pages deploy workflow runs the same `jupyter-book build .` plus
-`ruff check` and `pytest` on every push.
+Continuous integration mirrors the local workflow — `ruff check`, `ruff format
+--check`, `ty check --error-on-warning`, `pytest`, and finally
+`jupyter-book build .` — and runs on every push.
 
 ## Chapter ↔ module map
 
@@ -108,6 +108,31 @@ The GitHub Pages deploy workflow runs the same `jupyter-book build .` plus
 
 - [x] `datagen` — SymPy derivations of the discrete-time Q matrix used in the KF-design chapter
 
+## Notes on the code
+
+The toolkit is a clean-room reorganisation of the filterpy codebase rather than
+a compatibility fork: the goal is to demonstrate what a Kalman-family teaching
+library looks like when it is written **for** Python 3.14 instead of ported to
+it. That shows up in three places.
+
+* **Typing is first-class.** Every package ships a PEP 561 `py.typed` marker
+  and uses PEP 695 `type` aliases plus `numpy.typing.NDArray[np.float64]` in
+  `filters._typing`. `KalmanFilter`, `ExtendedKalmanFilter`, and friends
+  satisfy the runtime-checkable `Filter` protocol, so IMM / MMAE / plotting
+  helpers accept anything structural instead of requiring inheritance.
+* **Batch and smoother APIs return `NamedTuple`s.** `BatchOutput`,
+  `Batch2Output`, `RtsOutput`, `UkfRtsOutput`, `SmootherOutput`, and
+  `IMMOutput` expose `.means` / `.covs` / `.x` / `.P` fields while still
+  unpacking as ordinary tuples — no existing notebook or test breaks.
+* **Randomness is injected, not global.** Simulators, plotting helpers,
+  resamplers, and clutter models take an explicit
+  `numpy.random.Generator` (`rng=`) resolved through `filters._typing.resolve_rng`.
+  The legacy `seed=` keyword is retired; pass `rng=np.random.default_rng(seed)`
+  at the call site to pin reproducibility bit-for-bit.
+
+Every module is a plain Python package (no `sys.path` hacks) so you can
+`uv sync` or `pip install -e .` and import from anywhere.
+
 ## TODO
 
 - Chapter-end **Summary / Key terms / Exercises / Further reading** sections
@@ -117,16 +142,6 @@ The GitHub Pages deploy workflow runs the same `jupyter-book build .` plus
   into dedicated chapters.
 - Add PDA / clutter-aware tracking chapter that consumes `models.clutter`.
 - Add Singer motion model (`models.singer`) for maneuver-target literature.
-- Push type annotations and Google-style docstrings across `plots/` and the
-  remaining `filters/` modules, then lift the `ruff D` and `ty` gates.
-
-## Notes on the code
-
-Every module is a plain Python package (no `sys.path` hacks) so you can
-`pip install -e .` and import from anywhere. Randomness inside `simulators/`,
-`plots/`, and the notebooks is driven by
-`numpy.random.default_rng(seed)` — pass an explicit `seed=` to reproduce a
-figure or a golden test value bit-for-bit.
 
 ## License
 

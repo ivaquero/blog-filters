@@ -1,6 +1,16 @@
+"""Extended Kalman / sigma-point plotting helpers.
+
+Randomised demonstrations (EKF/UKF vs Monte Carlo) accept an injected
+``numpy.random.Generator`` so callers can pin figure output; the legacy
+``seed=`` parameter is retired.
+"""
+
+from __future__ import annotations
+
 import numpy as np
 from scipy import stats
 
+from filters._typing import resolve_rng
 from filters.kalman_ukf import unscented_transform
 from filters.sigma_points import MerweScaledSigmas
 
@@ -25,7 +35,7 @@ def _plot_comparison(
     print(f"{method_name:4} mean={computed_mean:.2f}, std={computed_std:.2f}")
 
 
-def plot_ekf_vs_mc(ax, seed=None):
+def plot_ekf_vs_mc(ax, rng: np.random.Generator | None = None) -> None:
     """Plot EKF vs Monte Carlo comparison for nonlinear transformation."""
 
     def fx(x):
@@ -36,8 +46,8 @@ def plot_ekf_vs_mc(ax, seed=None):
 
     mean, var = 1, 0.1
     std = np.sqrt(var)
-    rng = np.random.default_rng(seed)
-    data = rng.normal(loc=mean, scale=std, size=50000)
+    generator = resolve_rng(rng)
+    data = generator.normal(loc=mean, scale=std, size=50000)
     transformed = fx(data)
 
     ekf_mean = fx(mean)
@@ -47,7 +57,13 @@ def plot_ekf_vs_mc(ax, seed=None):
     _plot_comparison(ax, data, transformed, ekf_mean, ekf_std, "EKF", "b")
 
 
-def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0, seed=None):
+def plot_ukf_vs_mc(
+    ax,
+    kappa: float = 1.0,
+    alpha: float = 0.001,
+    beta: float = 3.0,
+    rng: np.random.Generator | None = None,
+) -> None:
     """Plot UKF vs Monte Carlo comparison for nonlinear transformation."""
 
     def fx(x):
@@ -55,8 +71,8 @@ def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0, seed=None):
 
     mean, var = 1, 0.1
     std = np.sqrt(var)
-    rng = np.random.default_rng(seed)
-    data = rng.normal(loc=mean, scale=std, size=50000)
+    generator = resolve_rng(rng)
+    data = generator.normal(loc=mean, scale=std, size=50000)
     transformed = fx(data)
 
     points = MerweScaledSigmas(1, kappa, alpha, beta)

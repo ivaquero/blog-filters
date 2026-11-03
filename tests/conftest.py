@@ -1,8 +1,8 @@
 """Shared fixtures for the blog-filters regression suite.
 
 Keeps every test deterministic without touching the module-level NumPy RNG:
-each fixture that produces randomness receives an explicit ``seed`` so CI runs
-match author runs bit-for-bit.
+each fixture that produces randomness constructs an explicit
+``numpy.random.Generator`` so CI runs match author runs bit-for-bit.
 """
 
 from __future__ import annotations

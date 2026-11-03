@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 
+from filters._typing import resolve_rng
 from models.const_vel import constant_velocity_transition_matrix
 
 
@@ -49,9 +50,9 @@ class ManeuveringTarget:
 
 
 class NoisySensor:
-    def __init__(self, std_noise=1.0, seed=None):
+    def __init__(self, std_noise=1.0, rng: np.random.Generator | None = None):
         self.std = std_noise
-        self.rng = np.random.default_rng(seed)
+        self.rng = resolve_rng(rng)
 
     def sense(self, pos):
         """Pass in actual position as tuple (x, y).
@@ -62,7 +63,7 @@ class NoisySensor:
         )
 
 
-def simulate_maneuver(steady_count, std, seed=None):
+def simulate_maneuver(steady_count, std, rng: np.random.Generator | None = None):
     t = ManeuveringTarget(x0=0, y0=0, v0=0.3, heading=0)
     xs, ys = [], []
 
@@ -79,7 +80,7 @@ def simulate_maneuver(steady_count, std, seed=None):
         xs.append(x)
         ys.append(y)
 
-    ns = NoisySensor(std, seed=seed)
+    ns = NoisySensor(std, rng=resolve_rng(rng))
     pos = np.array(list(zip(xs, ys, strict=True)))
     zs = np.array([ns.sense(p) for p in pos])
     return pos, zs

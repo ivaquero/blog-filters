@@ -115,7 +115,7 @@ def pretty_str(label, arr):
         """return true if a is a column vector"""
         try:
             return a.shape[0] > 1 and a.shape[1] == 1
-        except (AttributeError, IndexError):
+        except AttributeError, IndexError:
             return False
 
     # display empty lists correctly

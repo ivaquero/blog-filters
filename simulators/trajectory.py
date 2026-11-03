@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 
+from filters._typing import resolve_rng
 from filters.solvers import rk4
 
 
@@ -24,7 +25,16 @@ class _VelocityFn:
 
 
 class BallTrajectory2D:
-    def __init__(self, x0, y0, vel, theta_deg=0.0, g=9.8, noise=None, seed=None):
+    def __init__(
+        self,
+        x0,
+        y0,
+        vel,
+        theta_deg=0.0,
+        g=9.8,
+        noise=None,
+        rng: np.random.Generator | None = None,
+    ):
         if noise is None:
             noise = [0.0, 0.0]
         self.x = x0
@@ -35,7 +45,7 @@ class BallTrajectory2D:
         self._yvel = _VelocityFn(math.sin(theta) * vel, default_acc=-g)
         self.g = g
         self.noise = noise
-        self.rng = np.random.default_rng(seed)
+        self.rng = resolve_rng(rng)
 
     def step(self, dt):
         self.x = rk4(self.x, self.t, dt, self._xvel)
@@ -48,7 +58,15 @@ class BallTrajectory2D:
 
 
 class BaseballPath:
-    def __init__(self, x0, y0, launch_angle_deg, vel_ms, noise=(1.0, 1.0), seed=None):
+    def __init__(
+        self,
+        x0,
+        y0,
+        launch_angle_deg,
+        vel_ms,
+        noise=(1.0, 1.0),
+        rng: np.random.Generator | None = None,
+    ):
         """Create 2D baseball path object"""
         omega = math.radians(launch_angle_deg)
         self.v_x = vel_ms * math.cos(omega)
@@ -56,7 +74,7 @@ class BaseballPath:
         self.x = x0
         self.y = y0
         self.noise = noise
-        self.rng = np.random.default_rng(seed)
+        self.rng = resolve_rng(rng)
 
     def drag_force(self, vel):
         """Returns the force on a baseball due to air drag at

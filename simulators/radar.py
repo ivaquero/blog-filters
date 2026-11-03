@@ -4,15 +4,18 @@ import numpy as np
 import sympy as sy
 from numpy import linalg
 
+from filters._typing import resolve_rng
 from plots.plot_kf import plot_kf, plot_track
 
 
 class RadarStation:
-    def __init__(self, pos, range_std, elev_std, seed=None):
+    def __init__(
+        self, pos, range_std, elev_std, rng: np.random.Generator | None = None
+    ):
         self.pos = np.asarray(pos)
         self.range_std = range_std
         self.elev_std = elev_std
-        self.rng = np.random.default_rng(seed)
+        self.rng = resolve_rng(rng)
 
     def reading_of(self, ac_pos):
         """Returns (range, elevation) to aircraft.
@@ -32,11 +35,11 @@ class RadarStation:
 
 
 class ACSim:
-    def __init__(self, pos, vel, vel_std, seed=None):
+    def __init__(self, pos, vel, vel_std, rng: np.random.Generator | None = None):
         self.pos = np.asarray(pos, dtype=float)
         self.vel = np.asarray(vel, dtype=float)
         self.vel_std = vel_std
-        self.rng = np.random.default_rng(seed)
+        self.rng = resolve_rng(rng)
 
     def update(self, dt):
         """Compute and returns next position. Incorporates random variation in velocity."""
@@ -50,12 +53,12 @@ class RadarSim:
     flying at a constant altityude and velocity in 1D.
     """
 
-    def __init__(self, dt, pos, vel, alt, seed=None):
+    def __init__(self, dt, pos, vel, alt, rng: np.random.Generator | None = None):
         self.pos = pos
         self.vel = vel
         self.alt = alt
         self.dt = dt
-        self.rng = np.random.default_rng(seed)
+        self.rng = resolve_rng(rng)
 
     def get_range(self):
         """Returns slant range to the object.
@@ -159,8 +162,8 @@ def plot_radar3d_zs(ax, time, xs, obj, track=None, ylabels=None):
     ax.legend()
 
 
-def plot_moving_target(ax, seed=None):
-    rng = np.random.default_rng(seed)
+def plot_moving_target(ax, rng: np.random.Generator | None = None):
+    generator = resolve_rng(rng)
     pos = np.array([5.0, 5.0])
     for _ in range(5):
         pos += (0.5, 1.0)
@@ -169,7 +172,7 @@ def plot_moving_target(ax, seed=None):
 
         xs, ys = [], []
         for _ in range(100):
-            a = actual_angle + rng.standard_normal() * math.radians(1)
+            a = actual_angle + generator.standard_normal() * math.radians(1)
             xs.append(d * math.cos(a))
             ys.append(d * math.sin(a))
 
@@ -178,8 +181,8 @@ def plot_moving_target(ax, seed=None):
     ax.plot([5.5, pos[0]], [6, pos[1]], c="g", linestyle="--")
 
 
-def plot_iscts_two_sensors(axes, seed=None):
-    rng = np.random.default_rng(seed)
+def plot_iscts_two_sensors(axes, rng: np.random.Generator | None = None):
+    generator = resolve_rng(rng)
     poss = [np.array([4.0, 4]), np.array([3.0, 3.0])]
     sas = [[0, 2], [3, 4]]
     sbs = [[8, 2], [3, 7]]
@@ -188,7 +191,7 @@ def plot_iscts_two_sensors(axes, seed=None):
     for ax, pos, sa, sb, N in zip(axes, poss, sas, sbs, Ns, strict=True):
         ax.scatter(*sa, s=200, marker="v", c="k", label="Sensor 1")
         ax.scatter(*sb, s=200, marker="s", c="C0", label="Sensor 2")
-        _plot_iscts(ax, pos, sa, sb, N=N, rng=rng)
+        _plot_iscts(ax, pos, sa, sb, N=N, rng=generator)
         ax.legend()
 
 

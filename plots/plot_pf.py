@@ -1,12 +1,42 @@
+"""Particle-filter plotting helpers.
+
+Randomised visuals accept a caller-supplied ``numpy.random.Generator`` so
+notebooks can pin reproducibility without touching the global numpy RNG.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colorbar
 
+from filters._typing import resolve_rng
 from filters.resamplers import residual_resample
 
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 
-def plot_particles(ax, particles, marker="o", markersize=1, color="g"):
+__all__ = [
+    "plot_hbar",
+    "plot_particles",
+    "plot_pf",
+    "show_resample_multinomial",
+    "show_resample_residual",
+    "show_resample_stratified",
+    "show_resample_systematic",
+]
+
+
+def plot_particles(
+    ax: Axes,
+    particles: np.ndarray,
+    marker: str = "o",
+    markersize: float = 1,
+    color: str = "g",
+) -> None:
     N = len(particles)
     alpha = 0.20
     if N > 5000:
@@ -21,7 +51,9 @@ def plot_particles(ax, particles, marker="o", markersize=1, color="g"):
     )
 
 
-def plot_pf(axes, pf, xlim=100, ylim=100, *, weights=True):
+def plot_pf(
+    axes, pf, xlim: float = 100, ylim: float = 100, *, weights: bool = True
+) -> None:
     if weights:
         axes[1].set(yticklabels="", xlim=(0, ylim), ylim=(0, xlim))
         axes[1].scatter(pf.particles[:, 0], pf.weights, marker=".", s=1, color="k")
@@ -33,7 +65,7 @@ def plot_pf(axes, pf, xlim=100, ylim=100, *, weights=True):
     axes[0].set(xlim=(0, ylim), ylim=(0, xlim))
 
 
-def plot_hbar(a, N, figsize):
+def plot_hbar(a, N: int, figsize):
     cmap = mpl.colors.ListedColormap(
         [[0.0, 0.4, 1.0], [0.0, 0.8, 1.0], [1.0, 0.8, 0.0], [1.0, 0.4, 0.0]]
         * (N // 4 + 1)
@@ -56,19 +88,23 @@ def plot_hbar(a, N, figsize):
     return ax, cumsum
 
 
-def show_resample_multinomial(a, figsize=(6, 2), seed=None):
-    rng = np.random.default_rng(seed)
+def show_resample_multinomial(
+    a, figsize: tuple[float, float] = (6, 2), rng: np.random.Generator | None = None
+) -> None:
+    generator = resolve_rng(rng)
     N = len(a)
     ax, _ = plot_hbar(a, N, figsize=figsize)
 
     # make N subdivisions, and chose a random position within each one
-    b = rng.random(N)
+    b = generator.random(N)
     ax.scatter(b, [0.5] * len(b), s=60, facecolor="k", edgecolor="k")
     ax.set(title="multinomial resampling")
 
 
-def show_resample_stratified(a, figsize=(6, 2), seed=None):
-    rng = np.random.default_rng(seed)
+def show_resample_stratified(
+    a, figsize: tuple[float, float] = (6, 2), rng: np.random.Generator | None = None
+) -> None:
+    generator = resolve_rng(rng)
     N = len(a)
     ax, _ = plot_hbar(a, N, figsize=figsize)
 
@@ -76,13 +112,15 @@ def show_resample_stratified(a, figsize=(6, 2), seed=None):
     ax.vlines(xs, 0, 1, lw=2)
 
     # make N subdivisions, and chose a random position within each one
-    b = (rng.random(N) + range(N)) / N
+    b = (generator.random(N) + range(N)) / N
     ax.scatter(b, [0.5] * len(b), s=60, facecolor="k", edgecolor="k")
     ax.set(title="stratified resampling")
 
 
-def show_resample_systematic(a, figsize=(6, 2), seed=None):
-    rng = np.random.default_rng(seed)
+def show_resample_systematic(
+    a, figsize: tuple[float, float] = (6, 2), rng: np.random.Generator | None = None
+) -> None:
+    generator = resolve_rng(rng)
     N = len(a)
     ax, _ = plot_hbar(a, N, figsize=figsize)
 
@@ -90,12 +128,12 @@ def show_resample_systematic(a, figsize=(6, 2), seed=None):
     ax.vlines(xs, 0, 1, lw=2)
 
     # make N subdivisions, and chose a random position within each one
-    b = (rng.random() + np.array(range(N))) / N
+    b = (generator.random() + np.array(range(N))) / N
     ax.scatter(b, [0.5] * len(b), s=60, facecolor="k", edgecolor="k")
     ax.set(title="systematic resampling")
 
 
-def show_resample_residual(a, figsize=(6, 2)):
+def show_resample_residual(a, figsize: tuple[float, float] = (6, 2)) -> None:
     N = len(a)
     ax, cumsum = plot_hbar(a, N, figsize=figsize)
 

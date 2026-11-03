@@ -313,5 +313,4 @@ class SphericalRadialSigmas:
     def sigma_weights(self, x=None):
         n = self.num_sigmas()
         # equal weights 1/(2n) across all cubature points
-        W = np.full(2 * n, 1.0 / (2 * n))
-        return W
+        return np.full(2 * n, 1.0 / (2 * n))

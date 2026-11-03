@@ -1,9 +1,26 @@
+"""Particle-filter primitives.
+
+Randomness flows through an injected ``numpy.random.Generator`` so tests and
+notebooks own the stream; the legacy ``seed=`` knobs are gone. When ``rng`` is
+omitted we build a fresh unseeded generator, which matches the pattern used by
+``filters._typing.resolve_rng``.
+"""
+
+from __future__ import annotations
+
 import numpy as np
 from scipy import stats
 
+from ._typing import resolve_rng
+
 
 class ParticleFilter:
-    def __init__(self, N, x_dim, y_dim, seed=42):
+    """Object-centric particle filter with uniform initial weights."""
+
+    def __init__(
+        self, N: int, x_dim: float, y_dim: float, rng: np.random.Generator | None = None
+    ):
+        self.rng = resolve_rng(rng)
         self.particles = np.empty((N, 3))  # x, y, heading
         self.N = N
         self.x_dim = x_dim
@@ -13,20 +30,16 @@ class ParticleFilter:
         self.weights = np.empty(N)
         self.weights.fill(1.0 / N)
 
-        rng = np.random.default_rng()
-        self.particles[:, 0] = rng.uniform(0, x_dim, size=N)
-        self.particles[:, 1] = rng.uniform(0, y_dim, size=N)
-        self.particles[:, 2] = rng.uniform(0, 2 * np.pi, size=N)
+        self.particles[:, 0] = self.rng.uniform(0, x_dim, size=N)
+        self.particles[:, 1] = self.rng.uniform(0, y_dim, size=N)
+        self.particles[:, 2] = self.rng.uniform(0, 2 * np.pi, size=N)
 
-        self.seed = seed
-
-    def predict(self, u, std, dt=1):
-        """Move according to control input u with noise std"""
-        rng = np.random.default_rng(self.seed)
-        self.particles[:, 2] += u[0] + rng.standard_normal(self.N) * std[0]
+    def predict(self, u, std, dt: float = 1):
+        """Move according to control input ``u`` with per-step noise ``std``."""
+        self.particles[:, 2] += u[0] + self.rng.standard_normal(self.N) * std[0]
         self.particles[:, 2] %= 2 * np.pi
 
-        dist = (u[1] * dt) + (rng.standard_normal(self.N) * std[1])
+        dist = (u[1] * dt) + (self.rng.standard_normal(self.N) * std[1])
         self.particles[:, 0] += np.cos(self.particles[:, 2]) * dist
         self.particles[:, 1] += np.sin(self.particles[:, 2]) * dist
 
@@ -44,7 +57,7 @@ class ParticleFilter:
         self.weights *= prob
         self.weights /= sum(self.weights)  # normalize
 
-    def neff(self):
+    def neff(self) -> float:
         return 1.0 / np.sum(np.square(self.weights))
 
     def resample(self):
@@ -52,9 +65,8 @@ class ParticleFilter:
         w = np.zeros(self.N)
 
         cumsum = np.cumsum(self.weights)
-        rng = np.random.default_rng(self.seed)
         for i in range(self.N):
-            index = np.searchsorted(cumsum, rng.random())
+            index = np.searchsorted(cumsum, self.rng.random())
             p[i] = self.particles[index]
             w[i] = self.weights[index]
 
@@ -62,7 +74,7 @@ class ParticleFilter:
         self.weights.fill(1.0 / self.N)
 
     def estimate(self):
-        """Returns mean and variance"""
+        """Return mean and variance of the weighted particle positions."""
         pos = self.particles[:, 0:2]
         mu = np.average(pos, weights=self.weights, axis=0)
         var = np.average((pos - mu) ** 2, weights=self.weights, axis=0)
@@ -75,7 +87,7 @@ def neff(weights):
 
 
 def pf_estimate(particles, weights):
-    """Returns mean and variance of the weighted particles"""
+    """Return mean and variance of the weighted particles."""
     pos = particles[:, 0:2]
     mean = np.average(pos, weights=weights, axis=0)
     var = np.average((pos - mean) ** 2, weights=weights, axis=0)
@@ -90,17 +102,23 @@ def pf_update(particles, weights, z, R, landmarks):
         weights /= sum(weights)  # normalize
 
 
-def pf_predict(particles, u, std, dt=1.0, seed=42):
-    """Move according to control input u (heading change, velocity)
-    with noise Q (std heading change, std velocity)"""
+def pf_predict(
+    particles, u, std, dt: float = 1.0, rng: np.random.Generator | None = None
+):
+    """Move particles according to control ``u`` with per-step noise ``std``.
+
+    Heading is updated first, then each particle advances along its (noisy)
+    commanded direction. Pass an explicit ``rng`` to keep figure output
+    reproducible across calls.
+    """
+    generator = resolve_rng(rng)
     N = len(particles)
-    rng = np.random.default_rng(seed)
 
     # update heading
-    particles[:, 2] += u[0] + (rng.standard_normal(N) * std[0])
+    particles[:, 2] += u[0] + (generator.standard_normal(N) * std[0])
     particles[:, 2] %= 2 * np.pi
 
     # move in the (noisy) commanded direction
-    dist = (u[1] * dt) + (rng.standard_normal(N) * std[1])
+    dist = (u[1] * dt) + (generator.standard_normal(N) * std[1])
     particles[:, 0] += np.cos(particles[:, 2]) * dist
     particles[:, 1] += np.sin(particles[:, 2]) * dist

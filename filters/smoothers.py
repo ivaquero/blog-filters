@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import linalg
 
+from ._typing import RtsOutput
 from .helpers import pretty_str
 
 
@@ -14,7 +15,7 @@ def rts_smoother(Xs, Ps, Fs, Q):
         K[k] = P[k] @ F.T @ linalg.inv(Pp[k])
         x[k] += K[k] @ (x[k + 1] - F @ x[k])
         P[k] += K[k] @ (P[k + 1] - Pp[k]) @ K[k].T
-    return (x, P, K, Pp)
+    return RtsOutput(x, P, K, Pp)
 
 
 class FixedLagSmoother:

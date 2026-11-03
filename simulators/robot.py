@@ -5,6 +5,7 @@ import sympy as sy
 from numpy import linalg
 
 from filters import kalman_ekf, particle, resamplers
+from filters._typing import resolve_rng
 from plots import plot_pf
 
 from .datagen import gen_particles_gaussian, gen_particles_uniform
@@ -88,16 +89,17 @@ def HJac(x, lmark):
     return np.array([[-dx / dist, -dy / dist, 0], [dy / dist**2, -dx / dist**2, -1]])
 
 
-def z_landmark(lmark, sim_pos, std_rng, std_brg, rng=None):
-    if rng is None:
-        rng = np.random.default_rng()
+def z_landmark(
+    lmark, sim_pos, std_rng, std_brg, rng: np.random.Generator | None = None
+):
+    generator = resolve_rng(rng)
     x, y = sim_pos[0], sim_pos[1]
     dist = np.hypot(lmark[0] - x, lmark[1] - y)
     angle = math.atan2(lmark[1] - y, lmark[0] - x) - sim_pos[2]
     return np.array(
         [
-            dist + rng.standard_normal() * std_rng,
-            angle + rng.standard_normal() * std_brg,
+            dist + generator.standard_normal() * std_rng,
+            angle + generator.standard_normal() * std_brg,
         ]
     )
 
@@ -211,19 +213,19 @@ def robot_pf(
     initial_x=None,
     *,
     show_particles=False,
-    seed=None,
+    rng: np.random.Generator | None = None,
 ):
-    rng = np.random.default_rng(seed)
+    generator = resolve_rng(rng)
     landmarks = np.array([[-1, 2], [5, 10], [12, 14], [18, 21]])
     NL = len(landmarks)
 
     # create particles and weights
     if initial_x is not None:
         particles = gen_particles_gaussian(
-            mean=initial_x, std=(5, 5, np.pi / 4), N=N, seed=seed
+            mean=initial_x, std=(5, 5, np.pi / 4), N=N, rng=generator
         )
     else:
-        particles = gen_particles_uniform((0, 20), (0, 20), (0, 6.28), N, seed=seed)
+        particles = gen_particles_uniform((0, 20), (0, 20), (0, 6.28), N, rng=generator)
     weights = np.ones(N) / N
 
     if show_particles:
@@ -235,7 +237,7 @@ def robot_pf(
         robot_pos += (1, 1)
         # distance from robot to each landmark
         zs = linalg.norm(landmarks - robot_pos, axis=1) + (
-            rng.standard_normal(NL) * sensor_std_err
+            generator.standard_normal(NL) * sensor_std_err
         )
         # move diagonally forward to (x+1, x+1)
         particle.pf_predict(particles, u=(0.00, 1.414), std=(0.2, 0.05))
@@ -245,7 +247,7 @@ def robot_pf(
         )
         # resample if too few effective particles
         if particle.neff(weights) < N / 2:
-            indexes = resamplers.systematic_resample(weights)
+            indexes = resamplers.systematic_resample(weights, rng=generator)
             resamplers.resample_from_index(particles, weights, indexes)
             assert np.allclose(weights, 1 / N)
         mu, var = particle.pf_estimate(particles, weights)

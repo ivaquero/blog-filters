@@ -1,6 +1,17 @@
+"""Reusable synthetic-measurement generators.
+
+Every function that touches randomness accepts an explicit
+`numpy.random.Generator` (`rng=`), so callers own the stream and can pin
+reproducibility by building a fresh `default_rng(seed)` before the call.
+The previous `seed=` parameter has been retired: pass
+`rng=np.random.default_rng(seed)` at the call site instead.
+"""
+
 from collections.abc import Callable, Sequence
 
 import numpy as np
+
+from filters._typing import resolve_rng
 
 NoiseFn = Callable[[], float]
 Range = Sequence[float]
@@ -23,16 +34,15 @@ def _wrap_heading(particles: np.ndarray) -> np.ndarray:
     return particles
 
 
-def _resolve_noise_fn(random_func: NoiseFn | None) -> NoiseFn:
+def _resolve_noise_fn(random_func: NoiseFn | None, rng: np.random.Generator) -> NoiseFn:
     """Return a zero-argument standard-normal sampler.
 
-    If the caller does not supply ``random_func`` we draw a fresh
-    ``numpy.random.Generator`` so behaviour is reproducible-per-call rather than
-    relying on a shared global state.
+    If the caller supplies `random_func` it wins; otherwise we bind to the
+    provided Generator (which itself defaults to a fresh one).
     """
+
     if random_func is not None:
         return random_func
-    rng = np.random.default_rng()
     return rng.standard_normal
 
 
@@ -44,25 +54,12 @@ def gen_cvca(
     dt: float = 1,
     R: float = 1,
     random_func: NoiseFn | None = None,
+    rng: np.random.Generator | None = None,
 ) -> Samples:
-    """Generate samples from a constant velocity and constant acceleration model.
-
-    Args:
-        num: Number of samples.
-        x0: Initial state.
-        dx: Velocity.
-        ddx: Acceleration. Defaults to 0.
-        dt: Time step. Defaults to 1.
-        R: Measurement noise variance. Defaults to 1.
-        random_func: Optional zero-argument standard normal sampler. When None
-            a fresh ``numpy.random.Generator.standard_normal`` is used.
-
-    Returns:
-        Truth values and noisy measurements.
-    """
+    """Constant-velocity / constant-acceleration truth + noisy observations."""
     _validate_sample_count(num)
     _validate_variance("R", R)
-    sampler = _resolve_noise_fn(random_func)
+    sampler = _resolve_noise_fn(random_func, resolve_rng(rng))
 
     x = x0
     xs, zs = [], []
@@ -84,26 +81,13 @@ def gen_jittered_vel(
     Q: float = 0,
     R: float = 1,
     random_func: NoiseFn | None = None,
+    rng: np.random.Generator | None = None,
 ) -> Samples:
-    """Generate samples with process noise added to a constant velocity model.
-
-    Args:
-        num: Number of samples.
-        x0: Initial state.
-        dx: Base velocity.
-        dt: Time step. Defaults to 1.
-        Q: Process noise variance. Defaults to 0.
-        R: Measurement noise variance. Defaults to 1.
-        random_func: Optional zero-argument standard normal sampler. When None
-            a fresh ``numpy.random.Generator.standard_normal`` is used.
-
-    Returns:
-        Truth values and noisy measurements.
-    """
+    """Constant-velocity trajectory with process noise on the velocity term."""
     _validate_sample_count(num)
     _validate_variance("Q", Q)
     _validate_variance("R", R)
-    sampler = _resolve_noise_fn(random_func)
+    sampler = _resolve_noise_fn(random_func, resolve_rng(rng))
 
     x = x0
     xs, zs = [], []
@@ -119,74 +103,66 @@ def gen_jittered_vel(
 def jitterfy(
     center: float | np.ndarray, std: float, rng: np.random.Generator | None = None
 ) -> float | np.ndarray:
-    """Add normally distributed jitter to a scalar or array.
-
-    Args:
-        center: Original value or array.
-        std: Standard deviation of the jitter.
-        rng: Optional ``numpy.random.Generator``; a fresh one is created when
-            omitted so callers can pin reproducibility by passing their own.
-
-    Returns:
-        Jittered value or array.
-    """
+    """Add normally distributed jitter to a scalar or array."""
     _validate_variance("std", std)
-    if rng is None:
-        rng = np.random.default_rng()
-    return center + (rng.standard_normal() * std)
+    return center + (resolve_rng(rng).standard_normal() * std)
 
 
 def gen_sensor_data(
-    time: int, pos_std: float, vel_std: float, seed: int | None = 1123
+    time: int, pos_std: float, vel_std: float, rng: np.random.Generator | None = None
 ) -> tuple[list[list[float]], list[list[float]]]:
-    """Generate asynchronous position and velocity sensor readings."""
+    """Asynchronous position + velocity sensor readings at 3 Hz / 7 Hz."""
     _validate_sample_count(time)
     _validate_variance("pos_std", pos_std)
     _validate_variance("vel_std", vel_std)
 
-    rng = np.random.default_rng(seed)
+    generator = resolve_rng(rng)
     pos_data, vel_data = [], []
     dt = 0.0
     for _ in range(time * 3):
         dt += 1 / 3.0
-        time_jittered = dt + rng.standard_normal() * 0.01
+        time_jittered = dt + generator.standard_normal() * 0.01
         pos_data.append(
-            [time_jittered, time_jittered + rng.standard_normal() * pos_std]
+            [time_jittered, time_jittered + generator.standard_normal() * pos_std]
         )
 
     dt = 0.0
     for _ in range(time * 7):
         dt += 1 / 7.0
-        time_jittered = dt + rng.standard_normal() * 0.006
-        vel_data.append([time_jittered, 1.0 + rng.standard_normal() * vel_std])
+        time_jittered = dt + generator.standard_normal() * 0.006
+        vel_data.append([time_jittered, 1.0 + generator.standard_normal() * vel_std])
     return pos_data, vel_data
 
 
 def gen_particles_uniform(
-    x_range: Range, y_range: Range, hdg_range: Range, N: int, seed: int | None = None
+    x_range: Range,
+    y_range: Range,
+    hdg_range: Range,
+    N: int,
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray:
-    """Generate particles uniformly over x, y, and heading ranges."""
+    """Particles drawn uniformly from x/y/heading ranges."""
     _validate_sample_count(N)
-    rng = np.random.default_rng(seed)
+    generator = resolve_rng(rng)
 
     particles = np.empty((N, 3))
-    particles[:, 0] = rng.uniform(x_range[0], x_range[1], size=N)
-    particles[:, 1] = rng.uniform(y_range[0], y_range[1], size=N)
-    particles[:, 2] = rng.uniform(hdg_range[0], hdg_range[1], size=N)
+    particles[:, 0] = generator.uniform(x_range[0], x_range[1], size=N)
+    particles[:, 1] = generator.uniform(y_range[0], y_range[1], size=N)
+    particles[:, 2] = generator.uniform(hdg_range[0], hdg_range[1], size=N)
     return _wrap_heading(particles)
 
 
 def gen_particles_gaussian(
-    mean: Vector3, std: Vector3, N: int, seed: int | None = None
+    mean: Vector3, std: Vector3, N: int, rng: np.random.Generator | None = None
 ) -> np.ndarray:
-    """Generate particles from independent Gaussian dimensions."""
+    """Particles drawn from independent Gaussians per state dimension."""
     _validate_sample_count(N)
     if any(value < 0 for value in std):
         raise ValueError("std values must be non-negative")
-    rng = np.random.default_rng(seed)
+    generator = resolve_rng(rng)
 
     particles = np.empty((N, 3))
-    particles[:, 0] = mean[0] + (rng.standard_normal(N) * std[0])
-    particles[:, 1] = mean[1] + (rng.standard_normal(N) * std[1])
-    particles[:, 2] = mean[2] + (rng.standard_normal(N) * std[2])
+    particles[:, 0] = mean[0] + (generator.standard_normal(N) * std[0])
+    particles[:, 1] = mean[1] + (generator.standard_normal(N) * std[1])
+    particles[:, 2] = mean[2] + (generator.standard_normal(N) * std[2])
     return _wrap_heading(particles)

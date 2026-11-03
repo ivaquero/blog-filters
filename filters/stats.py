@@ -1,16 +1,21 @@
-from collections import namedtuple
+from typing import NamedTuple
 
 import numpy as np
 from numpy import linalg
 
-gaussian = namedtuple("gaussian", ["mean", "var"])
 
+class gaussian(NamedTuple):
+    """Scalar Gaussian parameterised by mean and (standard) deviation.
 
-def _gaussian_repr(self):
-    return f"N(μ={self.mean:.3f}, σ²={self.var**2:.3f})"
+    `var` stores the *standard deviation* (matching the historical
+    filterpy convention where `var ** 2` is printed as σ²).
+    """
 
+    mean: float
+    var: float
 
-gaussian.__repr__ = _gaussian_repr
+    def __repr__(self) -> str:
+        return f"N(μ={self.mean:.3f}, σ²={self.var**2:.3f})"
 
 
 def gaussian_product(g1, g2):

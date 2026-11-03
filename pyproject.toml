@@ -3,12 +3,12 @@ name = "blog-filters"
 version = "0.1.0"
 description = "Companion code and notebooks for the blog-filters series on Kalman-family estimators"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 dependencies = [
-  "matplotlib>=3.7",
-  "numpy>=1.24",
-  "scipy>=1.10",
-  "sympy>=1.12",
+  "matplotlib>=3.10",
+  "numpy>=2.1",
+  "scipy>=1.14",
+  "sympy>=1.13",
 ]
 
 [project.optional-dependencies]
@@ -16,12 +16,13 @@ book = [
   "jupyter-book<2",
 ]
 sim = [
-  "pandas>=2.0",
+  "pandas>=2.2",
   "PyYAML>=6.0",
 ]
 dev = [
-  "ruff>=0.6",
-  "pytest>=8.0",
+  "ruff>=0.14",
+  "pytest>=8.3",
+  "ty>=0.0.9",
 ]
 
 [build-system]
@@ -31,9 +32,16 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["filters", "models", "plots", "simulators", "symbols"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"filters/py.typed" = "filters/py.typed"
+"models/py.typed" = "models/py.typed"
+"plots/py.typed" = "plots/py.typed"
+"simulators/py.typed" = "simulators/py.typed"
+"symbols/py.typed" = "symbols/py.typed"
+
 [tool.ruff]
 fix = true
-target-version = "py310"
+target-version = "py314"
 line-length = 88
 
 [tool.ruff.format]
@@ -44,17 +52,36 @@ skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
 extend-select = [
+  "ANN",       # type annotations (PEP 484 / 695)
+  "ASYNC",
+  "B",         # bugbear
+  "C4",        # comprehensions
   "DTZ",
   "E",
   "F",
+  "FA",        # future-annotations cleanup
+  "FURB",      # refurbisher (idiom modernization)
   "I",
+  "ICN",
   "ISC",
+  "LOG",
   "NPY",
   "PERF",
+  "PGH",
+  "PIE",
+  "PT",        # flake8-pytest-style
+  "PTH",
+  "PYI",
+  "Q",
+  "RET",
+  "RSE",
   "RUF",
   "S",
   "SIM",
+  "SLF",
+  "TCH",
   "TID",
+  "TRY",       # exception handling patterns
   "UP",
   "W",
 ]
@@ -69,10 +96,49 @@ ignore = [
   "S603",
   # Mathematical code legitimately uses `I` for identity matrices.
   "E741",
-  # Intentional patterns retained from upstream filterpy.
+  # Notebook-adjacent helpers intentionally use try/except around matplotlib draws.
   "PERF203",
   "BLE001",
+  # Docstring-heavy numeric APIs still use bare `array` in prose; ANN401 would
+  # forbid `Any`, but the Protocol layer needs it for duck-typed inputs.
+  "ANN401",
+  # Existing notebooks rely on `assert_allclose` from `numpy.testing`, not
+  # pytest.raises with match=; PT rules would churn for no gain.
+  "PT006",
+  "PT007",
+  "PT011",
+  "PT012",
+  "PT013",
+  # TRY003/TRY004/TRY301 force "raise .. from .." verbosity that hurts
+  # readability in this teaching codebase.
+  "TRY003",
+  "TRY300",
+  "TRY301",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"filters/*" = [
+  # filters/ is being migrated progressively; only kalman.py and _typing.py
+  # currently satisfy full ANN coverage. Everything else is grandfathered
+  # until we finish the retrofit.
+  "ANN",
+]
+"filters/_typing.py" = ["ANN401"]
+"filters/kalman.py" = ["ANN401"]
+"models/*" = ["ANN"]
+"plots/*" = ["ANN"]
+"simulators/*" = ["ANN"]
+"symbols/*" = ["ANN"]
+"tests/*" = [
+  "ANN",        # fixtures + test bodies stay un-annotated for readability
+  "ARG",
+  "S101",
+  "SLF001",
+  "PLR2004",
+  "B008",
+  "DTZ",
+]
+"scripts/*" = ["ANN", "ARG", "INP", "S"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
@@ -83,8 +149,24 @@ combine-as-imports = true
 force-wrap-aliases = false
 split-on-trailing-comma = false
 order-by-type = true
+known-first-party = ["filters", "models", "plots", "simulators", "symbols"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra --strict-markers"
+
+[tool.ty.src]
+respect-ignore-files = true
+exclude = ["_build", "build"]
+
+[tool.ty.rules]
+# Baseline everything to error, then relax the few spots we intentionally
+# keep loose (Any-returning helpers, matplotlib duck typing).
+unresolved-import = "error"
+unresolved-attribute = "error"
+invalid-assignment = "error"
+invalid-type-form = "error"
+unsupported-operator = "error"
+not-subscriptable = "error"
+invalid-method-override = "error"

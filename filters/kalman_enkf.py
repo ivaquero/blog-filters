@@ -1,26 +1,50 @@
+"""Ensemble Kalman Filter (EnKF).
+
+The filter stores a single ``numpy.random.Generator`` on ``self.rng`` so
+predict/update advance the same stream instead of reseeding on every call —
+the pattern carried over from filterpy silently reused the same noise vector
+for every step and we now correct it as part of the Python 3.14 modernisation.
+"""
+
+from __future__ import annotations
+
 from copy import deepcopy
 
 import numpy as np
 from numpy import linalg
 
+from ._typing import resolve_rng
 from .helpers import pretty_str
 
 
 class EnsembleKalmanFilter:
     """Implements the Ensemble Kalman Filter (EnKF).
+
     It works with both linear and nonlinear systems.
 
     References
     ----------
-    John L Crassidis and John L. Junkins. "Optimal Estimation of Dynamic Systems. CRC Press, second edition. 2012. pp, 257-9.
+    John L Crassidis and John L. Junkins. "Optimal Estimation of Dynamic
+    Systems. CRC Press, second edition. 2012. pp, 257-9.
     """
 
-    def __init__(self, x, P, dim_z, dt, N, hx, fx, seed=42):
+    def __init__(
+        self,
+        x: np.ndarray,
+        P: np.ndarray,
+        dim_z: int,
+        dt: float,
+        N: int,
+        hx,
+        fx,
+        rng: np.random.Generator | None = None,
+    ):
         if dim_z <= 0:
             raise ValueError("dim_z must be greater than zero")
         if N <= 0:
             raise ValueError("N must be greater than zero")
 
+        self.rng = resolve_rng(rng)
         dim_x = len(x)
         self.dim_x = dim_x
         self.dim_z = dim_z
@@ -42,17 +66,17 @@ class EnsembleKalmanFilter:
         self._mean = np.zeros(dim_x)
         self._mean_z = np.zeros(dim_z)
 
-    def initialize(self, x, P, seed=42):
-        """Initializes the filter with the specified mean and covariance. Only need to call this when using the filter
-        to filter more than one set of data.
+    def initialize(self, x: np.ndarray, P: np.ndarray) -> None:
+        """Reset the ensemble with the given mean and covariance.
+
+        Only need to call this when reusing the filter across multiple data
+        sets; the constructor already performs the initial draw.
         """
 
         if x.ndim != 1:
             raise ValueError("x must be a 1D np.array")
 
-        self.seed = seed
-        rng = np.random.default_rng(self.seed)
-        self.sigmas = rng.multivariate_normal(mean=x, cov=P, size=self.N)
+        self.sigmas = self.rng.multivariate_normal(mean=x, cov=P, size=self.N)
         self.x = x
         self.P = P
 
@@ -65,7 +89,7 @@ class EnsembleKalmanFilter:
         self.P_post = self.P.copy()
 
     def update(self, z, R=None):
-        """Add a new measurement (z) to the Kalman filter. If z is None, nothing is changed."""
+        """Add a new measurement ``z``. If ``z`` is None nothing changes."""
 
         if z is None:
             self.z = np.array([[None] * self.dim_z]).T
@@ -95,8 +119,7 @@ class EnsembleKalmanFilter:
         self.SI = linalg.inv(self.S)
         self.K = P_xz @ self.SI
 
-        rng = np.random.default_rng(self.seed)
-        e_r = rng.multivariate_normal(self._mean_z, R, N)
+        e_r = self.rng.multivariate_normal(self._mean_z, R, N)
         for i in range(N):
             self.sigmas[i] += self.K @ (z + e_r[i] - sigmas_h[i])
 
@@ -109,15 +132,13 @@ class EnsembleKalmanFilter:
         self.P_post = self.P.copy()
 
     def predict(self):
-        """Predict next position."""
+        """Advance the ensemble by one time step."""
 
         N = self.N
         for i, s in enumerate(self.sigmas):
             self.sigmas[i] = self.fx(s, self.dt)
 
-        rng = np.random.default_rng(self.seed)
-        e = rng.multivariate_normal(self._mean, self.Q, N)
-        self.sigmas += e
+        self.sigmas += self.rng.multivariate_normal(self._mean, self.Q, N)
 
         self.x = np.mean(self.sigmas, axis=0)
         self.P = outer_product_sum(self.sigmas - self.x) / (N - 1)
@@ -148,7 +169,7 @@ class EnsembleKalmanFilter:
         )
 
 
-def outer_product_sum(A, B=None):
+def outer_product_sum(A: np.ndarray, B: np.ndarray | None = None) -> np.ndarray:
     if B is None:
         B = A
 
