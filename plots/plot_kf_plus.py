@@ -1,14 +1,10 @@
-import sys
-
 import numpy as np
-from numpy import random
 from scipy import stats
 
-from .plot_common import plot_cov_ellipse
-
-sys.path.append("..")
 from filters.kalman_ukf import unscented_transform
 from filters.sigma_points import MerweScaledSigmas
+
+from .plot_common import plot_cov_ellipse
 
 
 def _plot_comparison(
@@ -29,7 +25,7 @@ def _plot_comparison(
     print(f"{method_name:4} mean={computed_mean:.2f}, std={computed_std:.2f}")
 
 
-def plot_ekf_vs_mc(ax):
+def plot_ekf_vs_mc(ax, seed=None):
     """Plot EKF vs Monte Carlo comparison for nonlinear transformation."""
 
     def fx(x):
@@ -40,7 +36,8 @@ def plot_ekf_vs_mc(ax):
 
     mean, var = 1, 0.1
     std = np.sqrt(var)
-    data = random.normal(loc=mean, scale=std, size=50000)
+    rng = np.random.default_rng(seed)
+    data = rng.normal(loc=mean, scale=std, size=50000)
     transformed = fx(data)
 
     ekf_mean = fx(mean)
@@ -50,7 +47,7 @@ def plot_ekf_vs_mc(ax):
     _plot_comparison(ax, data, transformed, ekf_mean, ekf_std, "EKF", "b")
 
 
-def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0):
+def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0, seed=None):
     """Plot UKF vs Monte Carlo comparison for nonlinear transformation."""
 
     def fx(x):
@@ -58,7 +55,8 @@ def plot_ukf_vs_mc(ax, kappa=1.0, alpha=0.001, beta=3.0):
 
     mean, var = 1, 0.1
     std = np.sqrt(var)
-    data = random.normal(loc=mean, scale=std, size=50000)
+    rng = np.random.default_rng(seed)
+    data = rng.normal(loc=mean, scale=std, size=50000)
     transformed = fx(data)
 
     points = MerweScaledSigmas(1, kappa, alpha, beta)

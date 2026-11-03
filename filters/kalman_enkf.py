@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import numpy as np
-from numpy import linalg, random
+from numpy import linalg
 
 from .helpers import pretty_str
 
@@ -51,7 +51,7 @@ class EnsembleKalmanFilter:
             raise ValueError("x must be a 1D np.array")
 
         self.seed = seed
-        rng = random.default_rng(self.seed)
+        rng = np.random.default_rng(self.seed)
         self.sigmas = rng.multivariate_normal(mean=x, cov=P, size=self.N)
         self.x = x
         self.P = P
@@ -95,7 +95,7 @@ class EnsembleKalmanFilter:
         self.SI = linalg.inv(self.S)
         self.K = P_xz @ self.SI
 
-        rng = random.default_rng(self.seed)
+        rng = np.random.default_rng(self.seed)
         e_r = rng.multivariate_normal(self._mean_z, R, N)
         for i in range(N):
             self.sigmas[i] += self.K @ (z + e_r[i] - sigmas_h[i])
@@ -115,7 +115,7 @@ class EnsembleKalmanFilter:
         for i, s in enumerate(self.sigmas):
             self.sigmas[i] = self.fx(s, self.dt)
 
-        rng = random.default_rng(self.seed)
+        rng = np.random.default_rng(self.seed)
         e = rng.multivariate_normal(self._mean, self.Q, N)
         self.sigmas += e
 

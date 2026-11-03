@@ -164,8 +164,8 @@ class MMAEFilterBank:
 
         except AttributeError:
             self.z = 0
-            self.x = None
-            self.P = None
+            self.x = np.zeros(dim_x)
+            self.P = np.eye(dim_x)
 
         # these will always be a copy of x,P after predict() is called
         self.x_prior = self.x.copy()
@@ -179,7 +179,7 @@ class MMAEFilterBank:
         """Predict next position using the Kalman filter state propagation equations for each filter in the bank."""
 
         for f in self.filters:
-            f.predict(u)
+            f.predict(u=u)
 
         # save prior
         self.x_prior = self.x.copy()
@@ -206,10 +206,10 @@ class MMAEFilterBank:
 
         # new probability is recursively defined as prior * likelihood
         for i, f in enumerate(self.filters):
-            f.update(z, R, H)
+            f.update(z, H=H, R=R)
             self.p[i] *= f.likelihood
 
-        self.p /= sum(self.p)  # normalize
+        self.p /= np.sum(self.p)  # normalize
 
         # compute estimated state and covariance of the bank of filters.
         self.P = np.zeros(self.filters[0].P.shape)
@@ -218,9 +218,9 @@ class MMAEFilterBank:
         is_row_vector = self.filters[0].x.ndim == 1
         self.x = np.zeros(self.dim_x) if is_row_vector else np.zeros((self.dim_x, 1))
         for f, p in zip(self.filters, self.p, strict=True):
-            self.x += f.x @ p
-        for x, f, p in zip(self.x, self.filters, self.p, strict=True):
-            y = f.x - x
+            self.x += p * f.x
+        for f, p in zip(self.filters, self.p, strict=True):
+            y = f.x - self.x
             self.P += p * (np.outer(y, y) + f.P)
 
         # save measurement and posterior state

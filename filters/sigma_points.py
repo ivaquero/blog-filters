@@ -84,15 +84,17 @@ class JulierSigmas:
         self.Wc = self.Wm
 
     def __repr__(self):
-        return "\n".join([
-            "JulierSigmas object",
-            pretty_str("n", self.n),
-            pretty_str("κ", self.κ),
-            pretty_str("Wm", self.Wm),
-            pretty_str("Wc", self.Wc),
-            pretty_str("subtract", self.subtract),
-            pretty_str("sqrt", self.sqrt),
-        ])
+        return "\n".join(
+            [
+                "JulierSigmas object",
+                pretty_str("n", self.n),
+                pretty_str("κ", self.κ),
+                pretty_str("Wm", self.Wm),
+                pretty_str("Wc", self.Wc),
+                pretty_str("subtract", self.subtract),
+                pretty_str("sqrt", self.sqrt),
+            ]
+        )
 
 
 class MerweScaledSigmas:
@@ -170,17 +172,19 @@ class MerweScaledSigmas:
         return Wm, W, c
 
     def __repr__(self):
-        return "\n".join([
-            "MerweScaledSigmas object",
-            pretty_str("n", self.n),
-            pretty_str("α", self.α),
-            pretty_str("β", self.β),
-            pretty_str("κ", self.κ),
-            pretty_str("Wm", self.Wm),
-            pretty_str("Wc", self.Wc),
-            pretty_str("subtract", self.subtract),
-            pretty_str("sqrt", self.sqrt),
-        ])
+        return "\n".join(
+            [
+                "MerweScaledSigmas object",
+                pretty_str("n", self.n),
+                pretty_str("α", self.α),
+                pretty_str("β", self.β),
+                pretty_str("κ", self.κ),
+                pretty_str("Wm", self.Wm),
+                pretty_str("Wc", self.Wc),
+                pretty_str("subtract", self.subtract),
+                pretty_str("sqrt", self.sqrt),
+            ]
+        )
 
 
 class SimplexSigmas:
@@ -226,6 +230,9 @@ class SimplexSigmas:
             row = np.ones((1, Istar.shape[1] + 1)) * 1.0 / np.sqrt(λ * d * (d + 1))
             row[0, -1] = -d / np.sqrt(λ * d * (d + 1))
 
+            Istar = np.hstack((Istar, np.zeros((Istar.shape[0], 1))))
+            Istar = np.vstack((Istar, row))
+
         I_ = np.sqrt(n) * Istar
         scaled_unitary = U.T @ I_
 
@@ -241,15 +248,17 @@ class SimplexSigmas:
         self.Wc = self.Wm
 
     def __repr__(self):
-        return "\n".join([
-            "SimplexSigmas object",
-            pretty_str("n", self.n),
-            pretty_str("α", self.α),
-            pretty_str("Wm", self.Wm),
-            pretty_str("Wc", self.Wc),
-            pretty_str("subtract", self.subtract),
-            pretty_str("sqrt", self.sqrt),
-        ])
+        return "\n".join(
+            [
+                "SimplexSigmas object",
+                pretty_str("n", self.n),
+                pretty_str("α", self.α),
+                pretty_str("Wm", self.Wm),
+                pretty_str("Wc", self.Wc),
+                pretty_str("subtract", self.subtract),
+                pretty_str("sqrt", self.sqrt),
+            ]
+        )
 
 
 class SphericalRadialSigmas:
@@ -299,9 +308,10 @@ class SphericalRadialSigmas:
             sigmas[k] = x + U[k]
             sigmas[n + k] = x - U[k]
 
+        return sigmas
+
     def sigma_weights(self, x=None):
-        n = self.num_sigmas(x)
-        # weights are
-        W = 1 / (2 * n)
-        # weights
-        W *= np.ones(2 * n)
+        n = self.num_sigmas()
+        # equal weights 1/(2n) across all cubature points
+        W = np.full(2 * n, 1.0 / (2 * n))
+        return W

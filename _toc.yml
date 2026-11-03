@@ -6,13 +6,13 @@ root: README
 parts:
   - caption: Filter Implementation
     chapters:
-      - file: filters-ghk
+      - file: filters-bayes
       - file: filters-kf-basic
       - file: filters-kf-design
+      - file: filters-ghk
       - file: filters-kf-plus
       - file: filters-smoothers
       - file: filters-pf
-      - file: filters-bayes
   - caption: Real Scenario Simulation
     chapters:
       - file: filters-maneuver

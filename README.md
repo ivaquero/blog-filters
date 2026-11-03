@@ -3,71 +3,133 @@
 ![code size](https://img.shields.io/github/languages/code-size/ivaquero/blog-filters.svg)
 ![repo size](https://img.shields.io/github/repo-size/ivaquero/blog-filters.svg)
 
-This project is the reorganization of the code in the book [Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python).
+A beginner-friendly tutorial on Kalman-family filters, reorganized from
+Richard Labbe's
+[Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python)
+into a Jupyter Book plus a small Python package (`filters`, `models`, `plots`,
+`simulators`, `symbols`).
 
-## Goals
+## Read the book online
 
-- Provide a set of easy-to-understand introductory tutorials
-- Build a filter simulation toolkit that is friendly to beginners
+<https://ivaquero.github.io/blog-filters/>
 
-## Toolkit Structure
+## Run locally
 
-### `filters`: Filter-related module
+```bash
+# 1. Create an environment with the pinned dependencies
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .                 # so `from filters import ...` resolves
 
-- [ ] `bayes`: Bayesian statistics
-- [ ] `fusion`: data fusion
-- [ ] `ghk`: α-β-γ filtering
-- [ ] `ghq`: Gaussian-Hermite numerical integration
-- [ ] `imm`: interactive multiple models
-- [ ] `kalman_ckf`: cubature Kalman filter
-- [ ] `kalman_ekf`: extended Kalman filter
-- [ ] `kalman_enkf`: ensemble Kalman filter
-- [ ] `kalman_fm`: fading-memory filter
-- [ ] `kalman_hinf`: H∞ filter
-- [ ] `kalman_ukf`: unscented Kalman filter
-- [ ] `kalman`: linear Kalman filter
-- [ ] `lsq`: the least squares filter
-- [ ] `particle`: particle filter
-- [ ] `resamplers`: sampler
-- [ ] `sigma_points`: Sigma point
-- [ ] `smoothers`: smoother
-- [ ] `solvers`: equation solvers (such as Runge-Kutta)
-- [ ] `stats`: statistical indicators
-- [ ] `helpers`: auxiliary tools
+# 2. Build the book (executes every notebook via jupyter-book)
+jupyter-book build .
 
-### `models`: Model-related module
+# 3. Open the rendered HTML
+open _build/html/index.html      # Windows: start _build/html/index.html
+```
 
-- [ ] `const_acc`: constant acceleration model
-- [ ] `const_vel`: constant velocity model
-- [ ] `coord_turn`: coordinated rotation model
-- [ ] `singer`: Singer model
-- [ ] `noise`: model noise
-- [ ] `ssmodel*`: model base class
-- [ ] `pda`: probabilistic data association
+The GitHub Pages deploy workflow runs the same `jupyter-book build .` plus
+`ruff check` and `pytest` on every push.
 
-### `plots`: Plot-related module
+## Chapter ↔ module map
 
-- [ ] `plot_common`: common plot (measurement, trajectory, residual)
-- [ ] `plot_bayes`: Bayes statistical plot
-- [ ] `plot_gh`: α-β-γ filter plot
-- [ ] `plot_kf`: Kalman filter plot
-- [ ] `plot_kf_plus`: nonlinear Kalman filter plot
-- [ ] `plot_pf`: particle filter plot
-- [ ] `plot_sigmas`: Sigma point plot
-- [ ] `plot_fusion`: data fusion plot
-- [ ] `plot_smoother`: smoother plot
+| Chapter (Part 1 · Filter Implementation) | Filter modules | Support modules |
+|---|---|---|
+| `filters-bayes` — Grid Bayes filter | `filters.bayes` | `plots.plot_bayes` |
+| `filters-kf-basic` — Linear Kalman filter | `filters.bayes`, `filters.stats` | `models.const_vel`, `plots.plot_bayes`, `plots.plot_common`, `plots.plot_kf`, `simulators.datagen`, `simulators.linear` |
+| `filters-kf-design` — Designing the KF (Q, R, tuning) | `filters.kalman`, `filters.helpers`, `filters.stats` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.linear` |
+| `filters-ghk` — α-β and α-β-γ filters | `filters.ghk` | `plots.plot_gh`, `simulators.datagen` |
+| `filters-kf-plus` — Nonlinear KF (UKF, EnKF) | `filters.kalman`, `filters.kalman_ukf`, `filters.kalman_enkf`, `filters.sigma_points` | `models.noise`, `plots.plot_common`, `plots.plot_kf_plus` |
+| `filters-smoothers` — RTS & fixed-lag smoothers | `filters.kalman`, `filters.smoothers` | `plots.plot_smoother` |
+| `filters-pf` — Particle filter | (inlined in the notebook) | `plots.plot_pf`, `simulators.robot` |
 
-### `simulators`: Simulation-related module
+| Chapter (Part 2 · Real Scenario Simulation) | Filter modules | Support modules |
+|---|---|---|
+| `filters-maneuver` — IMM maneuvering target | `filters.imm`, `filters.kalman` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.maneuver` |
+| `filters-task-tracking` — Radar / robot / projectile tracking | `filters.kalman`, `filters.kalman_ekf`, `filters.kalman_ukf`, `filters.sigma_points` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `simulators.radar`, `simulators.robot`, `simulators.trajectory` |
+| `filters-task-fusion` — Two-sensor data fusion | `filters.fusion`, `filters.kalman` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.datagen`, `simulators.linear`, `simulators.radar` |
 
-- [ ] `datagen`: common data generation
-- [ ] `linear`: linear motion model
-- [ ] `maneuver`: maneuver model
-- [ ] `radar`: ground radar model
-- [ ] `robot`: robot model
-- [ ] `trajectory`: projectile model
-- [ ] `cfg`: Simulation configuration interface
+## Toolkit structure
 
-### `symbol`: Symbol derivation module
+### `filters` — filter implementations
 
-- [ ] `datagen`: data generation
-- [ ] `models`: motion model
+- [x] `bayes` — grid Bayesian filter
+- [x] `fusion` — multi-sensor fusion helpers
+- [x] `ghk` — α-β-γ filtering
+- [ ] `ghq` — Gauss-Hermite quadrature helpers (not yet integrated into a chapter)
+- [x] `helpers` — `KFSaver` and other auxiliary tools
+- [x] `imm` — interacting multiple models
+- [x] `kalman` — linear Kalman filter
+- [ ] `kalman_ckf` — cubature Kalman filter (not yet integrated into a chapter)
+- [x] `kalman_ekf` — extended Kalman filter
+- [x] `kalman_enkf` — ensemble Kalman filter
+- [ ] `kalman_fm` — fading-memory filter (not yet integrated into a chapter)
+- [ ] `kalman_hinf` — H∞ filter (not yet integrated into a chapter)
+- [x] `kalman_ukf` — unscented Kalman filter
+- [ ] `lsq` — least-squares filter (not yet integrated into a chapter)
+- [ ] `particle` — particle filter class (not yet integrated; the PF chapter inlines its own loop)
+- [ ] `resamplers` — particle resampling schemes (not yet integrated into a chapter)
+- [x] `sigma_points` — unscented sigma-point generators
+- [x] `smoothers` — RTS and fixed-lag smoothers
+- [ ] `solvers` — Runge-Kutta and ODE helpers (not yet integrated into a chapter)
+- [x] `stats` — statistical helpers (`gaussian`, `gaussian_pdf`, …)
+- [ ] `transformers` — measurement / state transforms (not yet integrated into a chapter)
+
+### `models` — motion & noise models
+
+- [x] `const_acc` — constant-acceleration model
+- [x] `const_vel` — constant-velocity model
+- [x] `coord_turn` — coordinated-turn model
+- [x] `clutter` — Poisson clutter generator (used by scenario code, not by any chapter yet)
+- [x] `noise` — process & measurement noise helpers
+- [x] `ssmodel` / `ssmodel_linear` / `ssmodel_nonlinear` — state-space base classes
+
+### `plots` — plotting helpers
+
+- [x] `plot_bayes` — Bayesian grid plots
+- [x] `plot_common` — measurement / trajectory / residual plots
+- [x] `plot_gh` — α-β-γ plots
+- [x] `plot_kf` — linear KF plots
+- [x] `plot_kf_plus` — nonlinear KF plots (UKF / EnKF / sigma points)
+- [x] `plot_pf` — particle-filter plots
+- [x] `plot_smoother` — smoother plots
+
+### `simulators` — synthetic data & scenarios
+
+- [x] `datagen` — CV/CA trajectory & measurement generators
+- [x] `linear` — linear-motion simulator
+- [x] `maneuver` — maneuvering-target simulator
+- [x] `radar` — ground-radar simulator
+- [x] `robot` — differential-drive robot simulator
+- [x] `trajectory` — projectile / ballistic simulator
+
+### `symbols` — symbolic derivations
+
+- [x] `datagen` — SymPy derivations of the discrete-time Q matrix used in the KF-design chapter
+
+## TODO
+
+- Chapter-end **Summary / Key terms / Exercises / Further reading** sections
+  (present in the original rlabbe book, not yet ported).
+- Wire the "not yet integrated" filters (`ghq`, `kalman_ckf`, `kalman_fm`,
+  `kalman_hinf`, `lsq`, `particle`, `resamplers`, `solvers`, `transformers`)
+  into dedicated chapters.
+- Add PDA / clutter-aware tracking chapter that consumes `models.clutter`.
+- Add Singer motion model (`models.singer`) for maneuver-target literature.
+- Push type annotations and Google-style docstrings across `plots/` and the
+  remaining `filters/` modules, then lift the `ruff D` and `ty` gates.
+
+## Notes on the code
+
+Every module is a plain Python package (no `sys.path` hacks) so you can
+`pip install -e .` and import from anywhere. Randomness inside `simulators/`,
+`plots/`, and the notebooks is driven by
+`numpy.random.default_rng(seed)` — pass an explicit `seed=` to reproduce a
+figure or a golden test value bit-for-bit.
+
+## License
+
+Content derived from
+[Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python)
+by Richard Labbe, distributed under the MIT license.

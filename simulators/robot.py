@@ -1,15 +1,13 @@
 import math
-import sys
 
 import numpy as np
 import sympy as sy
-from numpy import linalg, random
+from numpy import linalg
 
-from .datagen import gen_particles_gaussian, gen_particles_uniform
-
-sys.path.append("..")
 from filters import kalman_ekf, particle, resamplers
 from plots import plot_pf
+
+from .datagen import gen_particles_gaussian, gen_particles_uniform
 
 
 def robot_move(x, dt, u, wheelbase):
@@ -90,11 +88,18 @@ def HJac(x, lmark):
     return np.array([[-dx / dist, -dy / dist, 0], [dy / dist**2, -dx / dist**2, -1]])
 
 
-def z_landmark(lmark, sim_pos, std_rng, std_brg):
+def z_landmark(lmark, sim_pos, std_rng, std_brg, rng=None):
+    if rng is None:
+        rng = np.random.default_rng()
     x, y = sim_pos[0], sim_pos[1]
     dist = np.hypot(lmark[0] - x, lmark[1] - y)
     angle = math.atan2(lmark[1] - y, lmark[0] - x) - sim_pos[2]
-    return np.array([dist + random.randn() * std_rng, angle + random.randn() * std_brg])
+    return np.array(
+        [
+            dist + rng.standard_normal() * std_rng,
+            angle + rng.standard_normal() * std_brg,
+        ]
+    )
 
 
 def state_mean(sigmas, Wm):
@@ -162,7 +167,9 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         self.x_x, self.x_y = x, y
         self.v, self.a, self.θ = v, a, θ
 
-    def predict(self, u):
+    def predict(self, u=None):
+        if u is None:
+            u = np.zeros(2)
         self.x = self.move(self.x, u, self.dt)
         self.subs[self.θ] = self.x[2, 0]
         self.subs[self.v] = u[0]
@@ -197,16 +204,26 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
 
 
 def robot_pf(
-    ax, N, iters=18, sensor_std_err=0.1, initial_x=None, *, show_particles=False
+    ax,
+    N,
+    iters=18,
+    sensor_std_err=0.1,
+    initial_x=None,
+    *,
+    show_particles=False,
+    seed=None,
 ):
+    rng = np.random.default_rng(seed)
     landmarks = np.array([[-1, 2], [5, 10], [12, 14], [18, 21]])
     NL = len(landmarks)
 
     # create particles and weights
     if initial_x is not None:
-        particles = gen_particles_gaussian(mean=initial_x, std=(5, 5, np.pi / 4), N=N)
+        particles = gen_particles_gaussian(
+            mean=initial_x, std=(5, 5, np.pi / 4), N=N, seed=seed
+        )
     else:
-        particles = gen_particles_uniform((0, 20), (0, 20), (0, 6.28), N)
+        particles = gen_particles_uniform((0, 20), (0, 20), (0, 6.28), N, seed=seed)
     weights = np.ones(N) / N
 
     if show_particles:
@@ -218,7 +235,7 @@ def robot_pf(
         robot_pos += (1, 1)
         # distance from robot to each landmark
         zs = linalg.norm(landmarks - robot_pos, axis=1) + (
-            random.randn(NL) * sensor_std_err
+            rng.standard_normal(NL) * sensor_std_err
         )
         # move diagonally forward to (x+1, x+1)
         particle.pf_predict(particles, u=(0.00, 1.414), std=(0.2, 0.05))

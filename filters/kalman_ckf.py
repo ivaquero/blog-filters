@@ -10,99 +10,6 @@ from .helpers import pretty_str
 from .sigma_points import SphericalRadialSigmas
 
 
-def ckf_packed_pc(x, fmmparam):
-    """
-    CKF_PACKED_PC - Pack P and C for the Cubature Kalman filter transform
-
-    Syntax:
-            pc = CKF_PACKED_PC(x,fmmparam)
-
-    In:
-            x - Evaluation point
-            fmmparam - Array of handles and parameters to form the functions.
-
-    Out:
-            pc - Output values
-
-    Description:
-            Packs the integrals that need to be evaluated in nice function form to
-            ease the evaluation. Evaluates P = (f-fm)(f-fm)' and C = (x-m)(f-fm)'.
-    """
-
-    f = fmmparam[0]
-    m = fmmparam[1]
-    fm = fmmparam[2]
-    if len(fmmparam) >= 4:
-        param = fmmparam[3]
-
-    if isinstance(f, str) or callable(f):
-        F = f(x) if "param" not in locals() else f(x, param)
-    elif isinstance(f, np.ndarray):
-        F = f @ x
-    else:
-        F = f(x) if "param" not in locals() else f(x, param)
-    d = x.shape[0]
-    s = F.shape[0]
-
-    # Compute P = (f-fm)(f-fm)' and C = (x-m)(f-fm)'
-    # and form array of [vec(P):vec(C)]
-    f_ = F.shape[1]
-    pc = np.zeros((s**2 + d * s, f_))
-    P = np.zeros((s, s))
-    C = np.zeros((d, s))
-    for k in range(f_):
-        for j in range(s):
-            for i in range(s):
-                P[i, j] = (F[i, k] - fm[i]) * (F[j, k] - fm[j])
-            for i in range(d):
-                C[i, j] = (x[i, k] - m[i]) * (F[j, k] - fm[j])
-        pc[:, k] = np.concatenate([P.reshape(s * s), C.reshape(s * d)])
-
-    return pc
-
-
-def ckf_transform2(m, P, g, param=None, varargin=None):
-    """
-    CKF_TRANSFORM - Cubature Kalman filter transform of random variables
-
-    Syntax:
-      [mu,S,C,SX,W] = CKF_TRANSFORM(M,P,g,param)
-
-    In:
-      M - Random variable mean (Nx1 column vector)
-      P - Random variable covariance (NxN pos.def. matrix)
-      g - Transformation function of the form g(x,param) as
-          matrix, inline function, function name or function reference
-      g_param - Parameters of g               (optional, default empty)
-
-    Out:
-      mu - Estimated mean of y
-       S - Estimated covariance of y
-       C - Estimated cross-covariance of x and y
-      SX - Sigma points of x
-       W - Weights as cell array
-    """
-
-    # Estimate the mean of g
-    if param is None:
-        mu, SX, W, _ = SphericalRadialSigmas(g, m, P)
-    else:
-        mu, SX, W, _ = SphericalRadialSigmas(g, m, P, param)
-
-    # Estimate the P and C
-    if param is None:
-        pc, SX, W, _ = SphericalRadialSigmas(ckf_packed_pc, m, P, [g, m, mu])
-    else:
-        pc, SX, W, _ = SphericalRadialSigmas(ckf_packed_pc, m, P, [g, m, mu, param])
-
-    d = m.shape[0]
-    s = mu.shape[0]
-    S = pc[: s**2].reshape((s, s))
-    C = pc[s**2 :].reshape((d, s))
-
-    return mu, S, C, SX, W
-
-
 def ckf_transform(Xs, Q):
     """_summary_
 
@@ -140,7 +47,7 @@ class CubatureKalmanFilter:
     Arasaratnam, I, Haykin, S. "Cubature Kalman Filters," IEEE Transactions on Automatic Control, 2009, pp 1254-1269, vol 54, No 6
     """
 
-    def _init_(
+    def __init__(
         self,
         dim_x,
         dim_z,
@@ -165,7 +72,7 @@ class CubatureKalmanFilter:
         self.fx = fx
         self.x_mean = x_mean_fn
         self.z_mean = z_mean_fn
-        self.y = 0
+        self.y = np.zeros((dim_z, 1))
         self.z = np.array([[None] * self.dim_z]).T
         self.S = np.zeros((dim_z, dim_z))  # system uncertainty
         self.SI = np.zeros((dim_z, dim_z))  # inverse system uncertainty
@@ -203,7 +110,7 @@ class CubatureKalmanFilter:
         if not isinstance(fx_args, tuple):
             fx_args = (fx_args,)
 
-        sigmas = SphericalRadialSigmas(self.x, self.P)
+        sigmas = SphericalRadialSigmas(self.dim_x, self.P).sigma_points(self.x, self.P)
 
         # evaluate cubature points
         for k in range(self._num_sigmas):
@@ -302,98 +209,21 @@ class CubatureKalmanFilter:
             self._mahalanobis = math.sqrt(float(self.y.T @ self.SI @ self.y))
         return self._mahalanobis
 
-    def _repr_(self):
-        return "\n".join([
-            "CubatureKalmanFilter object",
-            pretty_str("dim_x", self.dim_x),
-            pretty_str("dim_z", self.dim_z),
-            pretty_str("dt", self._dt),
-            pretty_str("x", self.x),
-            pretty_str("P", self.P),
-            pretty_str("Q", self.Q),
-            pretty_str("R", self.R),
-            pretty_str("K", self.K),
-            pretty_str("y", self.y),
-            pretty_str("log-likelihood", self.log_likelihood),
-            pretty_str("likelihood", self.likelihood),
-            pretty_str("mahalanobis", self.mahalanobis),
-        ])
-
-
-def crts_smooth(M, P, f, Q, f_param=None, *, same_p=True):
-    """
-    CRTS_SMOOTH - Additive form cubature Rauch-Tung-Striebel smoother
-
-    Syntax:
-            [M,P,D] = CKF_SMOOTH(M,P,a,Q,[param,same_p])
-
-    In:
-            M - NxK matrix of K mean estimates from Cubature Kalman filter
-            P - NxNxK matrix of K state covariances from Cubature Kalman Filter
-            f - Dynamic model function as a matrix F defining
-                    linear function f(x) = F*x, inline function,
-                    function handle or name of function in
-                    form f(x,param)                   (optional, default eye())
-            Q - NxN process noise covariance matrix or NxNxK matrix
-                    of K state process noise covariance matrices for each step.
-            f_param - Parameters of f. Parameters should be a single cell array,
-                            vector or a matrix containing the same parameters for each
-                            step, or if different parameters are used on each step they
-                            must be a cell array of the format { param_1, param_2, ...},
-                            where param_x contains the parameters for step x as a cell array,
-                            a vector or a matrix.   (optional, default empty)
-            same_p - If 1 uses the same parameters
-                            on every time step      (optional, default 1)
-
-    Out:
-            M - Smoothed state mean sequence
-            P - Smoothed state covariance sequence
-            D - Smoother gain sequence
-
-    Description:
-            Cubature Rauch-Tung-Striebel smoother algorithm. Calculate
-            "smoothed" sequence from given Kalman filter output sequence by
-            conditioning all steps to all measurements. Uses the spherical-
-            radial cubature rule.
-    """
-    M = M.copy()
-    P = P.copy()
-
-    # Apply defaults
-    m_1, m_2 = M.shape[:2]
-
-    if f is None:
-        f = np.eye(m_2)
-
-    if Q is None:
-        Q = np.zeros(m_2)
-
-    # Extend Q if NxN matrix
-    if len(Q.shape) == 2:
-        Q = np.tile(Q, (m_1, 1, 1))
-
-    # Run the smoother
-    D = np.zeros((m_1, m_2, m_2))
-    if f_param is None:
-        for k in range(m_1 - 2, -1, -1):
-            m_pred, P_pred, C, *_ = ckf_transform(M[k], P[k], f)
-            P_pred += Q[k]
-            D[k] = linalg.solve(P_pred.T, C.T).T
-            M[k] += D[k] @ (M[k + 1] - m_pred)
-            P[k] += D[k] @ (P[k + 1] - P_pred) @ D[k].T
-    else:
-        for k in range(m_1 - 2, -1, -1):
-            if f_param is None:
-                params = None
-            elif same_p:
-                params = f_param
-            else:
-                params = f_param[k]
-
-            m_pred, P_pred, C, *_ = ckf_transform(M[k], P[k], f, params)
-            P_pred += Q[k]
-            D[k] = linalg.solve(P_pred.T, C.T).T
-            M[k] += D[k] @ (M[k + 1] - m_pred)
-            P[k] += D[k] @ (P[k + 1] - P_pred) @ D[k].T
-
-    return M, P, D
+    def __repr__(self):
+        return "\n".join(
+            [
+                "CubatureKalmanFilter object",
+                pretty_str("dim_x", self.dim_x),
+                pretty_str("dim_z", self.dim_z),
+                pretty_str("dt", self._dt),
+                pretty_str("x", self.x),
+                pretty_str("P", self.P),
+                pretty_str("Q", self.Q),
+                pretty_str("R", self.R),
+                pretty_str("K", self.K),
+                pretty_str("y", self.y),
+                pretty_str("log-likelihood", self.log_likelihood),
+                pretty_str("likelihood", self.likelihood),
+                pretty_str("mahalanobis", self.mahalanobis),
+            ]
+        )

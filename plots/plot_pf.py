@@ -1,11 +1,8 @@
-import sys
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import random
+from matplotlib import colorbar
 
-sys.path.append("..")
 from filters.resamplers import residual_resample
 
 
@@ -46,8 +43,8 @@ def plot_hbar(a, N, figsize):
     norm = mpl.colors.BoundaryNorm(cumsum, cmap.N)
 
     _ = plt.figure(figsize=figsize)
-    ax = plt.gcf().add_axes([0.01, 0.01, 1, 0.2])
-    bar = mpl.colorbar.ColorbarBase(
+    ax = plt.gcf().add_axes((0.01, 0.01, 1, 0.2))
+    bar = colorbar.ColorbarBase(
         ax,
         cmap=cmap,
         norm=norm,
@@ -59,17 +56,19 @@ def plot_hbar(a, N, figsize):
     return ax, cumsum
 
 
-def show_resample_multinomial(a, figsize=(6, 2)):
+def show_resample_multinomial(a, figsize=(6, 2), seed=None):
+    rng = np.random.default_rng(seed)
     N = len(a)
     ax, _ = plot_hbar(a, N, figsize=figsize)
 
     # make N subdivisions, and chose a random position within each one
-    b = random.random(N)
+    b = rng.random(N)
     ax.scatter(b, [0.5] * len(b), s=60, facecolor="k", edgecolor="k")
     ax.set(title="multinomial resampling")
 
 
-def show_resample_stratified(a, figsize=(6, 2)):
+def show_resample_stratified(a, figsize=(6, 2), seed=None):
+    rng = np.random.default_rng(seed)
     N = len(a)
     ax, _ = plot_hbar(a, N, figsize=figsize)
 
@@ -77,12 +76,13 @@ def show_resample_stratified(a, figsize=(6, 2)):
     ax.vlines(xs, 0, 1, lw=2)
 
     # make N subdivisions, and chose a random position within each one
-    b = (random.random(N) + range(N)) / N
+    b = (rng.random(N) + range(N)) / N
     ax.scatter(b, [0.5] * len(b), s=60, facecolor="k", edgecolor="k")
     ax.set(title="stratified resampling")
 
 
-def show_resample_systematic(a, figsize=(6, 2)):
+def show_resample_systematic(a, figsize=(6, 2), seed=None):
+    rng = np.random.default_rng(seed)
     N = len(a)
     ax, _ = plot_hbar(a, N, figsize=figsize)
 
@@ -90,7 +90,7 @@ def show_resample_systematic(a, figsize=(6, 2)):
     ax.vlines(xs, 0, 1, lw=2)
 
     # make N subdivisions, and chose a random position within each one
-    b = (random.random() + np.array(range(N))) / N
+    b = (rng.random() + np.array(range(N))) / N
     ax.scatter(b, [0.5] * len(b), s=60, facecolor="k", edgecolor="k")
     ax.set(title="systematic resampling")
 

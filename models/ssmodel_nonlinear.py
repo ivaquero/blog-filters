@@ -68,7 +68,7 @@ class NonlinearStateSpaceModel(StateSpaceModel):
     def Mt(self, t):
         """z[t] = h(x[t], t) + M[t] * v[t]
 
-        In case of observatoin noise is additive, return M[t].
+        In case of observation noise is additive, return M[t].
         """
         raise NotImplementedError
 

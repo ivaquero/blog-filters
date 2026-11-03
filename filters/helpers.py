@@ -2,6 +2,7 @@ import contextlib
 import inspect
 from collections import defaultdict, deque
 from copy import deepcopy
+from typing import Any
 
 import numpy as np
 
@@ -28,6 +29,14 @@ class KFSaver:
 
         if save_current:
             self.save()
+
+    def __getattr__(self, name: str) -> Any:
+        # Attributes such as `x`, `y`, `P`, `z` are populated dynamically by
+        # `save()` / `to_array()` via `self.__dict__[key] = ...`. This hook exists
+        # so that static type checkers can resolve those attribute accesses; it
+        # still raises AttributeError at runtime for genuinely missing names.
+        msg = f"{type(self).__name__!r} object has no attribute {name!r}"
+        raise AttributeError(msg)
 
     def save(self):
         kf = self._kf

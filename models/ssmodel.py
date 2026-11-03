@@ -1,10 +1,14 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 
 
 class StateSpaceModel(ABC):
-    """Staet space model."""
+    """State space model.
 
-    @abstractclassmethod
+    Concrete subclasses expose per-instance dimension lookups through a
+    ``self.ndim`` mapping (keys: ``"x"``, ``"z"``, ``"u"``, ``"w"``, ``"v"``).
+    """
+
+    @abstractmethod
     def state_equation(self, t, x, u=0, w=0):
         """Calculate the state equation.
 
@@ -16,7 +20,7 @@ class StateSpaceModel(ABC):
         t: time
         """
 
-    @abstractclassmethod
+    @abstractmethod
     def observation_equation(self, t, x, v=0):
         """Calculate the observation equation.
 
@@ -26,10 +30,6 @@ class StateSpaceModel(ABC):
         v: observation noise
         t: time
         """
-
-    def ndim(self, key):
-        """Return dimensions."""
-        return self.NDIM[key]
 
     def update_param(self, *params):
         """Update the time-varing parameters in the state space model."""

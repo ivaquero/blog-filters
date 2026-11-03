@@ -15,7 +15,48 @@ on:
 
 # This job installs dependencies, builds the book, and pushes it to `gh-pages`
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install lint tooling
+        run: |
+          pip install --upgrade pip
+          pip install ruff
+
+      - name: Ruff check
+        # TODO(phase-3): include notebooks once RNG/unpacked-variable cleanup lands
+        run: ruff check filters models plots simulators symbols tests
+
+      - name: Ruff format check
+        run: ruff format --check filters models plots simulators symbols tests
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install package + dev extras
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,sim]"
+
+      - name: Pytest regression suite
+        run: pytest -q
+
   deploy-book:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     permissions:
       pages: write

@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from scipy import linalg, stats
 
@@ -26,7 +28,7 @@ def gh_packed_pc(x, fmm_param):
     if len(fmm_param) >= 4:
         param = fmm_param[3]
 
-    if isinstance(f, str | callable):
+    if isinstance(f, str) or callable(f):
         F = f(x) if "param" not in locals() else f(x, param)
     elif isinstance(f, np.ndarray):
         F = f @ x
@@ -123,7 +125,7 @@ def gh_nd_scaled(f, n, m, P, param=None):
     x = np.roots(p)
 
     # 1D coefficients
-    Wc = 2 ** (n - 1) * np.math.factorial(n) * np.sqrt(np.pi) / n**2
+    Wc = 2 ** (n - 1) * math.factorial(n) * np.sqrt(np.pi) / n**2
     p2 = hermite_polynomial(n - 1)
     W = np.zeros(n)
     for i in range(n):
@@ -147,7 +149,7 @@ def gh_nd_scaled(f, n, m, P, param=None):
     W = np.prod(W[ind], axis=0)  # ND weights
 
     # Evaluate the function at the sigma points
-    if isinstance(f, str | callable):
+    if isinstance(f, str) or callable(f):
         F = f(SX) if param is None else f(SX, param)
     elif isinstance(f, np.ndarray):
         F = f @ SX

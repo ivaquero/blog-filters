@@ -1,3 +1,5 @@
+from typing import Any
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import patches
@@ -101,7 +103,7 @@ def show_markov_chain(figsize=(4, 4), facecolor="w"):
     ax.text(6, 5, "Turn", ha="center", va="center", fontsize="medium")
 
     # Define arrow configurations
-    arrows = [
+    arrows: list[dict[str, Any]] = [
         {
             "xy": (6, 4.5),
             "xytext": (4.1, 4.5),

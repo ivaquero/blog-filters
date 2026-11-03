@@ -23,14 +23,12 @@ class ParticleFilter:
     def predict(self, u, std, dt=1):
         """Move according to control input u with noise std"""
         rng = np.random.default_rng(self.seed)
-        self.particles[:, 2] += u[0] + rng.randn(self.N) * std[0]
+        self.particles[:, 2] += u[0] + rng.standard_normal(self.N) * std[0]
         self.particles[:, 2] %= 2 * np.pi
 
         dist = (u[1] * dt) + (rng.standard_normal(self.N) * std[1])
         self.particles[:, 0] += np.cos(self.particles[:, 2]) * dist
         self.particles[:, 1] += np.sin(self.particles[:, 2]) * dist
-
-        self.particles[:, 0:2] += u + rng.standard_normal(self.N, 2) * std
 
     def weight(self, z, var):
         dist = np.sqrt(
@@ -43,7 +41,7 @@ class ParticleFilter:
 
         # particles far from a measurement will give us 0.0 for a probability due to floating point limits. Once we hit zero we can never recover, so add some small nonzero value to all points.
         prob += 1.0e-12
-        self.weights += prob
+        self.weights *= prob
         self.weights /= sum(self.weights)  # normalize
 
     def neff(self):

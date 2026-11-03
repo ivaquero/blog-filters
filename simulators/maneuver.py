@@ -1,10 +1,7 @@
 import math
-import sys
 
 import numpy as np
-from numpy import random
 
-sys.path.append("..")
 from models.const_vel import constant_velocity_transition_matrix
 
 
@@ -52,19 +49,20 @@ class ManeuveringTarget:
 
 
 class NoisySensor:
-    def __init__(self, std_noise=1.0):
+    def __init__(self, std_noise=1.0, seed=None):
         self.std = std_noise
+        self.rng = np.random.default_rng(seed)
 
     def sense(self, pos):
         """Pass in actual position as tuple (x, y).
         Returns position with noise added (x,y)"""
         return (
-            pos[0] + (random.randn() * self.std),
-            pos[1] + (random.randn() * self.std),
+            pos[0] + (self.rng.standard_normal() * self.std),
+            pos[1] + (self.rng.standard_normal() * self.std),
         )
 
 
-def simulate_maneuver(steady_count, std):
+def simulate_maneuver(steady_count, std, seed=None):
     t = ManeuveringTarget(x0=0, y0=0, v0=0.3, heading=0)
     xs, ys = [], []
 
@@ -81,7 +79,7 @@ def simulate_maneuver(steady_count, std):
         xs.append(x)
         ys.append(y)
 
-    ns = NoisySensor(std)
+    ns = NoisySensor(std, seed=seed)
     pos = np.array(list(zip(xs, ys, strict=True)))
     zs = np.array([ns.sense(p) for p in pos])
     return pos, zs

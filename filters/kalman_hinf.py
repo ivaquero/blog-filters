@@ -17,7 +17,7 @@ class HInfinityFilter:
 
         self.x = np.zeros((dim_x, 1))
 
-        self.G = 0
+        self.G = np.zeros((dim_x, dim_u)) if dim_u else None
         self.F = np.eye(dim_x)
         self.H = np.zeros((dim_z, dim_x))
         self.P = np.eye(dim_x)
@@ -86,19 +86,22 @@ class HInfinityFilter:
         except Exception:
             self.z = deepcopy(z)
 
-    def predict(self, u=0):
+    def predict(self, u=None):
         """Predict next position.
 
         Parameters
         ----------
         u : ndarray
-            Optional control vector. If non-zero, it is multiplied by `B` to create the control input into the system.
+            Optional control vector. If non-zero, it is multiplied by `G` to create the control input into the system.
         """
 
         # x = Fx + Gu
-        self.x = self.F @ self.x + self.G @ u
+        if self.G is not None and u is not None:
+            self.x = self.F @ self.x + self.G @ u
+        else:
+            self.x = self.F @ self.x
 
-    def batch_filter(self, Zs, *, update_first=False, saver=False):
+    def batch_filter(self, Zs, *, update_first=False, saver=None):
         """Batch processes a sequences of measurements.
 
         Parameters
