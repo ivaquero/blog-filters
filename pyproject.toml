@@ -162,10 +162,10 @@ exclude = ["_build", "build"]
 [tool.ty.rules]
 # Baseline everything to error, then relax the few spots we intentionally
 # keep loose (Any-returning helpers, matplotlib duck typing).
-unresolved-import = "error"
-unresolved-attribute = "error"
+import-not-found = "error"
 invalid-assignment = "error"
-invalid-type-form = "error"
-unsupported-operator = "error"
-not-subscriptable = "error"
 invalid-method-override = "error"
+invalid-type-form = "error"
+not-subscriptable = "error"
+unresolved-attribute = "error"
+unsupported-operator = "error"
