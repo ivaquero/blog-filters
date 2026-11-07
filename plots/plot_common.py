@@ -81,6 +81,8 @@ def plot_track_ellipses(ax, N, zs, xs, cov, title):
             facecolor="white",
         )
     ax.set(title=title)
+    # Final covariance, i.e. the filter's steady-state uncertainty.
+    return cov[-1]
 
 
 def cal_cov_ellipse(cov, deviations=1):
