@@ -17,7 +17,7 @@ book = [
   # (_config.yml + _toc.yml). Jupyter Book 2 (mystmd) ignores both files and
   # produces no _build/html, which breaks the Pages deploy. See
   # .github/workflows/deploy-book.yml before relaxing this bound.
-  "jupyter-book<2",
+  "jupyter-book<3",
 ]
 dev = [
   "ruff>=0.14",
