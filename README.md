@@ -18,11 +18,12 @@ into a Jupyter Book plus a small Python package (`filters`, `models`, `plots`,
 The toolkit targets **Python 3.14** and is managed with [uv](https://docs.astral.sh/uv/):
 
 ```bash
-# 1. Create the pinned environment and install every package in editable mode
-uv sync                     # fallback: python -m venv .venv && pip install -e ".[dev]"
+# 1. Create the pinned environment (book tooling lives in the `book` extra)
+uv sync --all-extras         # fallback: pip install -e ".[book,dev,sim]"
 
-# 2. Build the book (executes every notebook via jupyter-book)
-uv run jupyter-book build .
+# 2. Build the book with Jupyter Book 2 (MyST). `--html` renders the static
+#    site, `--execute` runs every notebook; outputs are cached in _build/execute.
+uv run jupyter-book build --html --execute
 
 # 3. Open the rendered HTML
 open _build/html/index.html      # Windows: start _build/html/index.html
@@ -30,7 +31,8 @@ open _build/html/index.html      # Windows: start _build/html/index.html
 
 Continuous integration mirrors the local workflow — `ruff check`, `ruff format
 --check`, `ty check --error-on-warning`, `pytest`, and finally
-`jupyter-book build .` — and runs on every push.
+`jupyter-book build --html --execute` (with `BASE_URL=/blog-filters`, which is
+how GitHub project pages are served) — and runs on every push.
 
 ## Chapter ↔ module map
 

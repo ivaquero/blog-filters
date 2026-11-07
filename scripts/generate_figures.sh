@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Regenerate every figure that the tutorial notebooks produce.
 #
-# blog-filters keeps its notebooks as the source of truth: `jupyter-book build`
-# executes each notebook top-to-bottom and re-renders the inline outputs. This
-# script is a thin wrapper that (a) rebuilds only when invoked, (b) writes the
-# rendered HTML to _build/html so authors can eyeball the result, and (c) can
-# optionally persist PNGs to images/ when the notebook bodies are switched from
-# plt.show() to plt.savefig() (see TODO below).
+# blog-filters keeps its notebooks as the source of truth: `jupyter-book build
+# --execute` (Jupyter Book 2 / MyST) runs each notebook top-to-bottom and
+# re-renders the inline outputs. Executed outputs are cached under
+# `_build/execute`, so a second run only re-executes notebooks whose code
+# changed -- delete that directory to force a full re-run.
 #
 # Usage:
-#   ./scripts/generate_figures.sh              # rebuild all notebooks
-#   ./scripts/generate_figures.sh filters-kf-basic.ipynb   # single notebook
+#   ./scripts/generate_figures.sh              # execute everything, build the site
+#   ./scripts/generate_figures.sh --clean      # drop the execution cache first
 #
-# Requires: `jupyter-book` (see requirements.txt) and a working Python env with
-# numpy/scipy/matplotlib/pandas installed via `pip install -e .`.
+# Requires: `jupyter-book>=2` plus `jupyter-server` and `ipykernel` (see
+# requirements.txt), and a Python env with numpy/scipy/matplotlib/pandas
+# installed via `pip install -e .`.
 
 set -euo pipefail
 
@@ -31,16 +31,17 @@ command -v jupyter-book >/dev/null 2>&1 || {
     exit 127
 }
 
-if [[ $# -gt 0 ]]; then
-    for nb in "$@"; do
-        echo "[generate_figures] executing $nb"
-        # TODO: once notebooks save figures to images/*.png via plt.savefig,
-        # add `--ExecutePreprocessor.savefigs_to_build=True` here.
-        jupyter-book execute --to html --output _build/execute "$nb"
-    done
-else
-    echo "[generate_figures] full rebuild via jupyter-book build ."
-    jupyter-book build --all .
+if [[ "${1:-}" == "--clean" ]]; then
+    echo "[generate_figures] clearing _build/execute"
+    if command -v jupyter-book >/dev/null 2>&1; then
+        jupyter-book clean --execute
+    fi
 fi
+
+# MyST builds the whole project as one site; there is no per-notebook export
+# target, so a single-notebook re-run is not expressible here. The execution
+# cache keeps repeated runs cheap instead.
+echo "[generate_figures] building site with notebook execution"
+jupyter-book build --html --execute
 
 echo "[generate_figures] done. Open _build/html/index.html to review."

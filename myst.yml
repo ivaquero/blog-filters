@@ -1,0 +1,56 @@
+# Jupyter Book 2 / MyST project configuration.
+#
+# Replaces the Jupyter Book 1 pair `_config.yml` + `_toc.yml` (removed in the
+# same commit). Build with:
+#   jupyter-book build --html --execute          # static site in _build/html
+#   BASE_URL=/blog-filters jupyter-book build --html --execute   # GH Pages paths
+version: 1
+
+project:
+  title: A Tutorial for Kalman Filters
+  authors:
+    # A mononym handle: MyST would otherwise try to split it into given/family
+    # names and emit a validation warning.
+    - name:
+        literal: ivaquero
+  copyright: "2023"
+  # Files/directories MyST must not treat as content. `_build` holds the
+  # execution cache and the rendered site; the rest are local-dev byproducts
+  # that Sphinx used to sweep up silently.
+  exclude:
+    - _build
+    - .venv
+    - .pytest_cache
+    - "**/__pycache__"
+    - "**.ipynb_checkpoints"
+    - Thumbs.db
+    - .DS_Store
+  settings:
+    # Cells that end on a matplotlib artist return "<matplotlib.legend.Legend
+    # at 0x...>" as text output; drop that noise instead of warning 18 times.
+    output_matplotlib_strings: remove
+  toc:
+    - file: README.md
+    - title: Filter Implementation
+      children:
+        - file: filters-bayes.ipynb
+        - file: filters-kf-basic.ipynb
+        - file: filters-kf-design.ipynb
+        - file: filters-ghk.ipynb
+        - file: filters-kf-plus.ipynb
+        - file: filters-smoothers.ipynb
+        - file: filters-pf.ipynb
+    - title: Real Scenario Simulation
+      children:
+        - file: filters-maneuver.ipynb
+        - file: filters-task-tracking.ipynb
+        - file: filters-task-fusion.ipynb
+
+site:
+  template: book-theme
+  options:
+    logo: kalman.png
+    favicon: kalman.png
+    logo_text: Kalman Filters
+    # The book has a single author; a repeated byline on every page is noise.
+    hide_authors: true

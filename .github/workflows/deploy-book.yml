@@ -97,19 +97,19 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Build the book
-      # NOTE: this project is still on Jupyter Book 1 (Sphinx + _config.yml /
-      # _toc.yml), so requirements.txt pins `jupyter-book<2`. Do not relax that
-      # pin before the book has been migrated to Jupyter Book 2 (myst.yml): JB2
-      # does not read _config.yml / _toc.yml, and `jupyter-book build .` under
-      # JB2 treats the positional argument as a *file* to export, prints
-      # "No file exports found.", and still exits 0 -- producing no _build/html.
+      # Build the book (Jupyter Book 2 / MyST, configured by myst.yml).
+      #   --html     render the static site into _build/html
+      #   --execute  run every notebook once; this replaces the old
+      #              `execute_notebooks: auto` setting from _config.yml
+      # BASE_URL prefixes asset and navigation links with /<repo>/, which is
+      # what GitHub project pages are served from.
       - name: Build the book
+        env:
+          BASE_URL: /${{ github.event.repository.name }}
         run: |
-          jupyter-book build .
-          # Fail fast: jupyter-book can exit 0 without writing any site, which
-          # would otherwise surface far downstream as a tar error inside
-          # upload-pages-artifact ("_build/html: Cannot open").
+          jupyter-book build --html --execute
+          # Fail fast: a dry build would otherwise surface far downstream as
+          # "tar: _build/html: Cannot open" inside upload-pages-artifact.
           if [ ! -f _build/html/index.html ]; then
             echo "::error::jupyter-book produced no _build/html/index.html"
             exit 1

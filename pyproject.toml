@@ -13,11 +13,13 @@ dependencies = [
 
 [project.optional-dependencies]
 book = [
-  # Pinned below 2: the book still uses the Sphinx-based layout
-  # (_config.yml + _toc.yml). Jupyter Book 2 (mystmd) ignores both files and
-  # produces no _build/html, which breaks the Pages deploy. See
-  # .github/workflows/deploy-book.yml before relaxing this bound.
-  "jupyter-book<2",
+  # Jupyter Book 2 (mystmd) reads myst.yml. Bound below 3 so a future major
+  # cannot silently change the build contract again.
+  "jupyter-book>=2,<3",
+  # `build --execute` drives a Jupyter Server against an installed kernel;
+  # jupyter-book does not depend on either.
+  "jupyter-server>=2",
+  "ipykernel>=6",
 ]
 dev = [
   "ruff>=0.14",

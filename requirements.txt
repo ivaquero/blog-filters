@@ -1,4 +1,8 @@
-jupyter-book<2
+jupyter-book>=2,<3
+# `build --execute` drives a Jupyter Server against an installed kernel; neither
+# is pulled in by jupyter-book itself.
+jupyter-server
+ipykernel
 matplotlib
 numpy
 scipy
