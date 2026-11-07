@@ -98,9 +98,22 @@ jobs:
           pip install -r requirements.txt
 
       # Build the book
+      # NOTE: this project is still on Jupyter Book 1 (Sphinx + _config.yml /
+      # _toc.yml), so requirements.txt pins `jupyter-book<2`. Do not relax that
+      # pin before the book has been migrated to Jupyter Book 2 (myst.yml): JB2
+      # does not read _config.yml / _toc.yml, and `jupyter-book build .` under
+      # JB2 treats the positional argument as a *file* to export, prints
+      # "No file exports found.", and still exits 0 -- producing no _build/html.
       - name: Build the book
         run: |
           jupyter-book build .
+          # Fail fast: jupyter-book can exit 0 without writing any site, which
+          # would otherwise surface far downstream as a tar error inside
+          # upload-pages-artifact ("_build/html: Cannot open").
+          if [ ! -f _build/html/index.html ]; then
+            echo "::error::jupyter-book produced no _build/html/index.html"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

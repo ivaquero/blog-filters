@@ -8,3 +8,10 @@ updates:
     directory: '/'
     schedule:
       interval: monthly
+    ignore:
+      # The book is still Jupyter Book 1 (Sphinx + _config.yml/_toc.yml).
+      # Jupyter Book 2 is a mystmd rewrite: it ignores those files and
+      # `jupyter-book build .` exits 0 without writing _build/html, which breaks
+      # the GitHub Pages deploy. Lift this ignore after migrating to myst.yml.
+      - dependency-name: 'jupyter-book'
+        update-types: ['version-update:semver-major']

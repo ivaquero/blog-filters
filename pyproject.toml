@@ -13,7 +13,11 @@ dependencies = [
 
 [project.optional-dependencies]
 book = [
-  "jupyter-book<3",
+  # Pinned below 2: the book still uses the Sphinx-based layout
+  # (_config.yml + _toc.yml). Jupyter Book 2 (mystmd) ignores both files and
+  # produces no _build/html, which breaks the Pages deploy. See
+  # .github/workflows/deploy-book.yml before relaxing this bound.
+  "jupyter-book<2",
 ]
 dev = [
   "ruff>=0.14",
