@@ -76,7 +76,7 @@ def plot_track_ellipses(ax, N, zs, xs, cov, title):
             ax,
             (i + 1, xs[i]),
             cov=p,
-            stds=[2] * N,
+            stds=[2],
             edgecolor="darkslateblue",
             facecolor="white",
         )
