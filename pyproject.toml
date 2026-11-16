@@ -24,7 +24,11 @@ book = [
 dev = [
   "ruff>=0.14",
   "pytest>=8.3",
-  "ty>=0.0.9",
+  # Pinned to a patch release on purpose: ty is pre-1.0 and renames rules inside
+  # 0.0.x (e.g. `invalid-method-override` -> `incompatible-method-override` in
+  # 0.0.104), which turns into a CI failure under `--error-on-warning`. Bump this
+  # together with [tool.ty.rules] in one commit, never implicitly.
+  "ty==0.0.104",
 ]
 sim = [
   "pandas>=2.2",
@@ -168,10 +172,13 @@ exclude = ["_build", "build"]
 [tool.ty.rules]
 # Baseline everything to error, then relax the few spots we intentionally
 # keep loose (Any-returning helpers, matplotlib duck typing).
+# Rule names track ty 0.0.104; the pre-0.0.100 spellings
+# (`invalid-method-override`, `unresolved-attribute`) are retired aliases and
+# emit `warning[renamed-rule]`, which `--error-on-warning` turns into a CI fail.
 import-not-found = "error"
+incompatible-method-override = "error"
 invalid-assignment = "error"
-invalid-method-override = "error"
 invalid-type-form = "error"
+missing-attribute = "error"
 not-subscriptable = "error"
-unresolved-attribute = "error"
 unsupported-operator = "error"

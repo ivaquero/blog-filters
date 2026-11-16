@@ -48,10 +48,12 @@ jobs:
           python-version: '3.14'
 
       - name: Install package + type checker
+        # ty is pulled in by the `dev` extra, where it is pinned to one patch
+        # release. Do not `pip install ty` here: that silently floats to the
+        # newest 0.0.x, whose renamed rules fail the gate below.
         run: |
           pip install --upgrade pip
           pip install -e ".[dev,sim]"
-          pip install ty
 
       - name: ty check
         # Every diagnostic is an error: the pyproject.toml [tool.ty.rules]
