@@ -50,8 +50,7 @@ Icon
 
 # Editors
 .vscode/
+.workbuddy/
 .idea/
 *.swp
-
-# Agent scratch (see .workbuddy/memory)
-.workbuddy/
+*.lock
