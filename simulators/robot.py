@@ -312,9 +312,7 @@ def simulate_robot_pf(
         )
     weights = np.ones(num_particles) / num_particles
 
-    history: list[np.ndarray] | None = (
-        [particles.copy()] if keep_particles else None
-    )
+    history: list[np.ndarray] | None = [particles.copy()] if keep_particles else None
     truth = np.empty((iters, 2))
     means = np.empty((iters, 2))
     variances = np.empty((iters, 2))
@@ -353,6 +351,9 @@ _ALIASES: dict[str, tuple[str | None, str]] = {
     "Hx_1": (None, "landmark_range"),
     "RobotEKF": ("filters.robot_ekf", "RobotEKF"),
     "robot3d_symbol": ("symbols.robot", "robot3d_symbol"),
+    "residual": (None, "residual_range_bearing"),
+    "residual_h": (None, "residual_landmark_array"),
+    "residual_x": (None, "residual_state"),
     "robot_pf": (None, "simulate_robot_pf"),
     "z_landmark": (None, "landmark_reading"),
     "z_mean": (None, "measurement_mean"),

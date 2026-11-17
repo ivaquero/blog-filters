@@ -12,10 +12,11 @@ from typing import Any
 
 import numpy as np
 
-from filters._typing import Matrix, Vector
+from shared import Matrix, Vector
 
 __all__ = [
     "as_covariance",
+    "as_state_batch",
     "as_state_vector",
     "axis_count",
     "block_diag_axis",
@@ -46,6 +47,27 @@ def as_state_vector(x: Any) -> Vector:
 
     vector = np.asarray(x, dtype=float)
     return vector.reshape(-1) if vector.ndim > 1 else vector
+
+
+def as_state_batch(x: Any, dim_x: int | None = None) -> Matrix:
+    """Coerce one state or a stack of states to a ``(n, dim_x)`` batch.
+
+    A 1-D input becomes a single row so callers can pass either shape without
+    branching. A 2-D input is used as-is. Anything else is rejected: silently
+    flattening a ``(n, dim_x, k)`` tensor used to hide shape bugs deep inside a
+    particle filter. ``dim_x``, when given, validates the column count.
+    """
+
+    batch = np.asarray(x, dtype=float)
+    if batch.ndim == 1:
+        batch = batch.reshape(1, -1)
+    if batch.ndim != 2:
+        raise ValueError(f"state must be 1-D or 2-D, got shape {batch.shape}")
+    if dim_x is not None and batch.shape[1] != dim_x:
+        raise ValueError(
+            f"state batch must have {dim_x} columns, got shape {batch.shape}"
+        )
+    return batch
 
 
 def as_covariance(value: Any, dim: int, name: str = "P") -> Matrix:

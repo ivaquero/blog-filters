@@ -293,3 +293,98 @@ def test_attach_model_rejects_dimension_mismatch():
     ekf = ExtendedKalmanFilter(dim_x=3, dim_z=1)
     with pytest.raises(ValueError, match="do not match"):
         ekf.attach_model(ConstantVelocity(dt=0.1, axes=1))
+
+
+# ---------------------------------------------------------------------------
+# Batch propagation (S5)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "model",
+    [ConstantVelocity(dt=0.1), ConstantAcceleration(dt=0.1), CoordinatedTurn(dt=0.1)],
+)
+def test_fx_many_matches_pointwise(model):
+    r"""``fx_many`` must be numerically identical to looping over ``fx``."""
+
+    rng = np.random.default_rng(7)
+    batch = rng.standard_normal((50, model.dim_x))
+    point = np.vstack([model.fx(row) for row in batch])
+    assert np.allclose(model.fx_many(batch), point, rtol=1e-12, atol=1e-14)
+
+
+@pytest.mark.parametrize(
+    "model",
+    [ConstantVelocity(dt=0.1), ConstantAcceleration(dt=0.1), CoordinatedTurn(dt=0.1)],
+)
+def test_hx_many_matches_pointwise(model):
+    r"""``hx_many`` must be numerically identical to looping over ``hx``."""
+
+    rng = np.random.default_rng(9)
+    batch = rng.standard_normal((50, model.dim_x))
+    point = np.vstack([model.hx(row) for row in batch])
+    assert np.allclose(model.hx_many(batch), point, rtol=1e-12, atol=1e-14)
+
+
+def test_single_vector_is_promoted_to_one_row():
+    model = ConstantVelocity(dt=0.1)
+    state = np.array([1.0, 2.0, 3.0, 4.0])
+    assert model.fx_many(state).shape == (1, model.dim_x)
+    assert np.allclose(model.fx_many(state)[0], model.fx(state))
+    assert model.hx_many(state).shape == (1, model.dim_z)
+
+
+def test_batch_rejects_bad_column_count_and_rank():
+    model = ConstantVelocity(dt=0.1)
+    with pytest.raises(ValueError, match="4 columns"):
+        model.fx_many(np.zeros((5, 3)))
+    with pytest.raises(ValueError, match="1-D or 2-D"):
+        model.fx_many(np.zeros((5, 4, 1)))
+
+
+def test_batched_and_pointwise_ukf_agree_exactly():
+    """The UKF batch path is an optimisation, not a different estimator."""
+
+    _, measurements = _cv_measurements(dt=0.1, rng=np.random.default_rng(21))
+
+    def build(force_pointwise):
+        model = ConstantVelocity(dt=0.1, axes=1, process_var=0.01, measurement_var=0.25)
+        points = MerweScaledSigmas(n=model.dim_x, alpha=1e-3, beta=2.0, kappa=1)
+        ukf = UnscentedKalmanFilter.from_model(model, points)
+        ukf.x = np.array([0.0, 0.0])
+        ukf.P = np.eye(model.dim_x) * 10.0
+        if force_pointwise:
+            # Break the "bound to model" identity so the pointwise path is used.
+            ukf.model = None
+        return ukf
+
+    fast, slow = build(False), build(True)
+    for z in measurements:
+        fast.predict()
+        fast.update(np.array([z]))
+        slow.predict()
+        slow.update(np.array([z]))
+
+    # Matrix-product vs per-vector accumulation order differs in the last bits;
+    # over 40 filtering steps that rounding noise grows to ~3e-9 in the state.
+    assert np.allclose(fast.x, slow.x, rtol=1e-7, atol=1e-9)
+    assert np.allclose(fast.P, slow.P, rtol=1e-8, atol=1e-12)
+    assert np.allclose(fast.sigmas_f, slow.sigmas_f, rtol=1e-7, atol=1e-9)
+    assert np.allclose(fast.sigmas_h, slow.sigmas_h, rtol=1e-7, atol=1e-9)
+
+
+def test_custom_fx_callable_keeps_pointwise_path():
+    """A caller-supplied ``fx`` must never be routed through the model batch."""
+
+    model = ConstantVelocity(dt=0.1, axes=1)
+    points = MerweScaledSigmas(n=model.dim_x, alpha=1e-3, beta=2.0, kappa=1)
+    ukf = UnscentedKalmanFilter.from_model(model, points)
+
+    calls = {"n": 0}
+
+    def counting_fx(x, dt, **kwargs):
+        calls["n"] += 1
+        return model.fx(x, dt, **kwargs)
+
+    ukf.predict(fx=counting_fx)
+    assert calls["n"] == points.num_sigmas()

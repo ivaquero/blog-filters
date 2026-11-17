@@ -22,8 +22,9 @@ class Tracks(NamedTuple):
         True state, shape ``(N, D)``. ``D`` is the state dimension of the
         scenario (``1`` for a scalar walk, ``2`` for ``[x, v]``, ...).
     z
-        Measurement, shape ``(N, M)``, or ``None`` when the scenario has no
-        sensor (pure kinematics).
+        Measurement, shape ``(N, M)``. A scenario without a sensor returns
+        ``(N, 0)`` rather than ``None``, so callers can read ``.shape`` without
+        narrowing the type and ``z.size == 0`` means "no channels".
 
     Examples
     --------
@@ -41,4 +42,4 @@ class Tracks(NamedTuple):
 
     t: np.ndarray
     x: np.ndarray
-    z: np.ndarray | None = None
+    z: np.ndarray

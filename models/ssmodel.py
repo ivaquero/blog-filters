@@ -33,9 +33,9 @@ from typing import Any
 
 import numpy as np
 
-from filters._typing import Matrix, Measurement, Vector
+from shared import Matrix, Measurement, Vector
 
-from ._common import numerical_jacobian
+from ._common import as_state_batch, numerical_jacobian
 
 __all__ = ["NonlinearStateSpaceModel", "StateSpaceModel"]
 
@@ -126,6 +126,33 @@ class StateSpaceModel(ABC):
         v : array_like, optional
             Measurement noise; ``None`` means noise-free.
         """
+
+    def fx_many(
+        self,
+        x: Any,
+        dt: float | None = None,
+        *,
+        t: float = 0.0,
+        u: Any = None,
+        w: Any = None,
+    ) -> Matrix:
+        """Propagate a ``(n, dim_x)`` batch of states; a single vector yields one row.
+
+        The default is a loop over :meth:`fx`, which keeps every subclass
+        correct without extra work. Linear models override it with a single
+        matrix product; particle filters gain their speedup from that override.
+        """
+
+        batch = as_state_batch(x, self.dim_x)
+        return np.vstack(
+            [np.asarray(self.fx(row, dt, t=t, u=u, w=w)).reshape(-1) for row in batch]
+        )
+
+    def hx_many(self, x: Any, v: Any = None) -> Matrix:
+        """Map a ``(n, dim_x)`` batch of states to ``(n, dim_z)`` measurements."""
+
+        batch = as_state_batch(x, self.dim_x)
+        return np.vstack([np.asarray(self.hx(row, v=v)).reshape(-1) for row in batch])
 
     def jacobian_x(self, x: Any) -> Matrix:
         """Return ``df/dx`` evaluated at ``x`` (numeric by default)."""

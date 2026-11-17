@@ -9,17 +9,14 @@ algebra that ``datagen`` never touches.
 
 import importlib
 
+from ._types import Tracks
+
 __all__ = ["Tracks", "datagen", "linear", "maneuver", "radar", "robot", "trajectory"]
 
 _SUBMODULES = frozenset(__all__) - {"Tracks"}
 
 
 def __getattr__(name: str) -> object:
-    if name == "Tracks":
-        from ._types import Tracks
-
-        globals()[name] = Tracks
-        return Tracks
     if name in _SUBMODULES:
         module = importlib.import_module(f".{name}", __name__)
         globals()[name] = module

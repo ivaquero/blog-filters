@@ -26,7 +26,7 @@ from typing import Any
 
 import numpy as np
 
-from filters._typing import Matrix
+from shared import Matrix
 
 __all__ = ["order_by_derivative", "white_noise_continuous", "white_noise_discrete"]
 

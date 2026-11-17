@@ -122,7 +122,6 @@ ignore = [
 ]
 "filters/_typing.py" = ["ANN401"]
 "filters/kalman.py" = ["ANN401"]
-"models/*" = []
 "plots/*" = ["ANN"]
 "simulators/*" = ["ANN"]
 "symbols/*" = ["ANN"]
@@ -146,7 +145,7 @@ combine-as-imports = true
 force-wrap-aliases = false
 split-on-trailing-comma = false
 order-by-type = true
-known-first-party = ["filters", "models", "plots", "simulators", "symbols"]
+known-first-party = ["filters", "models", "plots", "shared", "simulators", "symbols"]
 
 [tool.ty.src]
 respect-ignore-files = true

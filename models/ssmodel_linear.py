@@ -23,10 +23,11 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from filters._typing import Matrix, Measurement, Vector
+from shared import Matrix, Measurement, Vector
 
 from ._common import (
     as_covariance,
+    as_state_batch,
     as_state_vector,
     axis_count,
     block_diag_axis,
@@ -131,6 +132,42 @@ class LinearStateSpaceModel(StateSpaceModel):
                 as_state_vector(v)
             )
         return measurement
+
+    def fx_many(
+        self,
+        x: Any,
+        dt: float | None = None,
+        *,
+        t: float = 0.0,
+        u: Any = None,
+        w: Any = None,
+    ) -> Matrix:
+        """Propagate a batch in one matrix product (no per-particle Python loop).
+
+        Control and noise terms, when present, are broadcast from ``u``/``w``
+        across the batch by NumPy, preserving ``fx``'s semantics exactly.
+        """
+
+        batch = as_state_batch(x, self.dim_x)
+        propagated = batch @ self.transition_matrix(t).T
+        if u is not None:
+            propagated = propagated + as_state_batch(u, self.dim_u) @ (
+                self.control_input_matrix(t).T
+            )
+        if w is not None:
+            propagated = propagated + as_state_batch(w, self.dim_w) @ (
+                self.process_noise_input(t).T
+            )
+        return propagated
+
+    def hx_many(self, x: Any, v: Any = None) -> Matrix:
+        batch = as_state_batch(x, self.dim_x)
+        measurements = batch @ self.measurement_matrix(0.0).T
+        if v is not None:
+            measurements = measurements + as_state_batch(v, self.dim_v) @ (
+                self.measurement_noise_matrix(0.0).T
+            )
+        return measurements
 
     def jacobian_x(self, x: Any) -> Matrix:
         return self.transition_matrix(0.0)
@@ -293,16 +330,22 @@ def constant_velocity_measurement_noise_matrix(dim_z: int) -> Matrix:
     return np.eye(dim_z)
 
 
-def constant_velocity_transition_function(x: Any, dt: float) -> Vector:
+def constant_velocity_transition_function(x: Any, dt: float) -> Vector | Matrix:
     """Apply the constant-velocity transition to ``x`` without building ``F``.
 
-    Equivalent to ``constant_velocity_transition_matrix(len(x), dt) @ x`` but
-    ~1000x faster per call, which matters when a particle filter evaluates it
-    once per particle.
+    Accepts a single state ``(dim_x,)`` or a batch ``(n, dim_x)``; the output
+    has the same shape as the input. Equivalent to multiplying by
+    ``constant_velocity_transition_matrix(dim_x, dt)`` but ~1000x faster per
+    call, which matters when a particle filter evaluates it once per particle.
     """
 
-    state = np.array(as_state_vector(x), dtype=float, copy=True)
-    state[0::2] += dt * state[1::2]
+    state = np.array(x, dtype=float, copy=True)
+    if state.ndim == 1:
+        state[0::2] += dt * state[1::2]
+    elif state.ndim == 2:
+        state[:, 0::2] += dt * state[:, 1::2]
+    else:
+        raise ValueError(f"state must be 1-D or 2-D, got shape {state.shape}")
     return state
 
 
@@ -477,12 +520,21 @@ def constant_acceleration_L(dim_x: int, dt: float) -> Matrix:
     return block_diag_axis(np.array([[0.5 * dt**2], [dt], [1.0]]), axes)
 
 
-def constant_acceleration_fx(x: Any, dt: float) -> Vector:
-    """Apply the constant-acceleration transition without building ``F``."""
+def constant_acceleration_fx(x: Any, dt: float) -> Vector | Matrix:
+    """Apply the constant-acceleration transition without building ``F``.
 
-    state = np.array(as_state_vector(x), dtype=float, copy=True)
-    state[0::3] += dt * state[1::3] + 0.5 * dt**2 * state[2::3]
-    state[1::3] += dt * state[2::3]
+    Accepts a single state ``(dim_x,)`` or a batch ``(n, dim_x)``.
+    """
+
+    state = np.array(x, dtype=float, copy=True)
+    if state.ndim == 1:
+        state[0::3] += dt * state[1::3] + 0.5 * dt**2 * state[2::3]
+        state[1::3] += dt * state[2::3]
+    elif state.ndim == 2:
+        state[:, 0::3] += dt * state[:, 1::3] + 0.5 * dt**2 * state[:, 2::3]
+        state[:, 1::3] += dt * state[:, 2::3]
+    else:
+        raise ValueError(f"state must be 1-D or 2-D, got shape {state.shape}")
     return state
 
 

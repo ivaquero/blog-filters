@@ -9,6 +9,13 @@ straight to :meth:`filters.kalman_ukf.UnscentedKalmanFilter.from_model` or
 The free functions (``constant_velocity_transition_matrix`` and friends) remain
 public because the notebooks build filters from matrices; they are no longer the
 only way in.
+
+Naming note: in the legacy helpers the suffix counts *state entries per axis*,
+not spatial dimensions — ``KFCA3d`` builds a three-state single-axis filter
+(``dim_x=3, dim_z=1``), and ``constant_velocity_filter_2d`` takes a two-state
+per-axis vector. Prefer the explicit ``ConstantVelocity(axes=...)`` /
+``ConstantAcceleration(axes=...)`` classes, whose ``axes`` argument states the
+spatial dimension unambiguously.
 """
 
 from . import (

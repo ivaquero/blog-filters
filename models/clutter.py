@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from filters._typing import resolve_rng
+from shared import resolve_rng
 
 
 class PoissonClutter2D:

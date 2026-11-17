@@ -38,21 +38,21 @@ how GitHub project pages are served) — and runs on every push.
 
 ## Chapter ↔ module map
 
-| Chapter (Part 1 · Filter Implementation) | Filter modules | Support modules |
-|---|---|---|
-| `filters-bayes` — Grid Bayes filter | `filters.bayes` | `plots.plot_bayes` |
-| `filters-kf-basic` — Linear Kalman filter | `filters.bayes`, `filters.stats` | `models.const_vel`, `plots.plot_bayes`, `plots.plot_common`, `plots.plot_kf`, `simulators.datagen`, `simulators.linear` |
-| `filters-kf-design` — Designing the KF (Q, R, tuning) | `filters.kalman`, `filters.helpers`, `filters.stats` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.linear` |
-| `filters-ghk` — α-β and α-β-γ filters | `filters.ghk` | `plots.plot_gh`, `simulators.datagen` |
-| `filters-kf-plus` — Nonlinear KF (UKF, EnKF) | `filters.kalman`, `filters.kalman_ukf`, `filters.kalman_enkf`, `filters.sigma_points` | `models.noise`, `plots.plot_common`, `plots.plot_kf_plus` |
-| `filters-smoothers` — RTS & fixed-lag smoothers | `filters.kalman`, `filters.smoothers` | `plots.plot_smoother` |
-| `filters-pf` — Particle filter | (inlined in the notebook) | `plots.plot_pf`, `simulators.robot` |
+| Chapter (Part 1 · Filter Implementation)              | Filter modules                                                                        | Support modules                                                                                                         |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `filters-bayes` — Grid Bayes filter                   | `filters.bayes`                                                                       | `plots.plot_bayes`                                                                                                      |
+| `filters-kf-basic` — Linear Kalman filter             | `filters.bayes`, `filters.stats`                                                      | `models.const_vel`, `plots.plot_bayes`, `plots.plot_common`, `plots.plot_kf`, `simulators.datagen`, `simulators.linear` |
+| `filters-kf-design` — Designing the KF (Q, R, tuning) | `filters.kalman`, `filters.helpers`, `filters.stats`                                  | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.linear`       |
+| `filters-ghk` — α-β and α-β-γ filters                 | `filters.ghk`                                                                         | `plots.plot_gh`, `simulators.datagen`                                                                                   |
+| `filters-kf-plus` — Nonlinear KF (UKF, EnKF)          | `filters.kalman`, `filters.kalman_ukf`, `filters.kalman_enkf`, `filters.sigma_points` | `models.noise`, `plots.plot_common`, `plots.plot_kf_plus`                                                               |
+| `filters-smoothers` — RTS & fixed-lag smoothers       | `filters.kalman`, `filters.smoothers`                                                 | `plots.plot_smoother`                                                                                                   |
+| `filters-pf` — Particle filter                        | (inlined in the notebook)                                                             | `plots.plot_pf`, `simulators.robot`                                                                                     |
 
-| Chapter (Part 2 · Real Scenario Simulation) | Filter modules | Support modules |
-|---|---|---|
-| `filters-maneuver` — IMM maneuvering target | `filters.imm`, `filters.kalman` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.maneuver` |
-| `filters-task-tracking` — Radar / robot / projectile tracking | `filters.kalman`, `filters.kalman_ekf`, `filters.kalman_ukf`, `filters.sigma_points` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `simulators.radar`, `simulators.robot`, `simulators.trajectory` |
-| `filters-task-fusion` — Two-sensor data fusion | `filters.fusion`, `filters.kalman` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.datagen`, `simulators.linear`, `simulators.radar` |
+| Chapter (Part 2 · Real Scenario Simulation)                   | Filter modules                                                                       | Support modules                                                                                                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filters-maneuver` — IMM maneuvering target                   | `filters.imm`, `filters.kalman`                                                      | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.maneuver`                                         |
+| `filters-task-tracking` — Radar / robot / projectile tracking | `filters.kalman`, `filters.kalman_ekf`, `filters.kalman_ukf`, `filters.sigma_points` | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `simulators.radar`, `simulators.robot`, `simulators.trajectory`                |
+| `filters-task-fusion` — Two-sensor data fusion                | `filters.fusion`, `filters.kalman`                                                   | `models.const_acc`, `models.const_vel`, `models.noise`, `plots.plot_common`, `plots.plot_kf`, `simulators.datagen`, `simulators.linear`, `simulators.radar` |
 
 ## Toolkit structure
 
@@ -89,6 +89,44 @@ how GitHub project pages are served) — and runs on every push.
 - [x] `noise` — process & measurement noise helpers
 - [x] `ssmodel` / `ssmodel_linear` / `ssmodel_nonlinear` — state-space base classes
 
+The classes are the supported entry point. `StateSpaceModel` fixes the contract
+(`fx`, `hx`, `jacobian_x`, `jacobian_h`, `process_cov`, `measurement_cov`) and
+satisfies `filters._typing.StateSpaceModelLike` structurally, so a model is
+handed straight to either estimator:
+
+```python
+from models import ConstantVelocity
+from filters.kalman_ekf import ExtendedKalmanFilter
+from filters.kalman_ukf import UnscentedKalmanFilter
+from filters.sigma_points import MerweScaledSigmas
+
+model = ConstantVelocity(dt=0.1, axes=2, process_var=0.01, measurement_var=0.25)
+ekf = ExtendedKalmanFilter.from_model(model, x0=[0, 1, 0, 1], P0=500.0)
+ukf = UnscentedKalmanFilter.from_model(
+    model, MerweScaledSigmas(n=model.dim_x, alpha=1e-3, beta=2.0, kappa=3 - model.dim_x)
+)
+```
+
+A nonlinear model only has to implement `fx`/`hx`: the Jacobians fall back to
+central differences, and `LinearModel(F=..., H=..., L=...)` covers an arbitrary
+linear plant without a new class. The free functions
+(`constant_velocity_transition_matrix`, `KFCA3d`, …) stay public for the
+notebooks; they are no longer the only way in. Note the legacy suffix counts
+*state entries per axis* (`KFCA3d` is a three-state single-axis filter), so
+prefer the classes' explicit `axes=` argument in new code.
+
+Models also expose `fx_many`/`hx_many` for vectorised propagation: they accept
+either one state `(dim_x,)` or a batch `(n, dim_x)` and are numerically
+identical to looping over `fx`/`hx`. The UKF picks the batch path automatically
+when its `fx`/`hx` are the attached model's own methods, cutting sigma-point
+propagation from ~75 ms to <1 ms per 20 000 points. A custom `fx=` callable
+keeps the original per-point loop.
+
+Numeric type aliases and `resolve_rng` live in the package-neutral `shared.py`;
+both `filters` and `models` import from it. `filters._typing` still re-exports
+them, so existing imports are unchanged, and importing `models` no longer pulls
+in any `filters` module.
+
 ### `plots` — plotting helpers
 
 - [x] `plot_bayes` — Bayesian grid plots
@@ -119,16 +157,16 @@ a compatibility fork: the goal is to demonstrate what a Kalman-family teaching
 library looks like when it is written **for** Python 3.14 instead of ported to
 it. That shows up in three places.
 
-* **Typing is first-class.** Every package ships a PEP 561 `py.typed` marker
+- **Typing is first-class.** Every package ships a PEP 561 `py.typed` marker
   and uses PEP 695 `type` aliases plus `numpy.typing.NDArray[np.float64]` in
   `filters._typing`. `KalmanFilter`, `ExtendedKalmanFilter`, and friends
   satisfy the runtime-checkable `Filter` protocol, so IMM / MMAE / plotting
   helpers accept anything structural instead of requiring inheritance.
-* **Batch and smoother APIs return `NamedTuple`s.** `BatchOutput`,
+- **Batch and smoother APIs return `NamedTuple`s.** `BatchOutput`,
   `Batch2Output`, `RtsOutput`, `UkfRtsOutput`, `SmootherOutput`, and
   `IMMOutput` expose `.means` / `.covs` / `.x` / `.P` fields while still
   unpacking as ordinary tuples — no existing notebook or test breaks.
-* **Randomness is injected, not global.** Simulators, plotting helpers,
+- **Randomness is injected, not global.** Simulators, plotting helpers,
   resamplers, and clutter models take an explicit
   `numpy.random.Generator` (`rng=`) resolved through `filters._typing.resolve_rng`.
   The legacy `seed=` keyword is retired; pass `rng=np.random.default_rng(seed)`

@@ -206,8 +206,9 @@ def simulate_turning(
     """Cartesian CV trajectory with a constant acceleration applied mid-run.
 
     Unlike :class:`ManeuveringTarget` this works in ``[x, vx, z, vz]`` state
-    space and has no sensor, so ``Tracks.z`` is ``None``. The retired version
-    returned an ``(N, 4, 1)`` stack that every caller had to ``reshape``.
+    space and has no sensor, so ``Tracks.z`` has shape ``(N, 0)``. The retired
+    version returned an ``(N, 4, 1)`` stack that every caller had to
+    ``reshape``.
 
     Parameters
     ----------
@@ -234,4 +235,4 @@ def simulate_turning(
             state = state + accel_matrix @ accel_vector
         states[i] = state.ravel()
 
-    return Tracks(t=(np.arange(num) + 1.0) * dt, x=states)
+    return Tracks(t=(np.arange(num) + 1.0) * dt, x=states, z=np.empty((num, 0)))

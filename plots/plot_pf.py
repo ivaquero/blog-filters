@@ -48,16 +48,14 @@ def plot_robot_pf(ax: Axes, run, *, show_particles: bool = False) -> None:
         if show_particles and clouds is not None:
             plot_particles(ax, clouds[step + 1], color="k", marker=",")
         actual = ax.scatter(
-            run.x_true[step, 0],
-            run.x_true[step, 1],
-            marker="+",
-            color="k",
-            s=180,
-            lw=3,
+            run.x_true[step, 0], run.x_true[step, 1], marker="+", color="k", s=180, lw=3
         )
-        estimate = ax.scatter(run.x_est[step, 0], run.x_est[step, 1], marker="s", color="r")
+        estimate = ax.scatter(
+            run.x_est[step, 0], run.x_est[step, 1], marker="s", color="r"
+        )
 
-    ax.legend([actual, estimate], ["Actual", "PF"], loc=4, numpoints=1)
+    if actual is not None and estimate is not None:
+        ax.legend([actual, estimate], ["Actual", "PF"], loc=4, numpoints=1)
 
 
 def plot_particles(

@@ -24,13 +24,17 @@ __all__ = ["STEER_EPS", "RobotEKF", "robot_move", "transition_jacobians"]
 STEER_EPS = 1e-6
 
 
-def robot_move(x, *, dt: float, u, wheelbase: float) -> np.ndarray:
+def robot_move(x, dt: float, *, u, wheelbase: float) -> np.ndarray:
     """Propagate a 3-state robot ``[x, y, heading]`` one step.
 
     The kinematic model is shared with the simulator, which is what a
     "differential-drive robot" is: one model, two consumers. The simulator used
     to carry a byte-identical copy because the EKF's version only accepted
     ``(3, 1)`` column vectors.
+
+    ``dt`` stays positional-capable because
+    :class:`~filters.kalman_ukf.UnscentedKalmanFilter` calls its ``fx`` callback
+    as ``fx(sigma, dt, **fx_args)``. Only ``u`` and ``wheelbase`` are keyword-only.
 
     Parameters
     ----------
@@ -71,9 +75,7 @@ def robot_move(x, *, dt: float, u, wheelbase: float) -> np.ndarray:
     )
 
 
-def transition_jacobians(
-    x, *, dt: float, u, wheelbase: float
-) -> tuple[Matrix, Matrix]:
+def transition_jacobians(x, *, dt: float, u, wheelbase: float) -> tuple[Matrix, Matrix]:
     """Return ``F = df/dx`` and ``V = df/du`` for :func:`robot_move`.
 
     Both branches follow the branch taken by :func:`robot_move`. For a
@@ -167,12 +169,7 @@ class RobotEKF(ExtendedKalmanFilter):
     """
 
     def __init__(
-        self,
-        dt: float,
-        *,
-        wheelbase: float,
-        std_vel: float,
-        std_steer: float,
+        self, dt: float, *, wheelbase: float, std_vel: float, std_steer: float
     ):
         super().__init__(3, 2, 2)
         self.dt = dt
@@ -197,7 +194,10 @@ class RobotEKF(ExtendedKalmanFilter):
             self.x, dt=self.dt, u=control, wheelbase=self.wheelbase
         )
         noise = np.diag([self.std_vel**2, self.std_steer**2])
-        self.P = transition @ self.P @ transition.T + control_matrix @ noise @ control_matrix.T
+        self.P = (
+            transition @ self.P @ transition.T
+            + control_matrix @ noise @ control_matrix.T
+        )
 
         self.x_prior = self.x.copy()
         self.P_prior = self.P.copy()

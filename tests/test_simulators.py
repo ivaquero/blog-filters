@@ -36,8 +36,9 @@ class TestTracks:
         t, x, z = linear.DogSimulation().simulate(num=2)
         assert t.shape == x.shape[:1] == z.shape[:1]
 
-    def test_sensor_less_scenario_reports_none(self):
-        assert maneuver.simulate_turning(num=5).z is None
+    def test_sensor_less_scenario_reports_empty_channel(self):
+        z = maneuver.simulate_turning(num=5).z
+        assert z.shape == (5, 0)
 
 
 class TestDogSimulation:
@@ -89,7 +90,9 @@ class TestMovingTarget:
 
 class TestCVCAObjects:
     def test_cv_simulate_matches_step_api(self):
-        stepped = linear.CVObject(vel_std=0.2, meas_std=0.3, rng=np.random.default_rng(5))
+        stepped = linear.CVObject(
+            vel_std=0.2, meas_std=0.3, rng=np.random.default_rng(5)
+        )
         xs, zs = [], []
         for _ in range(6):
             xs.append(stepped.update())
@@ -109,7 +112,9 @@ class TestCVCAObjects:
         assert tracks.z.shape == (4, 1)
 
     def test_ca_simulate_matches_step_api(self):
-        stepped = linear.CAObject(acc_std=0.05, meas_std=0.2, rng=np.random.default_rng(9))
+        stepped = linear.CAObject(
+            acc_std=0.05, meas_std=0.2, rng=np.random.default_rng(9)
+        )
         xs, zs = [], []
         for _ in range(6):
             xs.append(stepped.update())
@@ -201,7 +206,12 @@ class TestManeuver:
 class TestTrajectory:
     def test_vacuum_projectile_matches_analytic_apex(self):
         ball = trajectory.BallTrajectory2D(
-            x0=0.0, y0=0.0, speed=10.0, launch_angle_deg=90.0, gravity=10.0, meas_std=(0.0, 0.0)
+            x0=0.0,
+            y0=0.0,
+            speed=10.0,
+            launch_angle_deg=90.0,
+            gravity=10.0,
+            meas_std=(0.0, 0.0),
         )
         for _ in range(100):
             y = ball.step(dt=0.01)[1]
@@ -214,7 +224,9 @@ class TestTrajectory:
         assert baseball.meas_std == (0.0, 0.0)
 
         twin = trajectory.BallTrajectory2D(x0=0, y0=0, speed=5, launch_angle_deg=45)
-        assert np.array_equal(ball.simulate(num=3, dt=0.1).x, twin.simulate(num=3, dt=0.1).z)
+        assert np.array_equal(
+            ball.simulate(num=3, dt=0.1).x, twin.simulate(num=3, dt=0.1).z
+        )
 
     def test_drag_force_is_non_negative_and_monotone(self):
         assert trajectory.drag_force(0.0) >= 0.0
@@ -230,12 +242,14 @@ class TestRadar:
         assert xz_range == pytest.approx(np.hypot(10.0, 20.0))
 
     def test_doppler_model_returns_four_values(self):
-        distance, bearing, vx, vz = radar.range_bearing_doppler([10.0, 3.0, 20.0, 1.0])
+        distance, _bearing, vx, vz = radar.range_bearing_doppler([10.0, 3.0, 20.0, 1.0])
         assert (vx, vz) == (3.0, 1.0)
         assert distance == pytest.approx(np.hypot(10.0, 20.0))
 
     def test_slant_range_jacobian_matches_symbolic(self):
-        _, jacobian, _ = __import__("symbols.radar", fromlist=["radar3d_symbol"]).radar3d_symbol()
+        _, jacobian, _ = __import__(
+            "symbols.radar", fromlist=["radar3d_symbol"]
+        ).radar3d_symbol()
         subs = {sy.Symbol("x"): 7.0, sy.Symbol("x_vel"): -2.0, sy.Symbol("z"): 11.0}
         expected = np.array(jacobian.evalf(subs=subs), dtype=float)
         assert np.allclose(radar.slant_range_jacobian([7.0, -2.0, 11.0]), expected)
@@ -244,7 +258,15 @@ class TestRadar:
         assert radar.slant_range([3.0, 0.0, 4.0]) == pytest.approx(5.0)
 
     def test_radar_sim_noise_is_configurable(self):
-        quiet = radar.RadarSim(dt=1.0, pos=0.0, vel=0.0, alt=100.0, vel_std=0.0, alt_std=0.0, range_frac_std=0.0)
+        quiet = radar.RadarSim(
+            dt=1.0,
+            pos=0.0,
+            vel=0.0,
+            alt=100.0,
+            vel_std=0.0,
+            alt_std=0.0,
+            range_frac_std=0.0,
+        )
         assert quiet.measure() == pytest.approx(100.0)
 
 
@@ -266,8 +288,13 @@ class TestRobotEKF:
 
         for angle in (0.05, 0.1, 0.3, 0.5, -0.4, 1.2, -2.0):
             subs = {
-                x_sym: 0, y_sym: 0, v_sym: 1.3, a_sym: angle,
-                w_sym: 0.8, theta_sym: 0.37, t_sym: 0.5,
+                x_sym: 0,
+                y_sym: 0,
+                v_sym: 1.3,
+                a_sym: angle,
+                w_sym: 0.8,
+                theta_sym: 0.37,
+                t_sym: 0.5,
             }
             expected_f = np.array(f_j.evalf(subs=subs), dtype=float)
             expected_v = np.array(v_j.evalf(subs=subs), dtype=float)
@@ -292,7 +319,9 @@ class TestRobotEKF:
         expected = robot_ekf.robot_move(
             [1.0, 2.0, 0.3], dt=0.1, u=[1.0, 0.2], wheelbase=0.5
         )
-        assert np.allclose(ekf.move(np.array([[1.0], [2.0], [0.3]]), [1.0, 0.2], 0.1).ravel(), expected)
+        assert np.allclose(
+            ekf.move(np.array([[1.0], [2.0], [0.3]]), [1.0, 0.2], 0.1).ravel(), expected
+        )
 
     def test_process_noise_does_not_vanish_at_zero_speed(self):
         ekf = robot_ekf.RobotEKF(1.0, wheelbase=1.0, std_vel=0.1, std_steer=0.05)
@@ -305,7 +334,10 @@ class TestRobotEKF:
 class TestRobotScenario:
     def test_particle_filter_returns_data_instead_of_plotting(self):
         run = robot.simulate_robot_pf(
-            num_particles=200, iters=4, keep_particles=True, rng=np.random.default_rng(2)
+            num_particles=200,
+            iters=4,
+            keep_particles=True,
+            rng=np.random.default_rng(2),
         )
         assert run.x_true.shape == (4, 2)
         assert run.x_est.shape == (4, 2)

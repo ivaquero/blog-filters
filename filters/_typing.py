@@ -21,24 +21,24 @@ annotations — no `from __future__ import annotations` needed.
 from typing import Any, NamedTuple, Protocol, runtime_checkable
 
 import numpy as np
-import numpy.typing as npt
+
+from shared import (
+    CovarianceLayout,
+    FloatLike,
+    Matrix,
+    MatrixLike,
+    Measurement,
+    MeasurementLike,
+    StateLayout,
+    Vector,
+    resolve_rng,
+)
 
 # ---------------------------------------------------------------------------
-# Numeric aliases
+# Numeric aliases — re-exported from the package-neutral ``shared`` module so
+# models can import them without depending on ``filters``. Existing imports
+# from this module stay source-compatible.
 # ---------------------------------------------------------------------------
-
-type Matrix = npt.NDArray[np.float64]
-type Vector = npt.NDArray[np.float64]
-type Measurement = npt.NDArray[np.float64]
-# Any caller-supplied measurement — ndarray, list, tuple, or scalar — before
-# `reshape_z` normalises it into a `Measurement`.
-type MeasurementLike = npt.ArrayLike
-
-type FloatLike = float | np.floating
-type MatrixLike = Matrix | FloatLike
-
-type StateLayout = npt.NDArray[np.float64]
-type CovarianceLayout = npt.NDArray[np.float64]
 
 __all__ = [
     "Batch2Output",
@@ -61,23 +61,6 @@ __all__ = [
     "Vector",
     "resolve_rng",
 ]
-
-
-# ---------------------------------------------------------------------------
-# RNG helper
-# ---------------------------------------------------------------------------
-
-
-def resolve_rng(rng: np.random.Generator | None = None) -> np.random.Generator:
-    """Return `rng` when provided, otherwise a fresh unseeded generator.
-
-    Every simulator, resampler and plotting helper that touches randomness
-    accepts a `numpy.random.Generator`, so a caller can pin a stream, share
-    it across several objects, or thread it through a test fixture. Passing
-    `None` matches `np.random.default_rng()` semantics.
-    """
-
-    return np.random.default_rng() if rng is None else rng
 
 
 # ---------------------------------------------------------------------------

@@ -15,6 +15,22 @@ def _as_covariance(value, dim):
     return np.eye(dim) * value if np.isscalar(value) else value
 
 
+def _batch_method(filter_obj, fn, name):
+    """Return ``model.<name>`` when ``fn`` is that model's own bound method.
+
+    Batched propagation is an optimisation, not part of the ``fx``/``hx``
+    contract. It is only safe when the callable is the attached model's method:
+    a caller-supplied ``fx=`` may close over state that a batch call would
+    evaluate on the wrong axis, so such callables keep the per-point loop.
+    """
+
+    model = filter_obj.model
+    if model is None or getattr(fn, "__self__", None) is not model:
+        return None
+    method = getattr(model, name, None)
+    return method if callable(method) else None
+
+
 def unscented_transform(sigmas, Wm, Wc, noise_cov=None, mean_fn=None, residual_fn=None):
     """Computes unscented transform of a set of sigma points and weights.
 
@@ -225,8 +241,12 @@ class UnscentedKalmanFilter:
 
         R = self.R if R is None else _as_covariance(R, self._dim_z)
 
-        for i, sigma in enumerate(self.sigmas_f):
-            self.sigmas_h[i] = hx(sigma, **hx_args)
+        batch_hx = _batch_method(self, hx, "hx_many")
+        if batch_hx is not None:
+            self.sigmas_h[:] = np.asarray(batch_hx(self.sigmas_f, **hx_args))
+        else:
+            for i, sigma in enumerate(self.sigmas_f):
+                self.sigmas_h[i] = hx(sigma, **hx_args)
 
         # mean and covariance of prediction passed through unscented transform
         zp, self.S = UT(
@@ -277,8 +297,12 @@ class UnscentedKalmanFilter:
         # calculate sigma points for given mean and covariance
         sigmas = self.points_fn.sigma_points(self.x, self.P)
 
-        for i, sigma in enumerate(sigmas):
-            self.sigmas_f[i] = fx(sigma, dt, **fx_args)
+        batch_fx = _batch_method(self, fx, "fx_many")
+        if batch_fx is not None:
+            self.sigmas_f[:] = np.asarray(batch_fx(sigmas, dt, **fx_args))
+        else:
+            for i, sigma in enumerate(sigmas):
+                self.sigmas_f[i] = fx(sigma, dt, **fx_args)
 
     def batch_filter(self, zs, Rs=None, dts=None, UT=None, saver=None):
         try:

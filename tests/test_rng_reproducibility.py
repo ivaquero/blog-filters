@@ -16,7 +16,12 @@ from simulators import datagen, linear, maneuver, radar, trajectory
 
 
 def test_datagen_gen_particles_uniform_reproducible():
-    kwargs = dict(x_range=(0, 10), y_range=(0, 10), heading_range=(0, 6.28), num=20)
+    kwargs = {
+        "x_range": (0, 10),
+        "y_range": (0, 10),
+        "heading_range": (0, 6.28),
+        "num": 20,
+    }
     a = datagen.gen_particles_uniform(**kwargs, rng=np.random.default_rng(42))
     b = datagen.gen_particles_uniform(**kwargs, rng=np.random.default_rng(42))
     c = datagen.gen_particles_uniform(**kwargs, rng=np.random.default_rng(43))
@@ -25,14 +30,14 @@ def test_datagen_gen_particles_uniform_reproducible():
 
 
 def test_datagen_gen_particles_gaussian_reproducible():
-    kwargs = dict(mean=[1, 2, 0.5], std=[5, 5, 0.1], num=15)
+    kwargs = {"mean": [1, 2, 0.5], "std": [5, 5, 0.1], "num": 15}
     a = datagen.gen_particles_gaussian(**kwargs, rng=np.random.default_rng(7))
     b = datagen.gen_particles_gaussian(**kwargs, rng=np.random.default_rng(7))
     assert np.array_equal(a, b)
 
 
 def test_datagen_gen_sensor_data_reproducible():
-    kwargs = dict(duration=3, pos_std=0.1, vel_std=0.05)
+    kwargs = {"duration": 3, "pos_std": 0.1, "vel_std": 0.05}
     pa, va = datagen.gen_async_sensor_data(**kwargs, rng=np.random.default_rng(99))
     pb, vb = datagen.gen_async_sensor_data(**kwargs, rng=np.random.default_rng(99))
     assert pa == pb
@@ -40,7 +45,7 @@ def test_datagen_gen_sensor_data_reproducible():
 
 
 def test_datagen_gen_cvca_reproducible():
-    kwargs = dict(num=5, x0=0.0, vel=1.0, meas_var=1.0)
+    kwargs = {"num": 5, "x0": 0.0, "vel": 1.0, "meas_var": 1.0}
     a = datagen.gen_cvca(**kwargs, rng=np.random.default_rng(4))
     b = datagen.gen_cvca(**kwargs, rng=np.random.default_rng(4))
     assert np.array_equal(a.x, b.x)
@@ -48,7 +53,7 @@ def test_datagen_gen_cvca_reproducible():
 
 
 def test_linear_dog_simulation_reproducible():
-    kwargs = dict(x0=0, model_mean=1.0, vel_var=0.5, meas_var=0.2)
+    kwargs = {"x0": 0, "model_mean": 1.0, "vel_var": 0.5, "meas_var": 0.2}
     a = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
     b = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
     for _ in range(20):
@@ -56,7 +61,7 @@ def test_linear_dog_simulation_reproducible():
 
 
 def test_linear_dog_simulate_reproducible():
-    kwargs = dict(x0=0, model_mean=1.0, vel_var=0.5, meas_var=0.2)
+    kwargs = {"x0": 0, "model_mean": 1.0, "vel_var": 0.5, "meas_var": 0.2}
     a = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
     b = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
     first = a.simulate(num=20)
@@ -66,7 +71,7 @@ def test_linear_dog_simulate_reproducible():
 
 
 def test_linear_moving_target_reproducible():
-    kwargs = dict(pos=(0, 0), vel=(1, 1), meas_std=0.5)
+    kwargs = {"pos": (0, 0), "vel": (1, 1), "meas_std": 0.5}
     a = linear.MovingTarget2D(**kwargs, rng=np.random.default_rng(3))
     b = linear.MovingTarget2D(**kwargs, rng=np.random.default_rng(3))
     for _ in range(10):
@@ -74,10 +79,15 @@ def test_linear_moving_target_reproducible():
 
 
 def test_maneuver_simulate_maneuver_reproducible():
-    kwargs = dict(steady_count=20, meas_std=0.5)
-    a = maneuver.simulate_maneuver(**kwargs, rng=np.random.default_rng(17))
-    b = maneuver.simulate_maneuver(**kwargs, rng=np.random.default_rng(17))
-    c = maneuver.simulate_maneuver(**kwargs, rng=np.random.default_rng(18))
+    a = maneuver.simulate_maneuver(
+        steady_count=20, meas_std=0.5, rng=np.random.default_rng(17)
+    )
+    b = maneuver.simulate_maneuver(
+        steady_count=20, meas_std=0.5, rng=np.random.default_rng(17)
+    )
+    c = maneuver.simulate_maneuver(
+        steady_count=20, meas_std=0.5, rng=np.random.default_rng(18)
+    )
     # Truth trajectory is deterministic (only sensing noise is random).
     assert np.array_equal(a.x, b.x)
     assert np.array_equal(a.z, b.z)
@@ -85,7 +95,7 @@ def test_maneuver_simulate_maneuver_reproducible():
 
 
 def test_radar_station_and_sim_reproducible():
-    station = dict(range_std=1.0, bearing_std=0.1)
+    station = {"range_std": 1.0, "bearing_std": 0.1}
     st_a = radar.RadarStation((0, 0), **station, rng=np.random.default_rng(1))
     st_b = radar.RadarStation((0, 0), **station, rng=np.random.default_rng(1))
     ac_a = radar.ACSim((5, 5), (1, 0), vel_std=0.1, rng=np.random.default_rng(2))
@@ -96,7 +106,7 @@ def test_radar_station_and_sim_reproducible():
         assert np.array_equal(pos_a, pos_b)
         assert st_a.reading(pos_a) == st_b.reading(pos_b)
 
-    kwargs = dict(dt=1.0, pos=0.0, vel=1.0, alt=100.0)
+    kwargs = {"dt": 1.0, "pos": 0.0, "vel": 1.0, "alt": 100.0}
     rs_a = radar.RadarSim(**kwargs, rng=np.random.default_rng(5))
     rs_b = radar.RadarSim(**kwargs, rng=np.random.default_rng(5))
     for _ in range(10):
@@ -104,13 +114,27 @@ def test_radar_station_and_sim_reproducible():
 
 
 def test_trajectory_ball_and_baseball_reproducible():
-    ball = dict(x0=0, y0=0, speed=10, launch_angle_deg=30, meas_std=(0.1, 0.1))
-    bt_a = trajectory.BallTrajectory2D(**ball, rng=np.random.default_rng(42))
-    bt_b = trajectory.BallTrajectory2D(**ball, rng=np.random.default_rng(42))
+    def make_ball() -> trajectory.BallTrajectory2D:
+        return trajectory.BallTrajectory2D(
+            x0=0.0,
+            y0=0.0,
+            speed=10.0,
+            launch_angle_deg=30.0,
+            meas_std=(0.1, 0.1),
+            rng=np.random.default_rng(42),
+        )
+
+    bt_a, bt_b = make_ball(), make_ball()
     for _ in range(5):
         assert bt_a.step(dt=0.1) == bt_b.step(dt=0.1)
 
-    bat = dict(x0=0, y0=0, speed=40, launch_angle_deg=30, meas_std=(0.1, 0.1))
+    bat = {
+        "x0": 0,
+        "y0": 0,
+        "speed": 40,
+        "launch_angle_deg": 30,
+        "meas_std": (0.1, 0.1),
+    }
     bp_a = trajectory.BaseballPath(**bat, rng=np.random.default_rng(11))
     bp_b = trajectory.BaseballPath(**bat, rng=np.random.default_rng(11))
     for _ in range(5):
