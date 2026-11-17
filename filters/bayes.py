@@ -47,8 +47,18 @@ def posterior(likelihood, prior):
 def prior_estimate(x0, model, zs, R, *, show_steps=False):
     """Sequential Bayesian update of a scalar state.
 
-    Returns three (n, 2) stacks of (mean, σ) for the priors, the estimates
-    and the posterior standard deviations.
+    ``x0`` and ``model`` are :class:`filters.stats.gaussian` beliefs, so their
+    second field is a *standard deviation*. ``R`` is the measurement
+    *variance*, matching ``simulators.linear.DogSimulation``; it is converted
+    once per step.
+
+    Returns three ``(n, 2)`` stacks of ``(mean, variance)`` — the priors, the
+    estimates and the posteriors — so the result can be handed straight to
+    ``plot_kf(..., var=...)``. ``estimates`` currently duplicates ``ps`` and is
+    kept only because callers unpack three values.
+
+    All quantities are scalars; the stacks exist so callers can slice a whole
+    run without a second comprehension.
     """
     x = x0
     priors, estimates, ps = (
@@ -58,9 +68,11 @@ def prior_estimate(x0, model, zs, R, *, show_steps=False):
     )
     for i, z in enumerate(zs):
         prior = gaussian_sum(x, model)
-        likelihood = gaussian(z, R)
+        likelihood = gaussian(z, np.sqrt(R))
         x = gaussian_product(prior, likelihood)
-        priors[i], estimates[i], ps[i] = prior, x.mean, x.sigma
+        priors[i] = prior.mean, prior.sigma**2
+        estimates[i] = x.mean, x.sigma**2
+        ps[i] = x.mean, x.sigma**2
         if show_steps:
             if i == 0:
                 print_steps(prior, z, x)

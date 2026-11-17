@@ -7,6 +7,7 @@ from . import (
     plot_kf,
     plot_kf_plus,
     plot_pf,
+    plot_radar,
     plot_smoother,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "plot_kf",
     "plot_kf_plus",
     "plot_pf",
+    "plot_radar",
     "plot_smoother",
 ]

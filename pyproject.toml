@@ -122,7 +122,7 @@ ignore = [
 ]
 "filters/_typing.py" = ["ANN401"]
 "filters/kalman.py" = ["ANN401"]
-"models/*" = ["ANN"]
+"models/*" = []
 "plots/*" = ["ANN"]
 "simulators/*" = ["ANN"]
 "symbols/*" = ["ANN"]

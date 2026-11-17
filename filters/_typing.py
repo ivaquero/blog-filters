@@ -18,7 +18,7 @@ Uses Python 3.14 native PEP 695 `type` aliases and PEP 649 deferred
 annotations — no `from __future__ import annotations` needed.
 """
 
-from typing import NamedTuple, Protocol, runtime_checkable
+from typing import Any, NamedTuple, Protocol, runtime_checkable
 
 import numpy as np
 import numpy.typing as npt
@@ -56,6 +56,7 @@ __all__ = [
     "SigmaPointGenerator",
     "SmootherOutput",
     "StateLayout",
+    "StateSpaceModelLike",
     "UkfRtsOutput",
     "Vector",
     "resolve_rng",
@@ -126,6 +127,48 @@ class Resampler(Protocol):
     """Maps a weight vector to a resampled index vector."""
 
     def __call__(self, weights: Vector, rng: np.random.Generator) -> Vector: ...
+
+
+@runtime_checkable
+class StateSpaceModelLike(Protocol):
+    """Structural contract for the motion models the estimators accept.
+
+    ``ExtendedKalmanFilter.from_model`` and
+    ``UnscentedKalmanFilter.from_model`` take anything with this shape, so
+    ``models.ConstantVelocity()``, a user's own class, or a ``SimpleNamespace``
+    of bound methods all work — no inheritance from the ``models`` package, and
+    therefore no import from ``filters`` into ``models``.
+
+    The signatures mirror the callables the filters already used:
+    ``fx(x, dt)`` for propagation and ``hx(x)`` for measurement prediction, with
+    ``jacobian_*`` supplying the linearisations an EKF needs.
+    """
+
+    @property
+    def dim_x(self) -> int: ...
+
+    @property
+    def dim_z(self) -> int: ...
+
+    def fx(
+        self,
+        x: Any,
+        dt: float | None = None,
+        *,
+        t: float = 0.0,
+        u: Any = None,
+        w: Any = None,
+    ) -> Vector: ...
+
+    def hx(self, x: Any, v: Any = None) -> Measurement: ...
+
+    def jacobian_x(self, x: Any) -> Matrix: ...
+
+    def jacobian_h(self, x: Any) -> Matrix: ...
+
+    def process_cov(self) -> Matrix: ...
+
+    def measurement_cov(self) -> Matrix: ...
 
 
 # ---------------------------------------------------------------------------

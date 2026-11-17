@@ -16,131 +16,105 @@ from simulators import datagen, linear, maneuver, radar, trajectory
 
 
 def test_datagen_gen_particles_uniform_reproducible():
-    a = datagen.gen_particles_uniform(
-        (0, 10), (0, 10), (0, 6.28), N=20, rng=np.random.default_rng(42)
-    )
-    b = datagen.gen_particles_uniform(
-        (0, 10), (0, 10), (0, 6.28), N=20, rng=np.random.default_rng(42)
-    )
-    c = datagen.gen_particles_uniform(
-        (0, 10), (0, 10), (0, 6.28), N=20, rng=np.random.default_rng(43)
-    )
+    kwargs = dict(x_range=(0, 10), y_range=(0, 10), heading_range=(0, 6.28), num=20)
+    a = datagen.gen_particles_uniform(**kwargs, rng=np.random.default_rng(42))
+    b = datagen.gen_particles_uniform(**kwargs, rng=np.random.default_rng(42))
+    c = datagen.gen_particles_uniform(**kwargs, rng=np.random.default_rng(43))
     assert np.array_equal(a, b)
     assert not np.array_equal(a, c)
 
 
 def test_datagen_gen_particles_gaussian_reproducible():
-    a = datagen.gen_particles_gaussian(
-        mean=[1, 2, 0.5], std=[5, 5, 0.1], N=15, rng=np.random.default_rng(7)
-    )
-    b = datagen.gen_particles_gaussian(
-        mean=[1, 2, 0.5], std=[5, 5, 0.1], N=15, rng=np.random.default_rng(7)
-    )
+    kwargs = dict(mean=[1, 2, 0.5], std=[5, 5, 0.1], num=15)
+    a = datagen.gen_particles_gaussian(**kwargs, rng=np.random.default_rng(7))
+    b = datagen.gen_particles_gaussian(**kwargs, rng=np.random.default_rng(7))
     assert np.array_equal(a, b)
 
 
 def test_datagen_gen_sensor_data_reproducible():
-    pa, va = datagen.gen_sensor_data(
-        time=3, pos_std=0.1, vel_std=0.05, rng=np.random.default_rng(99)
-    )
-    pb, vb = datagen.gen_sensor_data(
-        time=3, pos_std=0.1, vel_std=0.05, rng=np.random.default_rng(99)
-    )
+    kwargs = dict(duration=3, pos_std=0.1, vel_std=0.05)
+    pa, va = datagen.gen_async_sensor_data(**kwargs, rng=np.random.default_rng(99))
+    pb, vb = datagen.gen_async_sensor_data(**kwargs, rng=np.random.default_rng(99))
     assert pa == pb
     assert va == vb
 
 
-def test_datagen_gen_cvca_respects_custom_sampler():
-    counter = iter(np.arange(100, dtype=float))
-    xs, zs = datagen.gen_cvca(
-        num=5, x0=0.0, dx=1.0, R=1.0, random_func=lambda: next(counter)
-    )
-    # Deterministic sampler → deterministic output.
-    assert len(xs) == 5
-    assert np.all(np.isfinite(zs))
+def test_datagen_gen_cvca_reproducible():
+    kwargs = dict(num=5, x0=0.0, vel=1.0, meas_var=1.0)
+    a = datagen.gen_cvca(**kwargs, rng=np.random.default_rng(4))
+    b = datagen.gen_cvca(**kwargs, rng=np.random.default_rng(4))
+    assert np.array_equal(a.x, b.x)
+    assert np.array_equal(a.z, b.z)
 
 
 def test_linear_dog_simulation_reproducible():
-    a = linear.DogSimulation(
-        x0=0, model_mean=1.0, Q=0.5, R=0.2, rng=np.random.default_rng(13)
-    )
-    b = linear.DogSimulation(
-        x0=0, model_mean=1.0, Q=0.5, R=0.2, rng=np.random.default_rng(13)
-    )
+    kwargs = dict(x0=0, model_mean=1.0, vel_var=0.5, meas_var=0.2)
+    a = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
+    b = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
     for _ in range(20):
-        za = a.move_and_sense()
-        zb = b.move_and_sense()
-        assert za == zb
+        assert a.move_and_sense() == b.move_and_sense()
 
 
-def test_linear_pos_sensor_reproducible():
-    sa = linear.PosSensor(pos=(0, 0), vel=(1, 1), R=0.5, rng=np.random.default_rng(3))
-    sb = linear.PosSensor(pos=(0, 0), vel=(1, 1), R=0.5, rng=np.random.default_rng(3))
+def test_linear_dog_simulate_reproducible():
+    kwargs = dict(x0=0, model_mean=1.0, vel_var=0.5, meas_var=0.2)
+    a = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
+    b = linear.DogSimulation(**kwargs, rng=np.random.default_rng(13))
+    first = a.simulate(num=20)
+    second = b.simulate(num=20)
+    assert np.array_equal(first.x, second.x)
+    assert np.array_equal(first.z, second.z)
+
+
+def test_linear_moving_target_reproducible():
+    kwargs = dict(pos=(0, 0), vel=(1, 1), meas_std=0.5)
+    a = linear.MovingTarget2D(**kwargs, rng=np.random.default_rng(3))
+    b = linear.MovingTarget2D(**kwargs, rng=np.random.default_rng(3))
     for _ in range(10):
-        assert sa.read() == sb.read()
+        assert np.array_equal(a.sample(), b.sample())
 
 
 def test_maneuver_simulate_maneuver_reproducible():
-    pos_a, zs_a = maneuver.simulate_maneuver(
-        steady_count=20, std=0.5, rng=np.random.default_rng(17)
-    )
-    pos_b, zs_b = maneuver.simulate_maneuver(
-        steady_count=20, std=0.5, rng=np.random.default_rng(17)
-    )
-    _, zs_c = maneuver.simulate_maneuver(
-        steady_count=20, std=0.5, rng=np.random.default_rng(18)
-    )
+    kwargs = dict(steady_count=20, meas_std=0.5)
+    a = maneuver.simulate_maneuver(**kwargs, rng=np.random.default_rng(17))
+    b = maneuver.simulate_maneuver(**kwargs, rng=np.random.default_rng(17))
+    c = maneuver.simulate_maneuver(**kwargs, rng=np.random.default_rng(18))
     # Truth trajectory is deterministic (only sensing noise is random).
-    assert np.array_equal(pos_a, pos_b)
-    # Same seed → same observations.
-    assert np.array_equal(zs_a, zs_b)
-    # Different seed → different observations.
-    assert not np.array_equal(zs_a, zs_c)
+    assert np.array_equal(a.x, b.x)
+    assert np.array_equal(a.z, b.z)
+    assert not np.array_equal(a.z, c.z)
 
 
 def test_radar_station_and_sim_reproducible():
-    st_a = radar.RadarStation(
-        (0, 0), range_std=1.0, elev_std=0.1, rng=np.random.default_rng(1)
-    )
-    st_b = radar.RadarStation(
-        (0, 0), range_std=1.0, elev_std=0.1, rng=np.random.default_rng(1)
-    )
+    station = dict(range_std=1.0, bearing_std=0.1)
+    st_a = radar.RadarStation((0, 0), **station, rng=np.random.default_rng(1))
+    st_b = radar.RadarStation((0, 0), **station, rng=np.random.default_rng(1))
     ac_a = radar.ACSim((5, 5), (1, 0), vel_std=0.1, rng=np.random.default_rng(2))
     ac_b = radar.ACSim((5, 5), (1, 0), vel_std=0.1, rng=np.random.default_rng(2))
     for _ in range(8):
         pos_a = ac_a.update(dt=1.0)
         pos_b = ac_b.update(dt=1.0)
         assert np.array_equal(pos_a, pos_b)
-        assert st_a.noisy_reading(pos_a) == st_b.noisy_reading(pos_b)
+        assert st_a.reading(pos_a) == st_b.reading(pos_b)
 
-    rs_a = radar.RadarSim(
-        dt=1.0, pos=0.0, vel=1.0, alt=100.0, rng=np.random.default_rng(5)
-    )
-    rs_b = radar.RadarSim(
-        dt=1.0, pos=0.0, vel=1.0, alt=100.0, rng=np.random.default_rng(5)
-    )
+    kwargs = dict(dt=1.0, pos=0.0, vel=1.0, alt=100.0)
+    rs_a = radar.RadarSim(**kwargs, rng=np.random.default_rng(5))
+    rs_b = radar.RadarSim(**kwargs, rng=np.random.default_rng(5))
     for _ in range(10):
-        assert rs_a.get_range() == rs_b.get_range()
+        assert rs_a.measure() == rs_b.measure()
 
 
 def test_trajectory_ball_and_baseball_reproducible():
-    bt_a = trajectory.BallTrajectory2D(
-        0, 0, 10, 30, noise=[0.1, 0.1], rng=np.random.default_rng(42)
-    )
-    bt_b = trajectory.BallTrajectory2D(
-        0, 0, 10, 30, noise=[0.1, 0.1], rng=np.random.default_rng(42)
-    )
+    ball = dict(x0=0, y0=0, speed=10, launch_angle_deg=30, meas_std=(0.1, 0.1))
+    bt_a = trajectory.BallTrajectory2D(**ball, rng=np.random.default_rng(42))
+    bt_b = trajectory.BallTrajectory2D(**ball, rng=np.random.default_rng(42))
     for _ in range(5):
-        assert bt_a.step(0.1) == bt_b.step(0.1)
+        assert bt_a.step(dt=0.1) == bt_b.step(dt=0.1)
 
-    bp_a = trajectory.BaseballPath(
-        0, 0, 30, 40, noise=(0.1, 0.1), rng=np.random.default_rng(11)
-    )
-    bp_b = trajectory.BaseballPath(
-        0, 0, 30, 40, noise=(0.1, 0.1), rng=np.random.default_rng(11)
-    )
+    bat = dict(x0=0, y0=0, speed=40, launch_angle_deg=30, meas_std=(0.1, 0.1))
+    bp_a = trajectory.BaseballPath(**bat, rng=np.random.default_rng(11))
+    bp_b = trajectory.BaseballPath(**bat, rng=np.random.default_rng(11))
     for _ in range(5):
-        assert bp_a.update(0.1) == bp_b.update(0.1)
+        assert bp_a.update(dt=0.1) == bp_b.update(dt=0.1)
 
 
 def test_resamplers_accept_injected_generator():
@@ -153,7 +127,5 @@ def test_resamplers_accept_injected_generator():
 
 def test_default_rng_is_used_when_none_provided():
     """Simulators still construct without a generator (they build a fresh one)."""
-    sensor = linear.PosSensor(pos=(0, 0), vel=(1, 1), R=0.1)
-    # Just make sure it does not crash and returns a two-element list.
-    out = sensor.read()
-    assert len(out) == 2
+    target = linear.MovingTarget2D(pos=(0, 0), vel=(1, 1), meas_std=0.1)
+    assert target.sample().shape == (2,)

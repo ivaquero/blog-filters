@@ -1,296 +1,261 @@
+"""Ground-radar and airborne-target simulators.
+
+This module used to hold nine plotting helpers and a SymPy derivation next to
+the physics, which made ``import simulators.radar`` pull in ``matplotlib``
+(~350 ms) and ``sympy`` (~210 ms) for a file that only needs ``numpy``. The
+plotting code now lives in :mod:`plots.plot_radar` and the derivation in
+:mod:`symbols.radar`; the retired names are still reachable through this
+module's ``__getattr__`` with a ``DeprecationWarning``.
+
+Measurement-model naming
+------------------------
+The three range/bearing models used to be ``H2dRE``, ``H3dRE`` and ``H4dRE``,
+which differed *silently* in which state entries they read: ``H2dRE`` took
+``x[0], x[1]`` while the other two took ``x[0], x[2]``. The names now say which
+layout they expect, so a 4-state call cannot quietly read the wrong column.
+"""
+
 import math
 
 import numpy as np
-import sympy as sy
-from numpy import linalg
 
 from filters._typing import resolve_rng
-from plots.plot_kf import plot_kf, plot_track
+
+__all__ = [
+    "ACSim",
+    "RadarSim",
+    "RadarStation",
+    "range_bearing_doppler",
+    "range_bearing_xy",
+    "range_bearing_xz",
+    "slant_range",
+    "slant_range_jacobian",
+]
 
 
 class RadarStation:
+    """Ground radar reporting slant range and bearing to a target.
+
+    Parameters
+    ----------
+    pos
+        Radar position in the horizontal plane.
+    range_std
+        Standard deviation of the range noise.
+    bearing_std
+        Standard deviation of the bearing noise, in radians. The parameter was
+        named ``elev_std`` while the angle computed was ``atan2(dy, dx)`` — an
+        azimuth, not an elevation — so callers routinely passed degrees.
+    rng
+        Random generator; a fresh unseeded one is built when omitted.
+    """
+
     def __init__(
-        self, pos, range_std, elev_std, rng: np.random.Generator | None = None
+        self,
+        pos,
+        *,
+        range_std: float,
+        bearing_std: float,
+        rng: np.random.Generator | None = None,
     ):
-        self.pos = np.asarray(pos)
+        self.pos = np.asarray(pos, dtype=float)
         self.range_std = range_std
-        self.elev_std = elev_std
+        self.bearing_std = bearing_std
         self.rng = resolve_rng(rng)
 
-    def reading_of(self, ac_pos):
-        """Returns (range, elevation) to aircraft.
-        Elevation is in radians.
-        """
-        diff = np.subtract(ac_pos, self.pos)
-        rng = linalg.norm(diff)
-        brg = math.atan2(diff[1], diff[0])
-        return rng, brg
+    def true_reading(self, ac_pos) -> tuple[float, float]:
+        """Return the noise-free ``(range, bearing)`` to the target.
 
-    def noisy_reading(self, ac_pos):
-        """Compute range and elev angle to aircraft with simulated noise"""
-        rng, brg = self.reading_of(ac_pos)
-        rng += self.rng.standard_normal() * self.range_std
-        brg += self.rng.standard_normal() * self.elev_std
-        return rng, brg
+        Bearing is in radians, measured from ``+x``.
+        """
+
+        diff = np.subtract(ac_pos, self.pos)
+        distance = np.linalg.norm(diff)
+        bearing = math.atan2(diff[1], diff[0])
+        return distance, bearing
+
+    def reading(self, ac_pos) -> tuple[float, float]:
+        """Return ``(range, bearing)`` with additive noise."""
+
+        distance, bearing = self.true_reading(ac_pos)
+        distance += self.rng.standard_normal() * self.range_std
+        bearing += self.rng.standard_normal() * self.bearing_std
+        return distance, bearing
 
 
 class ACSim:
-    def __init__(self, pos, vel, vel_std, rng: np.random.Generator | None = None):
+    """Aircraft flying at constant mean velocity with per-step velocity noise.
+
+    Parameters
+    ----------
+    pos
+        Initial position.
+    vel
+        Mean velocity.
+    vel_std
+        Standard deviation of the velocity noise.
+    rng
+        Random generator; a fresh unseeded one is built when omitted.
+    """
+
+    def __init__(
+        self, pos, vel, *, vel_std: float, rng: np.random.Generator | None = None
+    ):
         self.pos = np.asarray(pos, dtype=float)
         self.vel = np.asarray(vel, dtype=float)
         self.vel_std = vel_std
         self.rng = resolve_rng(rng)
 
-    def update(self, dt):
-        """Compute and returns next position. Incorporates random variation in velocity."""
+    def update(self, *, dt: float) -> np.ndarray:
+        """Advance ``dt`` and return the new position.
+
+        The velocity noise is a single draw applied to both axes — that is what
+        the original model did, and switching to per-axis noise would move every
+        figure built on this simulator, so it is documented rather than silently
+        altered.
+        """
+
         dx = self.vel * dt + (self.rng.standard_normal() * self.vel_std) * dt
-        self.pos += dx
+        self.pos = self.pos + dx
         return self.pos
 
 
 class RadarSim:
-    """Simulates the radar signal returns from an object
-    flying at a constant altityude and velocity in 1D.
+    """Slant-range radar tracking a target flying at constant altitude.
+
+    Parameters
+    ----------
+    dt
+        Time between measurements.
+    pos
+        Initial horizontal position.
+    vel
+        Initial horizontal velocity.
+    alt
+        Initial altitude.
+    vel_std, alt_std
+        Per-step standard deviations of the velocity and altitude jitter. They
+        used to be the literals ``0.1`` and ``0.1`` inside :meth:`measure`.
+    range_frac_std
+        Fractional range noise; the reading is scaled by it. Was the literal
+        ``0.05``.
+    rng
+        Random generator; a fresh unseeded one is built when omitted.
     """
 
-    def __init__(self, dt, pos, vel, alt, rng: np.random.Generator | None = None):
+    def __init__(
+        self,
+        *,
+        dt: float,
+        pos: float,
+        vel: float,
+        alt: float,
+        vel_std: float = 0.1,
+        alt_std: float = 0.1,
+        range_frac_std: float = 0.05,
+        rng: np.random.Generator | None = None,
+    ):
         self.pos = pos
         self.vel = vel
         self.alt = alt
         self.dt = dt
+        self.vel_std = vel_std
+        self.alt_std = alt_std
+        self.range_frac_std = range_frac_std
         self.rng = resolve_rng(rng)
 
-    def get_range(self):
-        """Returns slant range to the object.
-        Call once for each new measurement at dt time from last call.
+    def measure(self) -> float:
+        """Advance the target one step and return the noisy slant range.
+
+        Renamed from ``get_range``: the method advanced the target *and*
+        injected process noise, so a getter was mutating the simulation. It is
+        still one call per measurement — the docstring now says which step it
+        performs.
         """
-        # add some process noise to the system
-        self.vel = self.vel + 0.1 * self.rng.standard_normal()
-        self.alt = self.alt + 0.1 * self.rng.standard_normal()
+
+        self.vel = self.vel + self.vel_std * self.rng.standard_normal()
+        self.alt = self.alt + self.alt_std * self.rng.standard_normal()
         self.pos = self.pos + self.vel * self.dt
-        # add measurement noise
-        err = self.pos * 0.05 * self.rng.standard_normal()
-        range_ = np.hypot(self.pos, self.alt)
-        return range_ + err
+        error = self.pos * self.range_frac_std * self.rng.standard_normal()
+        slant = np.hypot(self.pos, self.alt)
+        return slant + error
 
 
-def HJac3d(x):
-    """Compute Jacobian of H matrix at x"""
-    if isinstance(x, list):
-        x = np.array(x)
+def slant_range(x) -> float:
+    """Return the slant range ``hypot(x[0], x[2])`` of a 3-state target.
 
-    horiz_dist = x[0]
-    altitude = x[2]
-    denom = np.hypot(horiz_dist, altitude)
-    return np.array([[horiz_dist / denom, 0.0, altitude / denom]])
+    Formerly ``hx``.
+    """
 
-
-def H2dRE(x, refpos=(0, 0)):
-    if isinstance(x, tuple):
-        x = np.array(x)
-
-    dx = x[0] - refpos[0]
-    dy = x[1] - refpos[1]
-    range_ = np.hypot(dx, dy)
-    elev = math.atan2(dy, dx)
-    return range_, elev
+    state = np.asarray(x, dtype=float).reshape(-1)
+    return float(np.hypot(state[0], state[2]))
 
 
-def H3dRE(x, refpos=(0, 0)):
-    if isinstance(x, list | tuple):
-        x = np.array(x)
+def slant_range_jacobian(x) -> np.ndarray:
+    """Return the Jacobian of :func:`slant_range`, shape ``(1, 3)``.
 
-    dx = x[0] - refpos[0]
-    dz = x[2] - refpos[1]
-    range_ = np.hypot(dx, dz)
-    elev = math.atan2(dz, dx)
-    return range_, elev
+    Formerly ``HJac3d``.
+    """
 
-
-def H4dRE(x, refpos=(0, 0)):
-    if isinstance(x, list | tuple):
-        x = np.array(x)
-
-    dx = x[0] - refpos[0]
-    dz = x[2] - refpos[1]
-    range_ = np.hypot(dx, dz)
-    elev = math.atan2(dz, dx)
-    return range_, elev, x[1], x[3]
+    state = np.asarray(x, dtype=float).reshape(-1)
+    horizontal = state[0]
+    altitude = state[2]
+    denominator = np.hypot(horizontal, altitude)
+    return np.array([[horizontal / denominator, 0.0, altitude / denominator]])
 
 
-def hx(x):
-    """compute measurement for slant range that would correspond to state x."""
-    return np.hypot(x[0], x[2])
+def range_bearing_xy(pos, *, refpos=(0.0, 0.0)) -> tuple[float, float]:
+    """Range and bearing from ``refpos`` to a 2-D position ``[x, y]``.
+
+    Formerly ``H2dRE``.
+    """
+
+    state = np.asarray(pos, dtype=float).reshape(-1)
+    dx = state[0] - refpos[0]
+    dy = state[1] - refpos[1]
+    return float(np.hypot(dx, dy)), float(math.atan2(dy, dx))
 
 
-def plot_radar3d(axes, time, xs, ylabels=None, track=None):
-    if ylabels is None:
-        ylabels = ["position", "velocity", "altitude"]
+def range_bearing_xz(x, *, refpos=(0.0, 0.0)) -> tuple[float, float]:
+    """Range and bearing for a 3-state ``[x, vx, z]`` target.
 
-    ys_dict = dict(zip(ylabels, [xs[:, 0], xs[:, 1], xs[:, 2]], strict=True))
+    ``refpos`` is ``(x_ref, z_ref)``. Formerly ``H3dRE``.
+    """
 
-    if track is not None:
-        track_dict = dict(
-            zip(ylabels, [track[:, 0], track[:, 1], track[:, 2]], strict=True)
-        )
-
-    for ax, ylabel in zip(axes, ylabels, strict=True):
-        plot_kf(ax, time, ys=ys_dict[ylabel], label=f"{ylabel} filtered")
-        if track is not None:
-            plot_track(ax, time, ys=track_dict[ylabel], label=f"{ylabel} track")
-        ax.set(xlabel="time", ylabel=ylabel)
-        ax.legend(fontsize="small")
-        ax.grid(1)
-        ax.tick_params(labelsize="small")
+    state = np.asarray(x, dtype=float).reshape(-1)
+    dx = state[0] - refpos[0]
+    dz = state[2] - refpos[1]
+    return float(np.hypot(dx, dz)), float(math.atan2(dz, dx))
 
 
-def plot_radar3d_zs(ax, time, xs, obj, track=None, ylabels=None):
-    xs = np.asarray(xs)
+def range_bearing_doppler(x, *, refpos=(0.0, 0.0)) -> tuple[float, float, float, float]:
+    """Range, bearing and the two velocity components for a 4-state target.
 
-    if ylabels is None:
-        ylabels = ["position", "velocity", "altitude"]
-    ys_dict = dict(
-        zip(
-            ["position", "velocity", "altitude"],
-            [xs[:, 0], xs[:, 1], xs[:, 2]],
-            strict=True,
-        )
-    )
+    State layout is ``[x, vx, z, vz]``; ``refpos`` is ``(x_ref, z_ref)``.
+    Formerly ``H4dRE``, whose name promised two outputs and returned four.
+    """
 
-    ax.plot(time, ys_dict[obj], label=f"filtered {obj}")
-    if track:
-        ax.plot(time, track, label="track", lw=2, ls="--", c="k")
-    ax.set(xlabel="time", ylabel=f"{obj}")
-    ax.legend()
+    state = np.asarray(x, dtype=float).reshape(-1)
+    distance, bearing = range_bearing_xz(state, refpos=refpos)
+    return distance, bearing, float(state[1]), float(state[3])
 
 
-def plot_moving_target(ax, rng: np.random.Generator | None = None):
-    generator = resolve_rng(rng)
-    pos = np.array([5.0, 5.0])
-    for _ in range(5):
-        pos += (0.5, 1.0)
-        actual_angle = math.atan2(pos[1], pos[0])
-        d = np.sqrt(pos[0] ** 2 + pos[1] ** 2)
-
-        xs, ys = [], []
-        for _ in range(100):
-            a = actual_angle + generator.standard_normal() * math.radians(1)
-            xs.append(d * math.cos(a))
-            ys.append(d * math.sin(a))
-
-        ax.scatter(xs, ys, c="C0")
-
-    ax.plot([5.5, pos[0]], [6, pos[1]], c="g", linestyle="--")
+_ALIASES: dict[str, tuple[str | None, str]] = {
+    "H2dRE": (None, "range_bearing_xy"),
+    "H3dRE": (None, "range_bearing_xz"),
+    "H4dRE": (None, "range_bearing_doppler"),
+    "HJac3d": (None, "slant_range_jacobian"),
+    "hx": (None, "slant_range"),
+    "plot_iscts_two_sensors": ("plots.plot_radar", "plot_iscts_two_sensors"),
+    "plot_moving_target": ("plots.plot_radar", "plot_moving_target"),
+    "plot_radar3d": ("plots.plot_radar", "plot_radar3d"),
+    "plot_radar3d_zs": ("plots.plot_radar", "plot_radar3d_zs"),
+    "radar3d_symbol": ("symbols.radar", "radar3d_symbol"),
+    "show_radar_chart": ("plots.plot_radar", "show_radar_chart"),
+}
 
 
-def plot_iscts_two_sensors(axes, rng: np.random.Generator | None = None):
-    generator = resolve_rng(rng)
-    poss = [np.array([4.0, 4]), np.array([3.0, 3.0])]
-    sas = [[0, 2], [3, 4]]
-    sbs = [[8, 2], [3, 7]]
-    Ns = [4, 5]
+def __getattr__(name: str) -> object:
+    from ._deprecation import deprecated_lookup
 
-    for ax, pos, sa, sb, N in zip(axes, poss, sas, sbs, Ns, strict=True):
-        ax.scatter(*sa, s=200, marker="v", c="k", label="Sensor 1")
-        ax.scatter(*sb, s=200, marker="s", c="C0", label="Sensor 2")
-        _plot_iscts(ax, pos, sa, sb, N=N, rng=generator)
-        ax.legend()
-
-
-def _plot_iscts(ax, pos, sa, sb, N=4, rng=None):
-    if rng is None:
-        rng = np.random.default_rng()
-    for _ in range(N):
-        pos += (0.5, 1.0)
-        actual_angle_a = math.atan2(pos[1] - sa[1], pos[0] - sa[0])
-        actual_angle_b = math.atan2(pos[1] - sb[1], pos[0] - sb[0])
-
-        da = np.sqrt((sa[0] - pos[0]) ** 2 + (sa[1] - pos[1]) ** 2)
-        db = np.sqrt((sb[0] - pos[0]) ** 2 + (sb[1] - pos[1]) ** 2)
-
-        xs, ys, xs_a, xs_b, ys_a, ys_b = [], [], [], [], [], []
-
-        for _ in range(300):
-            aa = actual_angle_a + rng.standard_normal() * math.radians(1)
-            ab = actual_angle_b + rng.standard_normal() * math.radians(1)
-
-            xs_a.append(da * math.cos(aa) + sa[0])
-            ys_a.append(da * math.sin(aa) + sa[1])
-
-            xs_b.append(db * math.cos(ab) + sb[0])
-            ys_b.append(db * math.sin(ab) + sb[1])
-
-            x, y = _isct(sa, sb, aa, ab)
-            xs.append(x)
-            ys.append(y)
-
-        ax.scatter(xs_a, ys_a, c="k", edgecolor="k")
-        ax.scatter(xs_b, ys_b, marker="v", edgecolor=None, c="C0")
-        ax.scatter(xs, ys, marker=".", c="r", alpha=0.5)
-
-
-def _isct(sa, sb, aa, ab):
-    """Returns the (x, y) intersections of points pa and pb given the bearing aa for point pa and bearing ab for point pb."""
-    # https://en.wikipedia.org/wiki/Line%E2%80%93line_intersection
-
-    # bearing to angle
-    # aa = 90 - aa
-    # ab = 90 - ab
-
-    # Line AB represented as a1x + b1y = c1
-    # Line CD represented as a2x + b2y = c2
-    a1, a2 = math.sin(aa), math.sin(ab)
-    b1, b2 = -math.cos(aa), -math.cos(ab)
-    c1, c2 = a1 * sa[0] + b1 * sa[1], a2 * sb[0] + b2 * sb[1]
-
-    det = a1 * b2 - a2 * b1
-
-    x = (b2 * c1 - b1 * c2) / det
-    y = (a1 * c2 - a2 * c1) / det
-
-    return x, y
-
-
-def show_radar_chart(ax):
-    ax.scatter([1, 2], [1, 2])
-    ax.annotate(
-        "",
-        xy=(2, 2),
-        xytext=(1, 1),
-        arrowprops={"arrowstyle": "->", "ec": "r", "shrinkA": 3, "shrinkB": 4},
-    )
-    ax.annotate(
-        "",
-        xy=(2, 1),
-        xytext=(1, 1),
-        arrowprops={"arrowstyle": "->", "ec": "b", "shrinkA": 0, "shrinkB": 0},
-    )
-    ax.annotate(
-        "",
-        xy=(2, 2),
-        xytext=(2, 1),
-        arrowprops={"arrowstyle": "->", "ec": "b", "shrinkA": 0, "shrinkB": 4},
-    )
-
-    ax.annotate("ϵ", xy=(1.2, 1.05), color="b")
-    ax.annotate("Aircraft", xy=(2.04, 2.0), color="b")
-    ax.annotate("altitude (y)", xy=(2.04, 1.5), color="k")
-    ax.annotate("x", xy=(1.5, 0.9))
-    ax.annotate("Radar", xy=(0.95, 0.8))
-    ax.annotate("Slant\n  (r)", xy=(1.5, 1.62), color="r")
-
-    ax.set(xlim=[0.9, 2.5], ylim=[0.5, 2.5])
-    ax.xaxis.set_ticks([])
-    ax.xaxis.set_ticklabels([])
-    ax.yaxis.set_ticks([])
-    ax.yaxis.set_ticklabels([])
-    ax.set(frame_on=False)
-
-
-def radar3d_symbol():
-    x, x_vel, y = sy.symbols("x, x_vel y")
-    H = sy.Matrix([sy.sqrt(x**2 + y**2)])
-    state = sy.Matrix([x, x_vel, y])
-    J = H.jacobian(state)
-    print(state)
-    print(J)
+    return deprecated_lookup(name, _ALIASES, module_name=__name__, namespace=globals())

@@ -23,11 +23,41 @@ __all__ = [
     "plot_hbar",
     "plot_particles",
     "plot_pf",
+    "plot_robot_pf",
     "show_resample_multinomial",
     "show_resample_residual",
     "show_resample_stratified",
     "show_resample_systematic",
 ]
+
+
+def plot_robot_pf(ax: Axes, run, *, show_particles: bool = False) -> None:
+    """Draw a run returned by ``simulators.robot.simulate_robot_pf``.
+
+    The scenario used to draw itself: ``robot_pf(ax, N, ...)`` took an ``Axes``,
+    plotted into it and returned ``None``. Splitting the two lets the same run be
+    plotted twice, re-plotted with different options, or not plotted at all.
+    """
+
+    clouds = run.particles
+    if show_particles and clouds is not None:
+        plot_particles(ax, clouds[0], markersize=25)
+
+    actual = estimate = None
+    for step in range(len(run.t)):
+        if show_particles and clouds is not None:
+            plot_particles(ax, clouds[step + 1], color="k", marker=",")
+        actual = ax.scatter(
+            run.x_true[step, 0],
+            run.x_true[step, 1],
+            marker="+",
+            color="k",
+            s=180,
+            lw=3,
+        )
+        estimate = ax.scatter(run.x_est[step, 0], run.x_est[step, 1], marker="s", color="r")
+
+    ax.legend([actual, estimate], ["Actual", "PF"], loc=4, numpoints=1)
 
 
 def plot_particles(

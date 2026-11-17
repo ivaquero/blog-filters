@@ -1,12 +1,13 @@
 import math
 import sys
 from copy import deepcopy
+from typing import Any
 
 import numpy as np
 from numpy import linalg
 from scipy import stats
 
-from ._typing import Batch2Output, UkfRtsOutput
+from ._typing import Batch2Output, StateSpaceModelLike, UkfRtsOutput
 from .helpers import mahalanobis, pretty_str
 
 
@@ -123,6 +124,69 @@ class UnscentedKalmanFilter:
         # these will always be a copy of x,P after predict() is called
         self.x_prior = self.x.copy()
         self.P_prior = self.P.copy()
+
+        # optional motion model; fx/hx above are already bound to it when the
+        # filter was built with from_model()
+        self.model: StateSpaceModelLike | None = None
+
+    @classmethod
+    def from_model(
+        cls,
+        model: StateSpaceModelLike,
+        points: Any,
+        dt: float | None = None,
+        **kwargs: Any,
+    ) -> UnscentedKalmanFilter:
+        """Build a filter whose ``fx``/``hx``/``Q``/``R`` come from ``model``.
+
+        Parameters
+        ----------
+        model : StateSpaceModelLike
+            Anything satisfying the model protocol; ``models.ConstantVelocity()``
+            and friends qualify.
+        points : object
+            Sigma-point generator, e.g. ``MerweScaledSigmas(n=4, ...)``.
+        dt : float, optional
+            Step length; falls back to ``model.dt`` and then to 1.0.
+        **kwargs
+            Forwarded to the constructor (``sqrt_fn``, ``x_mean_fn``, ...).
+
+        Returns
+        -------
+        UnscentedKalmanFilter
+            Filter wired to the model, with ``Q`` and ``R`` already priced.
+        """
+
+        step = dt if dt is not None else float(getattr(model, "dt", 1.0))
+        kf = cls(
+            dim_x=model.dim_x,
+            dim_z=model.dim_z,
+            dt=step,
+            hx=model.hx,
+            fx=model.fx,
+            points=points,
+            **kwargs,
+        )
+        kf.model = model
+        kf.Q = np.asarray(model.process_cov(), dtype=float)
+        kf.R = np.asarray(model.measurement_cov(), dtype=float)
+        return kf
+
+    def attach_model(self, model: StateSpaceModelLike) -> None:
+        """Route ``fx``/``hx`` through ``model`` without touching dimensions.
+
+        The sigma-point generator is sized by ``dim_x``, so a mismatched model is
+        rejected rather than producing silently truncated sigma points.
+        """
+
+        if (model.dim_x, model.dim_z) != (self._dim_x, self._dim_z):
+            raise ValueError(
+                f"model dimensions ({model.dim_x}, {model.dim_z}) do not match "
+                f"the filter's ({self._dim_x}, {self._dim_z})"
+            )
+        self.model = model
+        self.fx = model.fx
+        self.hx = model.hx
 
     def predict(self, dt=None, UT=None, fx=None, **fx_args):
         if dt is None:

@@ -1,149 +1,164 @@
+"""Process- and measurement-noise covariance helpers.
+
+Both generators return a per-axis covariance block, optionally tiled across
+spatial axes. The original implementations spelled out every matrix entry as a
+literal; each of those literals is the outer product ``v @ v.T`` of a *noise
+input vector* ``v`` that maps the driving white noise onto the state. Writing
+``v`` instead of the entries keeps the ``dt`` powers and the factorial
+normalisations in one line each, and makes the physical assumption visible:
+
+======  ============================  ==================
+``dim``  ``v``                         driving noise
+======  ============================  ==================
+2        ``[dt**2/2, dt]``             white acceleration
+3        ``[dt**2/2, dt, 1]``          white acceleration
+4        ``[dt**3/6, dt**2/2, dt, 1]``  white jerk
+======  ============================  ==================
+
+``dim=2`` and ``dim=3`` share the top-left block and both assume the noise
+drives acceleration; ``dim=4`` assumes it drives jerk. That inconsistency is
+inherited from filterpy, so it is preserved rather than "fixed" — pick the
+generator by the physical noise source, not by the state count.
+"""
+
+import math
+from typing import Any
+
 import numpy as np
-from scipy import linalg
+
+from filters._typing import Matrix
+
+__all__ = ["order_by_derivative", "white_noise_continuous", "white_noise_discrete"]
+
+#: ``(dt power, denominator)`` pairs per block dimension, highest state first.
+_NOISE_INPUT_SPEC: dict[int, tuple[tuple[int, float], ...]] = {
+    2: ((2, 2.0), (1, 1.0)),
+    3: ((2, 2.0), (1, 1.0), (0, 1.0)),
+    4: ((3, 6.0), (2, 2.0), (1, 1.0), (0, 1.0)),
+}
 
 
-def order_by_derivative(Q, dim, block_size):
-    """Order the matrix Q by derivative order
+def _tile(block: Matrix, block_size: int, *, order_by_dim: bool) -> Matrix:
+    """Repeat ``block`` either per axis or per derivative.
 
-    Parameters
-    ----------
-    Q : _type_
-        _description_
-    dim : _type_
-        _description_
-    block_size : _type_
-        _description_
-
-    Returns
-    -------
-    _type_
-        _description_
+    ``order_by_dim`` matches a state ordered ``[x, vx, y, vy, ...]``;
+    ``order_by_derivative`` matches ``[x, y, ..., vx, vy, ...]``.
     """
 
-    N = dim * block_size
-    D = np.zeros((N, N))
-    Q = np.array(Q)
-    for i, x in enumerate(Q.ravel()):
-        f = np.eye(block_size) * x
-        idx, idy = (i // dim) * block_size, (i % dim) * block_size
-        D[idx : idx + block_size, idy : idy + block_size] = f
-    return D
+    if block_size < 1:
+        raise ValueError(f"block_size must be at least 1, got {block_size}")
+    if order_by_dim:
+        return np.asarray(np.kron(np.eye(block_size), block), dtype=float)
+    return np.asarray(np.kron(block, np.eye(block_size)), dtype=float)
+
+
+def order_by_derivative(Q: Any, dim: int, block_size: int) -> Matrix:
+    """Reorder a per-derivative ``Q`` block into the per-axis state ordering.
+
+    For ``dim=2``, ``block_size=2`` and states ``[x, y, vx, vy]`` the
+    ``[position, velocity]`` coupling of each axis lands in the off-diagonal
+    blocks. Equivalent to ``np.kron(Q, np.eye(block_size))``; the loop this
+    replaced built one ``np.eye`` per matrix entry.
+    """
+
+    block = np.asarray(Q, dtype=float)
+    if block.ndim != 2 or block.shape[0] != dim:
+        raise ValueError(f"Q must be a ({dim}, {dim}) matrix, got {block.shape}")
+    return np.kron(block, np.eye(block_size))
 
 
 def white_noise_discrete(
-    dim,
+    dim: int,
     dt: float = 1.0,
     var: float = 1.0,
     block_size: int = 1,
     *,
     order_by_dim: bool = True,
-):
-    """Generate white noise with discrete time steps
+) -> Matrix:
+    """Return the process-noise covariance of a discretely sampled plant.
 
     Parameters
     ----------
-    dim : _type_
-        _description_
+    dim : int
+        States per axis: 2 for position/velocity, 3 for position/velocity/
+        acceleration, 4 for the same plus jerk.
     dt : float, optional
-        _description_, by default 1.0
+        Sampling interval, by default 1.0.
     var : float, optional
-        _description_, by default 1.0
+        Variance of the driving white noise, by default 1.0.
     block_size : int, optional
-        _description_, by default 1
+        Number of spatial axes to tile, by default 1.
     order_by_dim : bool, optional
-        _description_, by default True
-    seed : int, optional
-        _description_, by default 1123
+        Tile per axis (``[x, vx, y, vy]``) when True, per derivative
+        (``[x, y, vx, vy]``) when False, by default True.
 
     Returns
     -------
-    _type_
-        _description_
+    Matrix
+        ``(dim * block_size, dim * block_size)`` covariance matrix.
 
     Raises
     ------
     ValueError
-        _description_
+        If ``dim`` is not 2, 3 or 4, or ``block_size`` is below 1.
     """
 
-    if dim == 2:
-        Q = [[0.25 * dt**4, 0.5 * dt**3], [0.5 * dt**3, dt**2]]
-    elif dim == 3:
-        Q = [
-            [0.25 * dt**4, 0.5 * dt**3, 0.5 * dt**2],
-            [0.5 * dt**3, dt**2, dt],
-            [0.5 * dt**2, dt, 1],
-        ]
-    elif dim == 4:
-        Q = [
-            [(dt**6) / 36, (dt**5) / 12, (dt**4) / 6, (dt**3) / 6],
-            [(dt**5) / 12, (dt**4) / 4, (dt**3) / 2, (dt**2) / 2],
-            [(dt**4) / 6, (dt**3) / 2, dt**2, dt],
-            [(dt**3) / 6, (dt**2) / 2, dt, 1.0],
-        ]
-    else:
-        error_message = "dim must be 1, 2, 3 or 4"
-        raise ValueError(error_message)
+    spec = _NOISE_INPUT_SPEC.get(dim)
+    if spec is None:
+        raise ValueError(f"dim must be 2, 3 or 4, got {dim}")
 
-    if order_by_dim:
-        return linalg.block_diag(*[Q] * block_size) * var
-    return order_by_derivative(np.array(Q), dim, block_size) * var
+    input_vector = np.array([dt**power / denom for power, denom in spec])
+    block = np.outer(input_vector, input_vector)
+    return _tile(block, block_size, order_by_dim=order_by_dim) * var
 
 
 def white_noise_continuous(
-    dim,
+    dim: int,
     dt: float = 1.0,
     spectral_density: float = 1.0,
     block_size: int = 1,
     *,
     order_by_dim: bool = True,
-):
-    """Generate white noise with continuous time steps
+) -> Matrix:
+    """Return the process-noise covariance of a continuously driven plant.
+
+    The block is the exact discretisation
+    ``Q_ij = dt**(2m-i-j+1) / ((2m-i-j+1) (m-i)! (m-j)!)`` with ``m = dim - 1``,
+    which reproduces the textbook fourth-, sixth- and eighth-order blocks.
 
     Parameters
     ----------
-    dim : _type_
-        _description_
+    dim : int
+        States per axis, at least 2.
     dt : float, optional
-        _description_, by default 1.0
+        Sampling interval, by default 1.0.
     spectral_density : float, optional
-        _description_, by default 1.0
+        Spectral density of the driving white noise, by default 1.0.
     block_size : int, optional
-        _description_, by default 1
+        Number of spatial axes to tile, by default 1.
     order_by_dim : bool, optional
-        _description_, by default True
+        Tile per axis when True, per derivative when False, by default True.
 
     Returns
     -------
-    _type_
-        _description_
+    Matrix
+        ``(dim * block_size, dim * block_size)`` covariance matrix.
 
     Raises
     ------
     ValueError
-        _description_
+        If ``dim`` is below 2 or ``block_size`` is below 1.
     """
 
-    if dim == 2:
-        Q = [[(dt**3) / 3.0, (dt**2) / 2.0], [(dt**2) / 2.0, dt]]
-    elif dim == 3:
-        Q = [
-            [(dt**5) / 20.0, (dt**4) / 8.0, (dt**3) / 6.0],
-            [(dt**4) / 8.0, (dt**3) / 3.0, (dt**2) / 2.0],
-            [(dt**3) / 6.0, (dt**2) / 2.0, dt],
-        ]
+    if dim < 2:
+        raise ValueError(f"dim must be at least 2, got {dim}")
 
-    elif dim == 4:
-        Q = [
-            [(dt**7) / 252.0, (dt**6) / 72.0, (dt**5) / 30.0, (dt**4) / 24.0],
-            [(dt**6) / 72.0, (dt**5) / 20.0, (dt**4) / 8.0, (dt**3) / 6.0],
-            [(dt**5) / 30.0, (dt**4) / 8.0, (dt**3) / 3.0, (dt**2) / 2.0],
-            [(dt**4) / 24.0, (dt**3) / 6.0, (dt**2 / 2.0), dt],
-        ]
-    else:
-        raise ValueError("dim must be 2, 3, 4")
-
-    if order_by_dim:
-        return linalg.block_diag(*[Q] * block_size) * spectral_density
-
-    return order_by_derivative(np.array(Q), dim, block_size) * spectral_density
+    order = dim - 1
+    block = np.zeros((dim, dim))
+    for row in range(dim):
+        for col in range(dim):
+            power = 2 * order - row - col + 1
+            block[row, col] = dt**power / (
+                power * math.factorial(order - row) * math.factorial(order - col)
+            )
+    return _tile(block, block_size, order_by_dim=order_by_dim) * spectral_density

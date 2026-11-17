@@ -3,17 +3,30 @@ from __future__ import annotations
 import math
 import sys
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from numpy import linalg
 from scipy import stats
 
+from ._typing import StateSpaceModelLike
 from .helpers import mahalanobis, pretty_str
 from .transformers import reshape_z
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def _as_covariance(value: Any, dim: int) -> np.ndarray:
+    """Expand a scalar variance to ``value * I``; pass matrices through."""
+
+    return np.eye(dim) * value if np.isscalar(value) else np.asarray(value, float)
+
+
+def _flatten(state: Any) -> np.ndarray:
+    """Collapse the EKF's column vector into the 1-D vector models expect."""
+
+    return np.reshape(np.asarray(state, dtype=float), -1)
 
 
 class ExtendedKalmanFilter:
@@ -72,6 +85,10 @@ class ExtendedKalmanFilter:
         self.dim_z = dim_z
         self.dim_u = dim_u
 
+        # optional motion model; when set, predict() propagates f(x) and
+        # update() defaults HJac/Hx to the model's own Jacobian/measurement map
+        self.model: StateSpaceModelLike | None = None
+
         # state
         self.x = np.zeros((dim_x, 1))
         # state covariance
@@ -119,6 +136,95 @@ class ExtendedKalmanFilter:
         self.x_post = self.x.copy()
         self.P_post = self.P.copy()
 
+    @classmethod
+    def from_model(
+        cls,
+        model: StateSpaceModelLike,
+        x0: Any = None,
+        P0: Any = None,
+        Q: Any = None,
+        R: Any = None,
+        dim_u: int | None = None,
+    ) -> ExtendedKalmanFilter:
+        """Build a filter whose dimensions, ``Q`` and ``R`` come from ``model``.
+
+        Parameters
+        ----------
+        model : StateSpaceModelLike
+            Anything with ``dim_x``/``dim_z``, ``fx``, ``hx`` and the two
+            Jacobians — ``models.ConstantVelocity()`` and friends qualify.
+        x0 : array_like, optional
+            Initial state; zeros when omitted.
+        P0 : array_like or float, optional
+            Initial covariance; identity when omitted.
+        Q, R : array_like or float, optional
+            Override the model's own noise covariances.
+        dim_u : int, optional
+            Control-input dimension; taken from the model when it exposes one.
+
+        Returns
+        -------
+        ExtendedKalmanFilter
+            Filter with :attr:`model` attached, so :meth:`predict` and
+            :meth:`update` need no further callables.
+        """
+
+        model_dim_u = int(getattr(model, "dim_u", 0) or 0)
+        kf = cls(
+            dim_x=model.dim_x,
+            dim_z=model.dim_z,
+            dim_u=model_dim_u if dim_u is None else dim_u,
+        )
+        kf.model = model
+
+        if x0 is None:
+            kf.x = np.zeros((model.dim_x, 1))
+        else:
+            kf.x = reshape_z(x0, model.dim_x, 2)
+        kf.F = np.asarray(model.jacobian_x(kf.x.reshape(-1)), dtype=float)
+        kf.P = _as_covariance(np.eye(model.dim_x) if P0 is None else P0, model.dim_x)
+        kf.Q = (
+            _as_covariance(Q, model.dim_x)
+            if Q is not None
+            else np.asarray(model.process_cov(), dtype=float)
+        )
+        kf.R = (
+            _as_covariance(R, model.dim_z)
+            if R is not None
+            else np.asarray(model.measurement_cov(), dtype=float)
+        )
+        return kf
+
+    def attach_model(self, model: StateSpaceModelLike) -> None:
+        """Route :meth:`predict` and :meth:`update` through ``model``.
+
+        Dimensions are left untouched: swapping a model into an existing filter
+        is only meaningful when the new one has the same ``dim_x``/``dim_z``.
+        """
+
+        if (model.dim_x, model.dim_z) != (self.dim_x, self.dim_z):
+            raise ValueError(
+                f"model dimensions ({model.dim_x}, {model.dim_z}) do not match "
+                f"the filter's ({self.dim_x}, {self.dim_z})"
+            )
+        self.model = model
+
+    def _model_jacobian_h(self, state: Any, *_args: Any) -> np.ndarray:
+        """``HJac`` adapter for the attached model."""
+
+        model = self.model
+        if model is None:
+            raise RuntimeError("no model attached")
+        return np.asarray(model.jacobian_h(_flatten(state)), dtype=float)
+
+    def _model_measurement(self, state: Any, *_args: Any) -> np.ndarray:
+        """``Hx`` adapter for the attached model."""
+
+        model = self.model
+        if model is None:
+            raise RuntimeError("no model attached")
+        return np.asarray(model.hx(_flatten(state)), dtype=float)
+
     def predict_x(self, u: np.ndarray | float = 0.0):
         """Predicts the next state of X. You would need to do this when the usual Taylor expansion to generate F is not providing accurate results.
 
@@ -126,7 +232,6 @@ class ExtendedKalmanFilter:
         ----------
         u : np.ndarray | float, optional, by default 0.0
         """
-
         # x = Fx + Gu
         if self.G is not None and u is not None:
             self.x = self.F @ self.x + self.G @ u
@@ -136,10 +241,18 @@ class ExtendedKalmanFilter:
     def predict(self, u: np.ndarray | float = 0):
         """Predict next state (prior) using the Kalman filter state propagation equations.
 
+        When a model is attached the state is propagated with the model's own
+        ``fx`` and linearised at the current estimate, which keeps the mean
+        exact to first order instead of reusing a frozen ``F``.
+
         Parameters
         ----------
         u : np.ndarray | float, optional, by default 0
         """
+
+        if self.model is not None:
+            self.predict_model()
+            return
 
         self.predict_x(u)
         self.P = self.F @ self.P @ self.F.T + self.Q
@@ -148,11 +261,28 @@ class ExtendedKalmanFilter:
         self.x_prior = np.copy(self.x)
         self.P_prior = np.copy(self.P)
 
+    def predict_model(self) -> None:
+        """Propagate through the attached model's ``fx`` and Jacobian."""
+
+        if self.model is None:
+            raise RuntimeError("no model attached; use attach_model() or from_model()")
+
+        state = self.x.reshape(-1)
+        transition = np.asarray(self.model.jacobian_x(state), dtype=float)
+        predicted = np.asarray(self.model.fx(state), dtype=float)
+
+        self.F = transition
+        self.x = reshape_z(predicted, self.dim_x, self.x.ndim)
+        self.P = transition @ self.P @ transition.T + self.Q
+
+        self.x_prior = np.copy(self.x)
+        self.P_prior = np.copy(self.P)
+
     def update(
         self,
         z: np.ndarray,
-        HJac: Callable[..., np.ndarray],
-        Hx: Callable[..., np.ndarray],
+        HJac: Callable[..., np.ndarray] | None = None,
+        Hx: Callable[..., np.ndarray] | None = None,
         R: np.ndarray | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
@@ -164,10 +294,12 @@ class ExtendedKalmanFilter:
         ----------
         z : np.ndarray
            measurement for this step.
-        HJac : function
+        HJac : function, optional
            function which computes the Jacobian of the H matrix. Takes state variable (self.x) as input, returns H.
-        Hx : function
+           Defaults to the attached model's ``jacobian_h``.
+        Hx : function, optional
            function which takes as input the state variable (self.x) along with the optional arguments in hx_args, and returns the measurement that would correspond to that state.
+           Defaults to the attached model's ``hx``.
         R : np.ndarray | float | None
         args : tuple, optional, default (,)
            arguments to be passed into HJac after the required state variable.
@@ -182,6 +314,15 @@ class ExtendedKalmanFilter:
             self.x_post = self.x.copy()
             self.P_post = self.P.copy()
             return
+
+        if HJac is None or Hx is None:
+            if self.model is None:
+                raise TypeError(
+                    "HJac and Hx are required when no model is attached; "
+                    "use from_model()/attach_model() to supply them"
+                )
+            HJac = self._model_jacobian_h if HJac is None else HJac
+            Hx = self._model_measurement if Hx is None else Hx
 
         if not isinstance(args, tuple):
             args = (args,)

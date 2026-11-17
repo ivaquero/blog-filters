@@ -1,376 +1,291 @@
-from __future__ import annotations
+"""Nonlinear state-space models — the coordinated-turn family.
+
+The constant-acceleration helpers used to live here even though a
+constant-acceleration plant is linear; they now sit in
+:mod:`models.ssmodel_linear` next to the other closed-form matrices.
+
+Everything trigonometric in the turn model is evaluated through
+``sin(θ)/ω`` and ``2 sin²(θ/2)/ω`` rather than ``sin(θ)/ω`` and
+``(1-cos θ)/ω``. The latter pair loses all significance once ``θ`` drops below
+``1e-8`` (``1 - cos θ`` rounds to zero), which used to give a 100% error in
+``dJ/dω`` for a target flying straight; the replacement is exact to machine
+precision across the whole range, so no ``eps`` branch is needed.
+"""
 
 import math
+from typing import Any
 
 import numpy as np
 
-from filters.kalman import KalmanFilter
+from filters._typing import Matrix, Measurement, Vector
 
-from .noise import white_noise_discrete
-from .ssmodel import StateSpaceModel
+from ._common import as_state_vector
+from .ssmodel import NonlinearStateSpaceModel
 
+__all__ = [
+    "CT_MEASUREMENT_DIM",
+    "CT_PROCESS_NOISE_DIM",
+    "CT_STATE_DIM",
+    "FCT",
+    "HCT",
+    "CoordinatedTurn",
+    "FxCT",
+    "coordinated_turn_F",
+    "coordinated_turn_H",
+    "coordinated_turn_Jfx",
+    "coordinated_turn_L",
+    "coordinated_turn_M",
+    "coordinated_turn_fx",
+]
 
-class NonlinearStateSpaceModel(StateSpaceModel):
-    """Non-Linear time varying system.
-
-    State space model of the plant to be estimated.
-    x[t+1] = f(t, x[t], u[t], w[t])
-    z[t] = h(t, x[t], v[t])
-
-    f: state equation
-    h: observation equation
-    x: state
-    z: output
-    u: control input
-    w: system noise
-    v: observation noise
-    """
-
-    def Jfx(self, t, x):
-        """The Jacobian of the system model.
-
-        x[t+1] = f(x[t], u[t], w[t], t),
-        return (df/dx)(x).
-        """
-        raise NotImplementedError
-
-    def Jfw(self, t, x):
-        """The Jacobian of the state equation.
-
-        x[t+1] = f(x[t], u[t], w[t], t),
-        return (df/dw)(x).
-        """
-        raise NotImplementedError
-
-    def Jhx(self, t, x):
-        """The Jacobian of the observation equation.
-
-        z[t] = h(x[t], v[t], t),
-        return (dh/dx)(x).
-        """
-        raise NotImplementedError
-
-    def Jhv(self, t, x):
-        """The Jacobian of the observation equation.
-
-        z[t] = h(x[t], v[t], t),
-        return (dh/dv)(x).
-        """
-        raise NotImplementedError
-
-    def Lt(self, t):
-        """x[t+1] = f(x[t], u[t], t) + L[t] * w[t]
-
-        In case of system noise is additive, return L[t].
-        """
-        raise NotImplementedError
-
-    def Mt(self, t):
-        """z[t] = h(x[t], t) + M[t] * v[t]
-
-        In case of observation noise is additive, return M[t].
-        """
-        raise NotImplementedError
-
-
-CA_STATE_DIM_PER_AXIS = 3
 CT_STATE_DIM = 5
 CT_PROCESS_NOISE_DIM = 3
 CT_MEASUREMENT_DIM = 2
 
-
-def _axis_count(dim_x: int, state_dim_per_axis: int) -> int:
-    if dim_x < state_dim_per_axis or dim_x % state_dim_per_axis != 0:
-        raise ValueError(f"dim_x must be a positive multiple of {state_dim_per_axis}")
-    return dim_x // state_dim_per_axis
+#: Below this |sin θ| the series expansions win; the closed forms stay accurate
+#: far beyond it, so the switch only guards the last few digits.
+_SERIES_LIMIT = 1e-3
 
 
-def _as_state_vector(x) -> np.ndarray:
-    return np.asarray(x, dtype=float)
+def _turn_terms(turn_rate: float, dt: float) -> tuple[float, float, float, float]:
+    """Return ``(sinθ/ω, (1-cosθ)/ω, d/dω[sinθ/ω], d/dω[(1-cosθ)/ω])``.
 
-
-def _as_covariance(value, dim: int) -> np.ndarray:
-    return np.eye(dim) * value if np.isscalar(value) else np.atleast_2d(value)
-
-
-def _position_measurement_H(
-    dim_x: int, state_dim_per_axis: int, dim_z: int | None = None
-) -> np.ndarray:
-    axes = _axis_count(dim_x, state_dim_per_axis)
-    dim_z = axes if dim_z is None else dim_z
-
-    if dim_z < 1:
-        raise ValueError("dim_z must be at least 1")
-    if dim_z == dim_x:
-        return np.eye(dim_x)
-    if dim_z > axes:
-        raise ValueError("dim_z must be <= number of axes, or equal to dim_x")
-
-    H = np.zeros((dim_z, dim_x))
-    H[np.arange(dim_z), np.arange(dim_z) * state_dim_per_axis] = 1.0
-    return H
-
-
-def _block_diag_axis(axis_matrix: np.ndarray, axes: int) -> np.ndarray:
-    return np.kron(np.eye(axes), axis_matrix)
-
-
-def _ca_axis_count(dim_x: int) -> int:
-    return _axis_count(dim_x, CA_STATE_DIM_PER_AXIS)
-
-
-def constant_acceleration_H(dim_x: int, dim_z: int | None = None) -> np.ndarray:
-    """Return a measurement matrix for constant-acceleration states.
-
-    State order is ``[x, vx, ax, y, vy, ay, ...]``. By default, the matrix
-    measures position only for every spatial axis. Passing ``dim_z == dim_x``
-    returns an identity matrix for full-state measurements.
+    Written in terms of ``θ = ω dt`` so the ω→0 limit is a removal of the
+    singularity rather than a separate code path.
     """
-    return _position_measurement_H(dim_x, CA_STATE_DIM_PER_AXIS, dim_z)
-
-
-def constant_acceleration_F(dim: int, dt: float) -> np.ndarray:
-    """Return the transition matrix for a constant-acceleration model.
-
-    Supports any state dimension that is a multiple of 3.
-    """
-    axes = _ca_axis_count(dim)
-    F_axis = np.array([[1, dt, 0.5 * dt**2], [0, 1, dt], [0, 0, 1]], dtype=float)
-    return _block_diag_axis(F_axis, axes)
-
-
-def constant_acceleration_fx(x, dt: float) -> np.ndarray:
-    """Apply a constant-acceleration transition to state ``x``."""
-    x = _as_state_vector(x)
-    return constant_acceleration_F(len(x), dt) @ x
-
-
-def constant_acceleration_filter(
-    P, R, Q=0, dt: float = 1, x=(0, 0, 0), dim_z: int | None = None
-):
-    """Create a Kalman filter configured for constant acceleration.
-
-    The state is ordered per axis as ``[position, velocity, acceleration]``.
-    For example, a 2D state is ``[x, vx, ax, y, vy, ay]``.
-    """
-    x = _as_state_vector(x)
-    dim_x = len(x)
-    axes = _ca_axis_count(dim_x)
-    dim_z = axes if dim_z is None else dim_z
-
-    kf_ca = KalmanFilter(dim_x=dim_x, dim_z=dim_z)
-    kf_ca.x = x
-    kf_ca.F = constant_acceleration_F(dim_x, dt)
-    kf_ca.H = constant_acceleration_H(dim_x, dim_z)
-    kf_ca.P = _as_covariance(P, dim_x)
-    kf_ca.R = _as_covariance(R, dim_z)
-    kf_ca.Q = (
-        white_noise_discrete(dim=CA_STATE_DIM_PER_AXIS, dt=dt, var=Q, block_size=axes)
-        if np.isscalar(Q)
-        else np.atleast_2d(Q)
-    )
-    return kf_ca
-
-
-def constant_acceleration_filter_3d(P, R, Q=0, dt=1, x=(0, 0, 0)):
-    """Backward-compatible 1-axis constant-acceleration filter factory."""
-    return constant_acceleration_filter(P=P, R=R, Q=Q, dt=dt, x=x, dim_z=1)
-
-
-HCA = constant_acceleration_H
-FCA = constant_acceleration_F
-FxCA = constant_acceleration_fx
-KFCA = constant_acceleration_filter
-KFCA3d = constant_acceleration_filter_3d
-
-
-def coordinated_turn_F(
-    dim: int, dt: float, turn_rate: float = math.pi / 180, eps: float = 1e-14
-) -> np.ndarray:
-    """Return the transition matrix for a 2D coordinated-turn model."""
-    if dim != CT_STATE_DIM:
-        raise ValueError("dim must be 5")
-
-    if abs(turn_rate) < eps:
-        return np.array(
-            [
-                [1.0, dt, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, dt, 0.0],
-                [0.0, 0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0, 1.0],
-            ]
-        )
 
     theta = turn_rate * dt
+    if abs(theta) < _SERIES_LIMIT:
+        theta_sq = theta * theta
+        a = dt * (1.0 - theta_sq / 6.0 + theta_sq**2 / 120.0)
+        b = dt * theta * (0.5 - theta_sq / 24.0 + theta_sq**2 / 720.0)
+        da = dt**2 * theta * (-1.0 / 3.0 + theta_sq / 30.0 - theta_sq**2 / 840.0)
+        db = dt**2 * (0.5 - theta_sq / 8.0 + theta_sq**2 / 144.0)
+        return a, b, da, db
+
     sin_theta = math.sin(theta)
     cos_theta = math.cos(theta)
+    a = sin_theta / turn_rate
+    b = (1.0 - cos_theta) / turn_rate
+    da = dt**2 * (theta * cos_theta - sin_theta) / (theta * theta)
+    db = dt**2 * (theta * sin_theta - (1.0 - cos_theta)) / (theta * theta)
+    return a, b, da, db
+
+
+def coordinated_turn_F(dim: int, dt: float, turn_rate: float = math.pi / 180) -> Matrix:
+    """Return the transition matrix of a 2-D coordinated-turn model.
+
+    Parameters
+    ----------
+    dim : int
+        Must be 5; the guess is rejected rather than silently reinterpreted.
+    dt : float
+        Step length.
+    turn_rate : float, optional
+        Angular rate ``ω`` in rad/s, by default 1°/s.
+    """
+
+    if dim != CT_STATE_DIM:
+        raise ValueError(f"dim must be {CT_STATE_DIM}, got {dim}")
+
+    a, b, _, _ = _turn_terms(turn_rate, dt)
+    cos_theta = math.cos(turn_rate * dt)
+    sin_theta = math.sin(turn_rate * dt)
     return np.array(
         [
-            [1.0, sin_theta / turn_rate, 0.0, -(1 - cos_theta) / turn_rate, 0.0],
+            [1.0, a, 0.0, -b, 0.0],
             [0.0, cos_theta, 0.0, -sin_theta, 0.0],
-            [0.0, (1 - cos_theta) / turn_rate, 1.0, sin_theta / turn_rate, 0.0],
+            [0.0, b, 1.0, a, 0.0],
             [0.0, sin_theta, 0.0, cos_theta, 0.0],
             [0.0, 0.0, 0.0, 0.0, 1.0],
         ]
     )
 
 
-def coordinated_turn_H(dim_z: int = CT_MEASUREMENT_DIM) -> np.ndarray:
+def coordinated_turn_H(dim_z: int = CT_MEASUREMENT_DIM) -> Matrix:
     """Return the coordinated-turn measurement matrix.
 
-    ``dim_z=2`` measures position ``[x, y]``. ``dim_z=1`` measures ``x`` only,
+    ``dim_z=2`` measures position ``[x, y]``, ``dim_z=1`` measures ``x`` only,
     and ``dim_z=5`` returns full-state measurements.
+
+    The state is ``[x, vx, y, vy, ω]``, so positions sit at indices ``0, 2``
+    rather than in evenly spaced axis blocks — the shared turn rate breaks the
+    block structure the other models can rely on.
     """
+
     if dim_z == CT_STATE_DIM:
         return np.eye(CT_STATE_DIM)
-    if dim_z < 1 or dim_z > CT_MEASUREMENT_DIM:
-        raise ValueError("dim_z must be 1, 2, or 5")
+    if not 1 <= dim_z <= CT_MEASUREMENT_DIM:
+        raise ValueError(
+            f"dim_z must be 1, {CT_MEASUREMENT_DIM} or {CT_STATE_DIM}, got {dim_z}"
+        )
 
-    H = np.zeros((dim_z, CT_STATE_DIM))
-    H[np.arange(dim_z), np.arange(dim_z) * 2] = 1.0
-    return H
+    matrix = np.zeros((dim_z, CT_STATE_DIM))
+    matrix[np.arange(dim_z), np.arange(dim_z) * 2] = 1.0
+    return matrix
 
 
-def coordinated_turn_L(dt: float) -> np.ndarray:
+def coordinated_turn_L(dt: float) -> Matrix:
     """Return the additive process-noise input matrix for the turn model."""
+
     return np.array(
         [
-            [0.5 * (dt**2), 0.0, 0.0],
+            [0.5 * dt**2, 0.0, 0.0],
             [dt, 0.0, 0.0],
-            [0.0, 0.5 * (dt**2), 0.0],
+            [0.0, 0.5 * dt**2, 0.0],
             [0.0, dt, 0.0],
             [0.0, 0.0, dt],
         ]
     )
 
 
-def coordinated_turn_M(dim_z: int = CT_MEASUREMENT_DIM) -> np.ndarray:
+def coordinated_turn_M(dim_z: int = CT_MEASUREMENT_DIM) -> Matrix:
     """Return the additive observation-noise matrix for the turn model."""
-    if dim_z != CT_STATE_DIM and (dim_z < 1 or dim_z > CT_MEASUREMENT_DIM):
-        raise ValueError("dim_z must be 1, 2, or 5")
+
+    if dim_z != CT_STATE_DIM and not 1 <= dim_z <= CT_MEASUREMENT_DIM:
+        raise ValueError(
+            f"dim_z must be 1, {CT_MEASUREMENT_DIM} or {CT_STATE_DIM}, got {dim_z}"
+        )
     return np.eye(dim_z)
 
 
-def coordinated_turn_fx(x, dt: float, eps: float = 1e-14) -> np.ndarray:
-    """Apply a coordinated-turn transition to state ``x``."""
-    x = _as_state_vector(x)
-    return coordinated_turn_F(len(x), dt, turn_rate=x[4], eps=eps) @ x
+def coordinated_turn_fx(x: Any, dt: float, turn_rate: float | None = None) -> Vector:
+    """Apply the coordinated-turn transition to ``x``.
+
+    ``turn_rate=None`` reads the rate from the fifth state entry, which is the
+    convention the model class uses; pass a number for a fixed-rate turn.
+    """
+
+    state = as_state_vector(x)
+    if turn_rate is None:
+        turn_rate = float(state[4])
+    return coordinated_turn_F(CT_STATE_DIM, dt, turn_rate) @ state
 
 
-def _coordinated_turn_zero_jacobian(dt: float, vx: float, vy: float) -> np.ndarray:
-    return np.array(
-        [
-            [1.0, dt, 0.0, 0.0, -0.5 * (dt**2) * vy],
-            [0.0, 1.0, 0.0, 0.0, -dt * vy],
-            [0.0, 0.0, 1.0, dt, 0.5 * (dt**2) * vx],
-            [0.0, 0.0, 0.0, 1.0, dt * vx],
-            [0.0, 0.0, 0.0, 0.0, 1.0],
-        ]
-    )
+def coordinated_turn_Jfx(x: Any, dt: float) -> Matrix:
+    """Return ``df/dx`` for the coordinated-turn state equation.
 
+    A straight-flying target (``ω = 0``) is a regular point of the Jacobian, so
+    no special casing is needed: the entries that carry a ``1/ω²`` singularity
+    are evaluated from their series near zero.
+    """
 
-def coordinated_turn_Jfx(x, dt: float, eps: float = 1e-14) -> np.ndarray:
-    """Return ``df/dx`` for the coordinated-turn state equation."""
-    x = _as_state_vector(x)
-    vx, vy, omega = x[1], x[3], x[4]
-
-    if abs(omega) < eps:
-        return _coordinated_turn_zero_jacobian(dt, vx, vy)
+    state = as_state_vector(x)
+    vx, vy, omega = float(state[1]), float(state[3]), float(state[4])
+    a, b, da, db = _turn_terms(omega, dt)
 
     theta = omega * dt
-    sin_theta = math.sin(theta)
     cos_theta = math.cos(theta)
-    omega_sq = omega**2
+    sin_theta = math.sin(theta)
 
-    J = np.zeros((CT_STATE_DIM, CT_STATE_DIM))
-    J[0, 0] = 1
-    J[0, 1] = sin_theta / omega
-    J[0, 3] = -(1 - cos_theta) / omega
-    J[0, 4] = (
-        cos_theta * dt * vx / omega
-        - sin_theta * vx / omega_sq
-        - sin_theta * dt * vy / omega
-        - (-1 + cos_theta) * vy / omega_sq
-    )
-    J[1, 1] = cos_theta
-    J[1, 3] = -sin_theta
-    J[1, 4] = -sin_theta * dt * vx - cos_theta * dt * vy
-    J[2, 1] = (1 - cos_theta) / omega
-    J[2, 2] = 1
-    J[2, 3] = sin_theta / omega
-    J[2, 4] = (
-        sin_theta * dt * vx / omega
-        - (1 - cos_theta) * vx / omega_sq
-        + cos_theta * dt * vy / omega
-        - sin_theta * vy / omega_sq
-    )
-    J[3, 1] = sin_theta
-    J[3, 3] = cos_theta
-    J[3, 4] = cos_theta * dt * vx - sin_theta * dt * vy
-    J[4, 4] = 1
-    return J
+    jacobian = np.zeros((CT_STATE_DIM, CT_STATE_DIM))
+    jacobian[0, 0] = 1.0
+    jacobian[0, 1] = a
+    jacobian[0, 3] = -b
+    jacobian[0, 4] = da * vx - db * vy
+    jacobian[1, 1] = cos_theta
+    jacobian[1, 3] = -sin_theta
+    jacobian[1, 4] = -dt * (sin_theta * vx + cos_theta * vy)
+    jacobian[2, 1] = b
+    jacobian[2, 2] = 1.0
+    jacobian[2, 3] = a
+    jacobian[2, 4] = db * vx + da * vy
+    jacobian[3, 1] = sin_theta
+    jacobian[3, 3] = cos_theta
+    jacobian[3, 4] = dt * (cos_theta * vx - sin_theta * vy)
+    jacobian[4, 4] = 1.0
+    return jacobian
 
 
 class CoordinatedTurn(NonlinearStateSpaceModel):
-    """2D coordinated-turn state-space model.
+    """2-D coordinated-turn model.
 
-    State order is ``[x, vx, y, vy, omega]`` and measurement order is
-    ``[x, y]``.
+    State order is ``[x, vx, y, vy, ω]`` and the measurement vector is
+    ``[x, y]`` by default.
     """
 
-    def __init__(self, dt=0.1, eps=1e-14, dim_z: int = CT_MEASUREMENT_DIM):
+    def __init__(
+        self,
+        dt: float = 0.1,
+        dim_z: int = CT_MEASUREMENT_DIM,
+        *,
+        process_var: float = 1.0,
+        measurement_var: float = 1.0,
+    ) -> None:
+        if dt <= 0:
+            raise ValueError(f"dt must be positive, got {dt}")
+
         self.dt = dt
-        self.eps = eps
-        self.dim_z = dim_z
-        self.NDIM = {
-            "x": CT_STATE_DIM,
-            "z": CT_MEASUREMENT_DIM,
-            "u": 0,
-            "w": CT_PROCESS_NOISE_DIM,
-            "v": CT_MEASUREMENT_DIM,
-        }
-        self.ndim = {**self.NDIM, "z": dim_z, "v": dim_z}
+        self.process_var = process_var
+        self.measurement_var = measurement_var
         self.H = coordinated_turn_H(dim_z)
         self.M = coordinated_turn_M(dim_z)
+        self.L = coordinated_turn_L(dt)
+        self._dim_z = dim_z
 
-    def compute_F(self, omega, dt):
-        return coordinated_turn_F(CT_STATE_DIM, dt, turn_rate=omega, eps=self.eps)
+    @property
+    def dim_x(self) -> int:
+        return CT_STATE_DIM
 
-    def state_equation(self, t, x, u=0, w=None):
-        """Return ``x[t+1] = f(t, x[t], u[t], w[t])``."""
-        if w is None:
-            w = np.zeros(self.ndim["w"])
-        return self.compute_F(x[4], self.dt) @ x + self.Lt(t) @ w
+    @property
+    def dim_z(self) -> int:
+        return self._dim_z
 
-    def observation_equation(self, t, x, v=None):
-        """Return ``z[t] = h(t, x[t], v[t])``."""
-        if v is None:
-            v = np.zeros(self.ndim["v"])
-        return self.H @ x + self.M @ v
+    @property
+    def dim_w(self) -> int:
+        return CT_PROCESS_NOISE_DIM
 
-    def Jfx(self, t, x):
-        """Return ``df/dx`` for the coordinated-turn state equation."""
-        return coordinated_turn_Jfx(x, self.dt, eps=self.eps)
+    def compute_F(self, omega: float, dt: float | None = None) -> Matrix:
+        """Return the transition matrix for a given turn rate."""
 
-    def Jfw(self, t, x):
-        """Return ``df/dw`` for additive system noise."""
+        return coordinated_turn_F(CT_STATE_DIM, self.dt if dt is None else dt, omega)
+
+    def fx(
+        self,
+        x: Any,
+        dt: float | None = None,
+        *,
+        t: float = 0.0,
+        u: Any = None,
+        w: Any = None,
+    ) -> Vector:
+        state = as_state_vector(x)
+        step = self.dt if dt is None else dt
+        predicted = self.compute_F(float(state[4]), step) @ state
+        if w is not None:
+            predicted = predicted + coordinated_turn_L(step) @ as_state_vector(w)
+        return predicted
+
+    def hx(self, x: Any, v: Any = None) -> Measurement:
+        measurement = self.H @ as_state_vector(x)
+        if v is not None:
+            measurement = measurement + self.M @ as_state_vector(v)
+        return measurement
+
+    def process_cov(self) -> Matrix:
+        """Return ``Q`` as ``L Lᵀ * process_var`` (noise on acceleration, ω)."""
+
+        return self.L @ self.L.T * self.process_var
+
+    def measurement_cov(self) -> Matrix:
+        return self.M @ self.M.T * self.measurement_var
+
+    def Jfx(self, t: float, x: Any) -> Matrix:
+        return coordinated_turn_Jfx(x, self.dt)
+
+    def Jfw(self, t: float, x: Any) -> Matrix:
         return self.Lt(t)
 
-    def Jhx(self, t, x):
-        """Return ``dh/dx`` for position-only measurements."""
+    def Jhx(self, t: float, x: Any) -> Matrix:
         return self.H
 
-    def Jhv(self, t, x):
-        """Return ``dh/dv`` for additive observation noise."""
+    def Jhv(self, t: float, x: Any) -> Matrix:
         return self.Mt(t)
 
-    def Lt(self, t):
-        """Return additive system-noise input matrix ``L[t]``."""
-        return coordinated_turn_L(self.dt)
+    def Lt(self, t: float) -> Matrix:
+        return self.L
 
-    def Mt(self, t):
-        """Return additive observation-noise matrix ``M[t]``."""
+    def Mt(self, t: float) -> Matrix:
         return self.M
 
 

@@ -15,7 +15,7 @@ class PoissonClutter2D:
     within a square of side ``2 * range_`` centred on the observed position.
     """
 
-    def __init__(self, density: float, range_: float):
+    def __init__(self, density: float, range_: float) -> None:
         self.density = density
         self.range_ = range_
 
