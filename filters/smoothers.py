@@ -15,6 +15,17 @@ def _as_sequence(value, n: int, default):
     return list(value)
 
 
+def _with_control(x_pre, u, G):
+    """Add ``G @ u`` to a column-vector prediction, validating the shapes."""
+
+    if u is None:
+        return x_pre
+    if G.shape[1] == 0:
+        error_message = "control input requires dim_u > 0 at construction time"
+        raise ValueError(error_message)
+    return x_pre + G @ np.asarray(u).reshape(-1, 1)
+
+
 def rts_smoother(Xs, Ps, Fs=None, Qs=None, Q=None, inv=linalg.inv):
     """Rauch-Tung-Striebel smoother over a ``batch_filter`` run.
 
@@ -58,7 +69,9 @@ def rts_smoother(Xs, Ps, Fs=None, Qs=None, Q=None, inv=linalg.inv):
     for k in range(n - 2, -1, -1):
         F = Fs[k + 1]
         Pp[k] = F @ P[k] @ F.T + Qs[k + 1]
-        K[k] = P[k] @ F.T @ inv(Pp[k])
+        PFt = P[k] @ F.T
+        # Avoid forming an explicit inverse on the default path.
+        K[k] = linalg.solve(Pp[k].T, PFt.T).T if inv is linalg.inv else PFt @ inv(Pp[k])
         x[k] += K[k] @ (x[k + 1] - F @ x[k])
         P[k] += K[k] @ (P[k + 1] - Pp[k]) @ K[k].T
 
@@ -68,11 +81,17 @@ def rts_smoother(Xs, Ps, Fs=None, Qs=None, Q=None, inv=linalg.inv):
 class FixedLagSmoother:
     """Fixed Lag Kalman smoother."""
 
-    def __init__(self, dim_x, dim_z, N=None):
-        """Create a fixed lag Kalman filter smoother."""
+    def __init__(self, dim_x, dim_z, N=None, dim_u=0):
+        """Create a fixed lag Kalman filter smoother.
+
+        ``dim_u`` is the control-input dimension. It defaults to 0 so that
+        existing call sites that never pass ``u`` keep working; set it when
+        a control input is used and assign ``self.G`` accordingly.
+        """
 
         self.dim_x = dim_x
         self.dim_z = dim_z
+        self.dim_u = dim_u
         self.N = N
 
         self.x = np.zeros((dim_x, 1))
@@ -84,7 +103,7 @@ class FixedLagSmoother:
         self.R = np.eye(dim_z)
         self.K = np.zeros((dim_x, 1))
         self.y = np.zeros((dim_z, 1))
-        self.G = 0.0
+        self.G = np.zeros((dim_x, dim_u))
         self.S = np.zeros((dim_z, dim_z))
 
         # identity matrix. Do not alter this.
@@ -117,9 +136,7 @@ class FixedLagSmoother:
         k = self.count
 
         # predict step of normal Kalman filter
-        x_pre = F @ x
-        if u is not None:
-            x_pre += G @ u
+        x_pre = _with_control(F @ x, u, G)
 
         P = F @ P @ F.T + Q
 
@@ -181,9 +198,7 @@ class FixedLagSmoother:
             xhat = np.zeros((len(zs), self.dim_x, 1))
         for k, z in enumerate(zs):
             # predict step of normal Kalman filter
-            x_pre = F @ x
-            if us is not None:
-                x_pre += G @ us[k]
+            x_pre = _with_control(F @ x, None if us is None else us[k], G)
 
             P = F @ P @ F.T + Q
             # update step of normal Kalman filter
@@ -223,8 +238,8 @@ class FixedLagSmoother:
         return "\n".join(
             [
                 "FixedLagSmoother object",
-                pretty_str("dim_x", self.x),
-                pretty_str("dim_z", self.x),
+                pretty_str("dim_x", self.dim_x),
+                pretty_str("dim_z", self.dim_z),
                 pretty_str("N", self.N),
                 pretty_str("x", self.x),
                 pretty_str("x_s", self.x_s),

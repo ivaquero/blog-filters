@@ -7,12 +7,8 @@ import numpy as np
 from numpy import linalg
 from scipy import stats
 
-from ._typing import Batch2Output, StateSpaceModelLike, UkfRtsOutput
-from .helpers import mahalanobis, pretty_str
-
-
-def _as_covariance(value, dim):
-    return np.eye(dim) * value if np.isscalar(value) else value
+from ._typing import BatchPosteriorOutput, StateSpaceModelLike, UkfRtsOutput
+from .helpers import as_covariance, mahalanobis, pretty_str
 
 
 def _batch_method(filter_obj, fn, name):
@@ -239,7 +235,7 @@ class UnscentedKalmanFilter:
         if UT is None:
             UT = unscented_transform
 
-        R = self.R if R is None else _as_covariance(R, self._dim_z)
+        R = self.R if R is None else as_covariance(R, self._dim_z)
 
         batch_hx = _batch_method(self, hx, "hx_many")
         if batch_hx is not None:
@@ -344,7 +340,7 @@ class UnscentedKalmanFilter:
             if saver is not None:
                 saver.save()
 
-        return Batch2Output(means, covariances)
+        return BatchPosteriorOutput(means, covariances)
 
     def rts_smoother(self, Xs, Ps, Qs=None, dts=None, UT=None):
         """Runs the Rauch-Tung-Striebel Kalman smoother on a set of

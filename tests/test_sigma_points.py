@@ -84,3 +84,13 @@ def test_num_sigmas_takes_no_argument():
     assert sp.num_sigmas() == 5
     with pytest.raises(TypeError):
         sp.num_sigmas(np.zeros(2))  # ty: ignore[too-many-positional-arguments]
+
+
+def test_sigma_point_parameters_use_ascii_names():
+    """Unicode identifiers made keyword use awkward outside the notebook."""
+    from filters.sigma_points import JulierSigmas, MerweScaledSigmas, SimplexSigmas
+
+    assert JulierSigmas(2, kappa=1.0).kappa == 1.0
+    pts = MerweScaledSigmas(2, kappa=0.0, alpha=1.0, beta=0.0)
+    assert (pts.kappa, pts.alpha, pts.beta) == (0.0, 1.0, 0.0)
+    assert SimplexSigmas(2, alpha=0.5).alpha == 0.5

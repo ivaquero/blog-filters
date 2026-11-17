@@ -7,7 +7,7 @@ from itertools import product
 import numpy as np
 
 from ._typing import Filter, Measurement
-from .helpers import pretty_str
+from .helpers import likelihood_of, pretty_str
 
 
 @functools.cache
@@ -121,7 +121,7 @@ class IMMEstimator:
         # run update on each filter, and save the likelihood
         for i, f in enumerate(self.filters):
             _update(f, z)
-            self.likelihood[i] = f.likelihood
+            self.likelihood[i] = likelihood_of(f)
 
         # update mode probabilities from total probability * likelihood
         self.mu = self.cbar * self.likelihood
@@ -274,7 +274,7 @@ class MMAEFilterBank:
         # new probability is recursively defined as prior * likelihood
         for i, f in enumerate(self.filters):
             _update(f, z, H=H, R=R)
-            self.p[i] *= f.likelihood
+            self.p[i] *= likelihood_of(f)
 
         self.p /= np.sum(self.p)  # normalize
 

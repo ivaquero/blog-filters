@@ -3,26 +3,27 @@ from scipy import linalg
 
 
 def reshape_z(z, dim_z, ndim):
-    """Ensure z is a (dim_z, 1) shaped vector.
+    """Ensure ``z`` is shaped for a Kalman update.
 
     Parameters
     ----------
-    z : _type_
-        _description_
-    dim_z : _type_
-        _description_
-    ndim : _type_
-        _description_
+    z : array_like
+        A measurement, either ``(dim_z,)`` or ``(dim_z, 1)``.
+    dim_z : int
+        Expected measurement dimension.
+    ndim : int
+        State dimension; ``1`` means the state is a scalar and the
+        measurement is accepted as a plain float.
 
     Returns
     -------
-    _type_
-        _description_
+    ndarray, shape (dim_z, 1)
+        The measurement as a column vector.
 
     Raises
     ------
     ValueError
-        _description_
+        If ``z`` cannot be reshaped to ``(dim_z, 1)``.
     """
 
     z = np.atleast_2d(z)

@@ -8,9 +8,10 @@ Guards the P0 crash that was fixed in Phase 1 (missing ``.copy()`` parens on
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from filters.kalman import KalmanFilter
-from filters.smoothers import rts_smoother
+from filters.smoothers import FixedLagSmoother, rts_smoother
 
 
 def _collect_runs(zs, kf):
@@ -119,3 +120,60 @@ def test_top_level_rts_defaults_to_identity_transition():
 
     assert np.all(np.isfinite(x))
     assert x.shape == means.shape
+
+
+def _control_smoother():
+    """A smoother whose gain is zero, so x after update equals x_pre exactly."""
+    fls = FixedLagSmoother(2, 1, N=2, dim_u=1)
+    fls.G = np.array([[1.0], [0.0]])
+    fls.Q = np.zeros((2, 2))
+    fls.R = np.array([[1e6]])
+    fls.P = np.zeros((2, 2))
+    fls.H = np.array([[1.0, 0.0]])
+    return fls
+
+
+def test_fixed_lag_control_without_dim_u_raises_clear_error():
+    """The old ``G = 0.0`` raised a cryptic matmul error; now it explains dim_u."""
+    fls = FixedLagSmoother(2, 1, N=2)
+    assert fls.G.shape == (2, 0)
+
+    with pytest.raises(ValueError, match="dim_u"):
+        fls.smooth(np.array([[1.0]]), u=np.array([1.0]))
+
+
+def test_fixed_lag_smoother_applies_control_input():
+    fls = _control_smoother()
+    fls.smooth(np.array([[1.0]]), u=np.array([2.0]))
+
+    assert np.allclose(fls.x, np.array([[2.0], [0.0]]))
+
+
+def test_fixed_lag_smooth_batch_applies_control_inputs():
+    fls = _control_smoother()
+    x_smooth, x_hat = fls.smooth_batch(
+        [np.array([[1.0]]), np.array([[2.0]])],
+        N=2,
+        us=[np.array([2.0]), np.array([3.0])],
+    )
+
+    # The state propagates: step 2 starts from step 1's state, then adds u=3.
+    assert np.allclose(x_hat[0], np.array([[2.0], [0.0]]))
+    assert np.allclose(x_hat[1], np.array([[5.0], [0.0]]))
+    assert x_smooth.shape == x_hat.shape
+    # The batch variant is functional: it must not touch filter state.
+    assert np.allclose(fls.x, np.zeros((2, 1)))
+
+
+def test_fixed_lag_smooth_batch_rejects_control_without_dim_u():
+    fls = FixedLagSmoother(2, 1, N=2)
+    with pytest.raises(ValueError, match="dim_u"):
+        fls.smooth_batch([np.array([[1.0]])], N=2, us=[np.array([1.0])])
+
+
+def test_fixed_lag_repr_labels_the_dimensions():
+    fls = FixedLagSmoother(3, 2, N=2)
+    text = repr(fls)
+
+    assert "dim_x = 3" in text
+    assert "dim_z = 2" in text

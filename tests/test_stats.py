@@ -62,3 +62,10 @@ def test_gaussian_sum_adds_variances():
     total = gaussian_sum(gaussian(1.0, 3.0), gaussian(2.0, 4.0))
     assert np.isclose(total.mean, 3.0)
     assert np.isclose(total.sigma, 5.0)
+
+
+def test_capitalised_gaussian_is_the_canonical_name():
+    from filters.stats import Gaussian, gaussian
+
+    assert Gaussian is gaussian
+    assert Gaussian(1.0, 2.0).sigma == 2.0

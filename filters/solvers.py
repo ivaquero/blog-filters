@@ -1,21 +1,21 @@
 def rk4(y0, x0, dx, func):
-    """Computes 4th order Runge-Kutta for dy0/dx.
+    """One classical fourth-order Runge-Kutta step for ``dy/dx = func(y, x)``.
 
     Parameters
     ----------
-    y0 : _type_
-        _description_
-    x0 : _type_
-        _description_
-    dx : _type_
-        _description_
-    func : _type_
-        _description_
+    y0 : ndarray
+        State at the start of the step.
+    x0 : float
+        Independent variable at the start of the step.
+    dx : float
+        Step size.
+    func : callable
+        Derivative ``func(y, x)`` returning the same shape as ``y0``.
 
     Returns
     -------
-    _type_
-        _description_
+    ndarray
+        State advanced by one step of size ``dx``.
     """
 
     k1 = dx * func(y0, x0)

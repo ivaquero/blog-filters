@@ -122,3 +122,9 @@ def test_ekf_update_normalises_measurement_shapes():
         assert ekf.y.shape == (2, 1)
         assert np.allclose(ekf.x, reference.x)
         assert np.allclose(ekf.P, reference.P)
+
+
+def test_repr_uses_the_actual_class_name():
+    from filters.kalman_ekf import ExtendedKalmanFilter
+
+    assert repr(ExtendedKalmanFilter(2, 1)).startswith("ExtendedKalmanFilter object")

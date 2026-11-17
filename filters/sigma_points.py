@@ -4,25 +4,31 @@ from scipy import linalg
 from .helpers import pretty_str
 
 
-def print_sigmas(n=1, mean=5, cov=3, κ=2, α=0.1, β=2.0):
-    """_summary_
+def print_sigmas(n=1, mean=5, cov=3, kappa=2, alpha=0.1, beta=2.0):
+    """Print the Merwe scaled sigma points, weights and scaling constant.
 
     Parameters
     ----------
     n : int, optional
-        _description_, by default 1
+        State dimension, by default 1.
     mean : int, optional
-        _description_, by default 5
+        State mean, by default 5.
     cov : int, optional
-        _description_, by default 3
+        State covariance (scalar expands to ``cov * I``), by default 3.
+    kappa : int, optional
+        Secondary scaling parameter, by default 2.
+    alpha : float, optional
+        Primary scaling parameter, by default 0.1.
+    beta : float, optional
+        Prior-knowledge parameter (2 for Gaussian), by default 2.0.
     """
 
-    points = MerweScaledSigmas(n, κ, α, β)
+    points = MerweScaledSigmas(n, kappa, alpha, beta)
     print(f"sigmas: {points.sigma_points(mean, cov).T[0]}")
     Wm, Wc = points.Wm, points.Wc
     print(f"mean weights: {Wm}")
     print(f"cov weights: {Wc}")
-    print(f"lambda: {α**2 * (n + κ) - n}")
+    print(f"lambda: {alpha**2 * (n + kappa) - n}")
     print(f"sum cov: {sum(Wc)}")
 
 
@@ -30,12 +36,12 @@ class JulierSigmas:
     """
     Generates sigma points and weights according to Simon J. Julier
     and Jeffery K. Uhlmann's original paper.
-    It parametizes the sigma points using κ.
+    It parametizes the sigma points using kappa.
     """
 
     def __init__(self, n, kappa=0.0, sqrt_method=None, subtract=None):
         self.n = n
-        self.κ = kappa
+        self.kappa = kappa
         self.sqrt = linalg.cholesky if sqrt_method is None else sqrt_method
         self.subtract = np.subtract if subtract is None else subtract
         self.sigma_weights()
@@ -46,7 +52,7 @@ class JulierSigmas:
 
     def sigma_points(self, x, P):
         """Computes the sigma points for an UKF given the mean (x) and covariance (P) of the filter.
-        κ is an arbitrary constant. Returns sigma points.
+        kappa is an arbitrary constant. Returns sigma points.
         """
 
         if self.n != np.size(x):
@@ -62,9 +68,9 @@ class JulierSigmas:
         P = np.eye(n) * P if np.isscalar(P) else np.atleast_2d(P)
         sigmas = np.zeros((2 * n + 1, n))
 
-        # U'*U = (n+κ)*P.
+        # U'*U = (n+kappa)*P.
         # Returns lower triangular matrix.
-        U = self.sqrt((n + self.κ) * P)
+        U = self.sqrt((n + self.kappa) * P)
 
         sigmas[0] = x
         for k in range(n):
@@ -76,7 +82,7 @@ class JulierSigmas:
         """Computes the weights for the UKF. In this formulation the weights for the mean and covariance are the same."""
 
         n = self.n
-        k = self.κ
+        k = self.kappa
         c = n + k
 
         self.Wm = np.full(2 * n + 1, 0.5 / c)
@@ -88,7 +94,7 @@ class JulierSigmas:
             [
                 "JulierSigmas object",
                 pretty_str("n", self.n),
-                pretty_str("κ", self.κ),
+                pretty_str("kappa", self.kappa),
                 pretty_str("Wm", self.Wm),
                 pretty_str("Wc", self.Wc),
                 pretty_str("subtract", self.subtract),
@@ -99,7 +105,7 @@ class JulierSigmas:
 
 class MerweScaledSigmas:
     """
-    Generates sigma points and weights according to Van der Merwe's 2004 dissertation. It parametizes the sigma points using κ, α, β terms, and is the version seen in most publications.
+    Generates sigma points and weights according to Van der Merwe's 2004 dissertation. It parametizes the sigma points using kappa, alpha, beta terms, and is the version seen in most publications.
     Unless you know better, this should be your default choice.
     """
 
@@ -107,9 +113,9 @@ class MerweScaledSigmas:
         self, n, kappa, alpha=1, beta=0, sqrt_method=None, subtract_method=None
     ):
         self.n = n
-        self.α = alpha
-        self.β = beta
-        self.κ = kappa if kappa is not None else 3 - n
+        self.alpha = alpha
+        self.beta = beta
+        self.kappa = kappa if kappa is not None else 3 - n
         self.sqrt = linalg.cholesky if sqrt_method is None else sqrt_method
         self.subtract = np.subtract if subtract_method is None else subtract_method
         self.sigma_weights()
@@ -133,9 +139,9 @@ class MerweScaledSigmas:
         n = self.n
         P = np.eye(n) * P if np.isscalar(P) else np.atleast_2d(P)
 
-        c = self.α**2 * (n + self.κ)  # scaling constant
+        c = self.alpha**2 * (n + self.kappa)  # scaling constant
         U = self.sqrt(c * P)  # upper-triangular matrix
-        # λ = c - n
+        # lam = c - n
 
         sigmas = np.zeros((2 * n + 1, n))
         sigmas[0] = x
@@ -154,22 +160,22 @@ class MerweScaledSigmas:
         """Computes the weights for the scaled UKF."""
 
         n = self.n
-        c = self.α**2 * (n + self.κ)  # scaling constant
-        λ = c - n
+        c = self.alpha**2 * (n + self.kappa)  # scaling constant
+        lam = c - n
 
         self.Wc = np.full(2 * n + 1, 0.5 / c)
         self.Wm = np.full(2 * n + 1, 0.5 / c)
-        self.Wc[0] = λ / c + (1 - self.α**2 + self.β)
-        self.Wm[0] = λ / c
+        self.Wc[0] = lam / c + (1 - self.alpha**2 + self.beta)
+        self.Wm[0] = lam / c
 
     def __repr__(self):
         return "\n".join(
             [
                 "MerweScaledSigmas object",
                 pretty_str("n", self.n),
-                pretty_str("α", self.α),
-                pretty_str("β", self.β),
-                pretty_str("κ", self.κ),
+                pretty_str("alpha", self.alpha),
+                pretty_str("beta", self.beta),
+                pretty_str("kappa", self.kappa),
                 pretty_str("Wm", self.Wm),
                 pretty_str("Wc", self.Wc),
                 pretty_str("subtract", self.subtract),
@@ -184,9 +190,9 @@ class SimplexSigmas:
     method.
     """
 
-    def __init__(self, n, α=1, sqrt_method=None, subtract=None):
+    def __init__(self, n, alpha=1, sqrt_method=None, subtract=None):
         self.n = n
-        self.α = α
+        self.alpha = alpha
         self.sqrt = linalg.cholesky if sqrt_method is None else sqrt_method
         self.subtract = np.subtract if subtract is None else subtract
         self.sigma_weights()
@@ -214,12 +220,12 @@ class SimplexSigmas:
         P = np.eye(n) * P if np.isscalar(P) else np.atleast_2d(P)
         U = self.sqrt(P)
 
-        λ = n / (n + 1)
-        Istar = np.array([[-1 / np.sqrt(2 * λ), 1 / np.sqrt(2 * λ)]])
+        lam = n / (n + 1)
+        Istar = np.array([[-1 / np.sqrt(2 * lam), 1 / np.sqrt(2 * lam)]])
 
         for d in range(2, n + 1):
-            row = np.ones((1, Istar.shape[1] + 1)) * 1.0 / np.sqrt(λ * d * (d + 1))
-            row[0, -1] = -d / np.sqrt(λ * d * (d + 1))
+            row = np.ones((1, Istar.shape[1] + 1)) * 1.0 / np.sqrt(lam * d * (d + 1))
+            row[0, -1] = -d / np.sqrt(lam * d * (d + 1))
 
             Istar = np.hstack((Istar, np.zeros((Istar.shape[0], 1))))
             Istar = np.vstack((Istar, row))
@@ -243,7 +249,7 @@ class SimplexSigmas:
             [
                 "SimplexSigmas object",
                 pretty_str("n", self.n),
-                pretty_str("α", self.α),
+                pretty_str("alpha", self.alpha),
                 pretty_str("Wm", self.Wm),
                 pretty_str("Wc", self.Wc),
                 pretty_str("subtract", self.subtract),

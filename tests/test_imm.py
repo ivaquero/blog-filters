@@ -140,3 +140,41 @@ def test_mmae_skips_overrides_a_filter_does_not_declare():
     received_R = first.seen["R"]
     assert received_R is not None
     assert np.array_equal(received_R, np.array([[0.5]]))
+
+
+def test_imm_accepts_filters_without_likelihood():
+    """H-infinity exposes y/V but no likelihood; mixing it used to crash."""
+    from filters.kalman_hinf import HInfinityFilter
+
+    def hinf(seed):
+        f = HInfinityFilter(2, 1, 0, 0.1)
+        f.H = np.array([[1.0, 0.0]])
+        f.V = np.array([[0.5 + seed]])
+        f.x = np.array([[seed], [0.0]])
+        return f
+
+    filters = [hinf(0.0), hinf(1.0)]
+    imm = IMMEstimator(filters, mu=np.array([0.5, 0.5]), M=np.eye(2) * 0.9 + 0.05)
+
+    imm.update(np.array([[1.0]]))
+
+    assert np.all(np.isfinite(imm.mu))
+    assert np.isclose(imm.mu.sum(), 1.0)
+
+
+def test_mmae_accepts_filters_without_likelihood():
+    from filters.kalman_hinf import HInfinityFilter
+
+    def hinf(seed):
+        f = HInfinityFilter(2, 1, 0, 0.1)
+        f.H = np.array([[1.0, 0.0]])
+        f.V = np.array([[0.5 + seed]])
+        f.x = np.array([[seed], [0.0]])
+        return f
+
+    bank = MMAEFilterBank([hinf(0.0), hinf(1.0)], p=[0.5, 0.5], dim_x=2)
+
+    bank.update(np.array([[1.0]]))
+
+    assert np.all(np.isfinite(bank.p))
+    assert np.isclose(bank.p.sum(), 1.0)

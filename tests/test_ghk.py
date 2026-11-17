@@ -102,3 +102,54 @@ def test_critical_damping_rejects_out_of_range_theta():
 
     with pytest.raises(ValueError, match="theta"):
         critical_damping_params(1.5)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: GHFilter(0.0, 1.0, 1.0, 0.5, 0.2),
+        lambda: GHKFilter(0.0, 1.0, 0.0, 1.0, 0.5, 0.2, 0.1),
+    ],
+)
+def test_update_records_the_measurement(factory):
+    """``repr`` and KFSaver used to report z=0 regardless of the input."""
+    filt = factory()
+
+    filt.update(2.0)
+
+    assert filt.z == 2.0
+    assert filt.y == 2.0 - filt.x_pred
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: GHFilter(0.0, 1.0, 1.0, 0.5, 0.2),
+        lambda: GHKFilter(0.0, 1.0, 0.0, 1.0, 0.5, 0.2, 0.1),
+    ],
+)
+def test_batch_filter_leaves_state_at_the_last_estimate(factory):
+    data = [1.0, 2.0, 3.0]
+    filt = factory()
+
+    estimates = filt.batch_filter(data)
+
+    assert np.allclose(filt.x, estimates[-1, 0])
+    assert np.allclose(filt.dx, estimates[-1, 1])
+    assert filt.z == data[-1]
+
+
+def test_batch_filter_saver_sees_the_current_state():
+    class Saver:
+        def __init__(self, filt):
+            self.filt = filt
+            self.xs = []
+
+        def save(self):
+            self.xs.append(self.filt.x)
+
+    filt = GHFilter(0.0, 1.0, 1.0, 0.5, 0.2)
+    saver = Saver(filt)
+    estimates = filt.batch_filter([1.0, 2.0, 3.0], saver=saver)
+
+    assert np.allclose(saver.xs, estimates[1:, 0])

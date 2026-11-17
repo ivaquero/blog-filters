@@ -10,17 +10,11 @@ from numpy import linalg
 from scipy import stats
 
 from ._typing import StateSpaceModelLike
-from .helpers import mahalanobis, pretty_str
+from .helpers import as_covariance, mahalanobis, pretty_str
 from .transformers import reshape_z
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-
-def _as_covariance(value: Any, dim: int) -> np.ndarray:
-    """Expand a scalar variance to ``value * I``; pass matrices through."""
-
-    return np.eye(dim) * value if np.isscalar(value) else np.asarray(value, float)
 
 
 def _flatten(state: Any) -> np.ndarray:
@@ -182,14 +176,14 @@ class ExtendedKalmanFilter:
         else:
             kf.x = reshape_z(x0, model.dim_x, 2)
         kf.F = np.asarray(model.jacobian_x(kf.x.reshape(-1)), dtype=float)
-        kf.P = _as_covariance(np.eye(model.dim_x) if P0 is None else P0, model.dim_x)
+        kf.P = as_covariance(np.eye(model.dim_x) if P0 is None else P0, model.dim_x)
         kf.Q = (
-            _as_covariance(Q, model.dim_x)
+            as_covariance(Q, model.dim_x)
             if Q is not None
             else np.asarray(model.process_cov(), dtype=float)
         )
         kf.R = (
-            _as_covariance(R, model.dim_z)
+            as_covariance(R, model.dim_z)
             if R is not None
             else np.asarray(model.measurement_cov(), dtype=float)
         )
@@ -524,7 +518,7 @@ class ExtendedKalmanFilter:
     def __repr__(self):
         return "\n".join(
             [
-                "KalmanFilter object",
+                f"{type(self).__name__} object",
                 pretty_str("x", self.x),
                 pretty_str("P", self.P),
                 pretty_str("x_prior", self.x_prior),

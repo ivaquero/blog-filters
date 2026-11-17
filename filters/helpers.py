@@ -1,6 +1,7 @@
 import contextlib
 import inspect
 import math
+import sys
 from collections import defaultdict, deque
 from copy import deepcopy
 from typing import Any
@@ -96,16 +97,19 @@ class KFSaver:
             self.flatten()
 
     def flatten(self):
+        """Drop trailing singleton axes, e.g. ``(n, 3, 1)`` to ``(n, 3)``.
+
+        The old ``shape[2]`` lookup raised on 1-D and 2-D arrays and the
+        exception was swallowed, so column vectors were never flattened.
+        """
+
         for key in self.keys:
-            with contextlib.suppress(Exception):
-                arr = self.__dict__[key]
-                shape = arr.shape
-                if shape[2] == 1:
-                    self.__dict__[key] = arr.reshape(shape[0], shape[1])
-                arr = self.__dict__[key]
-                shape = arr.shape
-                if len(shape) == 2 and shape[1] == 1:
-                    self.__dict__[key] = arr.ravel()
+            arr = self.__dict__[key]
+            if not isinstance(arr, np.ndarray):
+                continue
+            while arr.ndim > 1 and arr.shape[-1] == 1:
+                arr = arr[..., 0]
+            self.__dict__[key] = arr
 
     def __repr__(self):
         return f"<KFSaver object at {hex(id(self))}\n  Keys: {' '.join(self.keys)}>"
@@ -127,6 +131,51 @@ def mahalanobis(y, S) -> float:
     except np.linalg.LinAlgError:
         squared = float(y @ np.linalg.pinv(S) @ y)
     return math.sqrt(max(squared, 0.0))
+
+
+def as_covariance(value, dim: int) -> np.ndarray:
+    """Expand a scalar variance to ``value * I``; pass matrices through.
+
+    KF/EKF/UKF each carried a private copy; the EKF version also coerced to
+    float, which the other two silently skipped.
+    """
+
+    return np.eye(dim) * value if np.isscalar(value) else np.asarray(value, dtype=float)
+
+
+def likelihood_of(filt) -> float:
+    """Likelihood of ``filt``'s last innovation, for IMM/MMAE mode weights.
+
+    Filters such as KF/EKF/UKF/CKF expose a ``likelihood`` property. Others
+    (notably `HInfinityFilter`) do not, which used to raise ``AttributeError``
+    as soon as they were mixed into a bank. Reconstruct a Gaussian likelihood
+    from ``f.y`` and the innovation/noise covariance (``S`` or ``V``) when the
+    property is missing, and fall back to the smallest positive float when
+    no covariance is available — the same floor the native properties use.
+    """
+
+    value = getattr(filt, "likelihood", None)
+    if value is not None:
+        return float(np.asarray(value).reshape(-1)[0])
+
+    y = np.asarray(getattr(filt, "y", [])).reshape(-1)
+    S = getattr(filt, "S", None)
+    if S is None or not np.any(S):
+        S = getattr(filt, "V", None)
+    if y.size == 0 or S is None or not np.any(S):
+        return sys.float_info.min
+
+    S = np.asarray(S, dtype=float)
+    try:
+        squared = float(y @ np.linalg.solve(S, y))
+        sign, logdet = np.linalg.slogdet(S)
+    except np.linalg.LinAlgError:
+        return sys.float_info.min
+    if sign <= 0:
+        return sys.float_info.min
+
+    log_likelihood = -0.5 * (y.size * math.log(2.0 * math.pi) + logdet + squared)
+    return max(math.exp(log_likelihood), sys.float_info.min)
 
 
 def pretty_str(label, arr):

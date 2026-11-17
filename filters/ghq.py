@@ -3,6 +3,10 @@ import math
 import numpy as np
 from scipy import linalg, stats
 
+# Number of Gauss-Hermite quadrature points per dimension. One constant for
+# the whole pipeline: predict/update/transform used to default to 10/3/3.
+DEFAULT_P = 10
+
 
 def gh_packed_pc(x, fmm_param):
     """
@@ -172,7 +176,7 @@ def gh_nd_scaled(f, n, m, P, param=None):
     return I, SX, x, W, F
 
 
-def gh_transform(m, P, g, g_param=None, tr_param=None):
+def gh_transform(m, P, g, g_param=None, p=DEFAULT_P, *, tr_param=None):
     """
     GH_TRANSFORM - Gauss-Hermite transform of random variables
 
@@ -185,8 +189,9 @@ def gh_transform(m, P, g, g_param=None, tr_param=None):
       g - Transformation function of the form g(x,param) as
           matrix, inline function, function name or function reference
       g_param - Parameters of g               (optional, default empty)
-      tr_param - Parameters of the integration method in form {p}:
-          p - Number of points in Gauss-Hermite integration
+      p - Number of Gauss-Hermite points per dimension (default DEFAULT_P)
+      tr_param - Optional extra parameter tuple for the integration helper;
+          kept for compatibility and no longer used to carry ``p``.
 
     Out:
       mu - Estimated mean of y
@@ -196,7 +201,8 @@ def gh_transform(m, P, g, g_param=None, tr_param=None):
        W - Weights as cell array
     """
 
-    p = tr_param if tr_param is not None else 3
+    if p is None:
+        p = DEFAULT_P
 
     # Estimate the mean of g
     if g_param is None:
@@ -204,11 +210,15 @@ def gh_transform(m, P, g, g_param=None, tr_param=None):
     else:
         mu, SX, _, W, _ = gh_nd_scaled(g, p, m, P, g_param)
 
-    # Estimate the P and C
-    if tr_param is None:
-        pc, SX, _, W, _ = gh_nd_scaled(gh_packed_pc, p, m, P, [g, m, mu])
-    else:
-        pc, SX, _, W, _ = gh_nd_scaled(gh_packed_pc, p, m, P, [g, m, mu, g_param])
+    # Estimate P and C. The old code used ``tr_param`` both as the order and
+    # as the switch for passing g_param, so g_param was replaced by the order
+    # on every prediction/update call. Pass it explicitly instead.
+    packed = [g, m, mu]
+    if g_param is not None:
+        packed.append(g_param)
+    if tr_param is not None:
+        packed.append(tr_param)
+    pc, SX, _, W, _ = gh_nd_scaled(gh_packed_pc, p, m, P, packed)
 
     d = m.shape[0]
     s = mu.shape[0]
@@ -218,7 +228,7 @@ def gh_transform(m, P, g, g_param=None, tr_param=None):
     return mu, S, C, SX, W
 
 
-def gh_kf_predict(M, P, f=None, Q=None, f_param=None, p=10):
+def gh_kf_predict(M, P, f=None, Q=None, f_param=None, p=DEFAULT_P):
     """
     GHKF_PREDICT - Gauss-Hermite Kalman filter prediction step
 
@@ -264,7 +274,7 @@ def gh_kf_predict(M, P, f=None, Q=None, f_param=None, p=10):
     return M, P
 
 
-def gh_kf_update(M, P, Y, h, R=None, h_param=None, p=3):
+def gh_kf_update(M, P, Y, h, R=None, h_param=None, p=DEFAULT_P):
     """
     GHKF_UPDATE - Gauss-Hermite Kalman filter update step
 
@@ -325,7 +335,7 @@ def gh_kf_update(M, P, Y, h, R=None, h_param=None, p=3):
     return M, P, K, MU, S, LH
 
 
-def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
+def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=DEFAULT_P, *, same_p=True):
     """
     GHRTS_SMOOTH - Additive form Gauss-Hermite Rauch-Tung-Striebel smoother
 
@@ -359,6 +369,11 @@ def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
 
     Description:
             Gauss-Hermite Rauch-Tung-Striebel smoother algorithm. Calculate "smoothed" sequence from given Kalman filter output sequence by conditioning all steps to all measurements.
+
+    This stays separate from `filters.smoothers.rts_smoother`: the predicted
+    moments come from a Gauss-Hermite transform of the nonlinear dynamics,
+    not from a fixed ``F @ P @ F.T``, so the two smoothers are not
+    interchangeable despite the shared name.
     """
     M = M.copy()
     P = P.copy()
@@ -373,7 +388,7 @@ def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
         Q = np.zeros((m_2, m_2))
 
     if p is None:
-        p = 10
+        p = DEFAULT_P
 
     # Extend Q if NxN matrix
     if len(Q.shape) == 2:

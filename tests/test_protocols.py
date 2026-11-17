@@ -20,10 +20,9 @@ from filters import resamplers
 from filters._typing import (
     Batch2Output,
     BatchOutput,
+    BatchPosteriorOutput,
     Filter,
-    IMMOutput,
     RtsOutput,
-    SmootherOutput,
     UkfRtsOutput,
     resolve_rng,
 )
@@ -94,8 +93,7 @@ def test_batch_output_field_names_are_stable():
     assert Batch2Output._fields == ("means", "covs")
     assert RtsOutput._fields == ("x", "P", "K", "P_prior")
     assert UkfRtsOutput._fields == ("x", "P", "K")
-    assert SmootherOutput._fields == ("x_smoothed", "P_smoothed")
-    assert IMMOutput._fields == ("x", "P", "mu")
+    assert Batch2Output is BatchPosteriorOutput
 
 
 def test_kalman_batch_filter_returns_named_tuple():
@@ -192,3 +190,19 @@ def test_resampler_accepts_injected_generator(resampler):
     a = resampler(weights, rng=np.random.default_rng(1234))
     b = resampler(weights, rng=np.random.default_rng(1234))
     np.testing.assert_array_equal(a, b)
+
+
+def test_sigma_point_protocol_return_matches_implementations():
+    """Every generator returns one ndarray, not a tuple of three vectors."""
+    import inspect
+
+    from filters._typing import SigmaPointGenerator
+    from filters.sigma_points import JulierSigmas, MerweScaledSigmas
+
+    annotation = inspect.get_annotations(
+        SigmaPointGenerator.sigma_points, eval_str=True
+    )["return"]
+    assert str(annotation) != "tuple[Vector, Vector, Vector]"
+
+    for points in (JulierSigmas(2), MerweScaledSigmas(2, 0.0, 1.0, 0.0)):
+        assert isinstance(points.sigma_points(np.zeros(2), np.eye(2)), np.ndarray)

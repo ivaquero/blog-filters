@@ -51,6 +51,7 @@ class GHFilter:
         self.x_pred = self.x + (self.dx * self.dt)
 
         # update step
+        self.z = z
         self.y = z - self.x_pred
         self.dx = self.dx_pred + h * self.y / self.dt
         self.x = self.x_pred + g * self.y
@@ -58,36 +59,27 @@ class GHFilter:
         return (self.x, self.dx)
 
     def batch_filter(self, data, saver=None, *, save_preds=False):
-        """Performs g-h filter with a fixed g and h."""
+        """Perform g-h filtering with fixed g and h, updating filter state.
 
-        x = self.x
-        dx = self.dx
+        The old loop kept ``x``/``dx`` in locals, so ``self.x`` stayed at its
+        initial value and ``saver`` recorded that stale state on every step.
+        Delegating to `update` keeps every attribute (including ``y``, ``z``
+        and the predictions) consistent with the returned estimates.
+        """
+
         n = len(data)
-
         estimates = np.zeros((n + 1, 2))
-        estimates[0, 0] = x
-        estimates[0, 1] = dx
+        estimates[0] = (self.x, self.dx)
 
         if save_preds:
             predictions = np.zeros(n)
 
-        # optimization to avoid n computations of h / dt
-        h_dt = self.h / self.dt
-
         for i, z in enumerate(data):
-            # prediction step
-            x_est = x + (dx * self.dt)
-
-            # update step
-            residual = z - x_est
-            dx = dx + h_dt * residual  # i.e. dx = dx + h * residual / dt
-            x = x_est + self.g * residual
-
-            estimates[i + 1, 0] = x
-            estimates[i + 1, 1] = dx
+            self.update(z)
+            estimates[i + 1] = (self.x, self.dx)
 
             if save_preds:
-                predictions[i] = x_est
+                predictions[i] = self.x_pred
 
             if saver is not None:
                 saver.save()
@@ -218,6 +210,7 @@ class GHKFilter:
         self.x_pred = self.x + self.dx * dt + 0.5 * self.ddx * (dt_sqr)
 
         # update step
+        self.z = z
         self.y = z - self.x_pred
 
         self.ddx = self.ddx_pred + 2 * k * self.y / dt_sqr
@@ -231,41 +224,23 @@ class GHKFilter:
 
         The previous implementation was a copy of the g-h loop: it ignored
         ``k`` entirely and returned two columns, so the acceleration state was
-        never estimated. Estimates now carry ``(x, dx, ddx)``.
+        never estimated. Estimates now carry ``(x, dx, ddx)``, and the filter
+        is left at the final estimate (as with `GHFilter.batch_filter`).
         """
 
-        dt = self.dt
-        half_dt_sqr = 0.5 * dt**2
-        h_dt = self.h / dt
-        k_dt_sqr = 2 * self.k / dt**2
-        g = self.g
-
-        x, dx, ddx = self.x, self.dx, self.ddx
         n = len(data)
-
         estimates = np.zeros((n + 1, 3))
-        estimates[0] = (x, dx, ddx)
+        estimates[0] = (self.x, self.dx, self.ddx)
 
         if save_preds:
             predictions = np.zeros(n)
 
         for i, z in enumerate(data):
-            # prediction step; ddx is carried, only dx and x advance
-            dx_pred = dx + ddx * dt
-            x_est = x + dx * dt + half_dt_sqr * ddx
-
-            # update step
-            residual = z - x_est
-            ddx = ddx + k_dt_sqr * residual
-            dx = dx_pred + h_dt * residual
-            x = x_est + g * residual
-
-            estimates[i + 1, 0] = x
-            estimates[i + 1, 1] = dx
-            estimates[i + 1, 2] = ddx
+            self.update(z)
+            estimates[i + 1] = (self.x, self.dx, self.ddx)
 
             if save_preds:
-                predictions[i] = x_est
+                predictions[i] = self.x_pred
 
             if saver is not None:
                 saver.save()

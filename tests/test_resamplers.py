@@ -88,3 +88,43 @@ def test_resample_from_index_copies_particles_and_resets_weights():
 
     assert np.array_equal(particles[0], [9.0, 10.0, 11.0])
     assert np.allclose(weights, 0.25)
+
+
+@pytest.mark.parametrize(
+    "bad_weights",
+    [
+        np.array([0.3, 0.3, 0.3, 0.0]),  # sums to 0.9
+        np.array([0.2] * 4),  # sums to 0.8
+        np.array([0.6, 0.6, 0.6, 0.6]),  # sums to 2.4
+    ],
+)
+@pytest.mark.parametrize("resample", RESAMPLERS)
+def test_unnormalised_weights_stay_in_bounds(resample, bad_weights):
+    """A CDF below 1.0 used to let searchsorted/while return index N."""
+    indexes = resample(bad_weights, rng=np.random.default_rng(11))
+
+    assert indexes.min() >= 0
+    assert indexes.max() < len(bad_weights)
+
+
+def test_uniform_fallback_for_zero_weights():
+    for resample in RESAMPLERS:
+        indexes = resample(np.zeros(5), rng=np.random.default_rng(2))
+        assert np.all((indexes >= 0) & (indexes < 5))
+
+
+def test_residual_uses_fractional_part_in_count_units():
+    """N*w - floor(N*w) must decide the residual slots, not w - floor(N*w)."""
+    # N=10: each of the first four particles gets 2 deterministic copies and
+    # 0.5 residual share, so the last two slots must also go to those four.
+    # The old (w - copies) formula was negative everywhere and fell back to
+    # uniform, which would have selected the zero-weight particles here.
+    weights = np.array([0.25] * 4 + [0.0] * 6)
+    counts = np.bincount(
+        resamplers.residual_resample(weights, rng=np.random.default_rng(4)),
+        minlength=10,
+    )
+
+    assert counts.sum() == 10
+    assert counts[4:].sum() == 0
+    assert counts[:4].min() >= 2

@@ -89,10 +89,11 @@ def test_rejects_degenerate_construction():
         EnsembleKalmanFilter(
             np.zeros(2), np.eye(2), 0, 1.0, 10, lambda x: x, lambda x, _: x
         )
-    with pytest.raises(ValueError, match="N must"):
-        EnsembleKalmanFilter(
-            np.zeros(2), np.eye(2), 1, 1.0, 0, lambda x: x[:1], lambda x, _: x
-        )
+    for bad_N in (0, 1):
+        with pytest.raises(ValueError, match="N must be at least 2"):
+            EnsembleKalmanFilter(
+                np.zeros(2), np.eye(2), 1, 1.0, bad_N, lambda x: x[:1], lambda x, _: x
+            )
 
 
 def test_outer_product_sum_matches_the_gram_matrix():

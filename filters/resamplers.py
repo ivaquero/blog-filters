@@ -12,6 +12,29 @@ def _resolve_rng(rng: np.random.Generator | None) -> np.random.Generator:
     return _default_rng if rng is None else rng
 
 
+def _normalised_weights(weights):
+    """Return weights that sum to exactly one, falling back to uniform."""
+
+    w = np.asarray(weights, dtype=float)
+    total = w.sum()
+    if total <= 0.0:
+        return np.full(len(w), 1.0 / len(w))
+    return w / total
+
+
+def _cumulative(weights):
+    """CDF of ``weights`` with the last bin forced to 1.0.
+
+    Without the final clamp, floating-point drift (or weights that do not sum
+    to one) leaves ``cumulative_sum[-1] < 1`` and ``searchsorted`` can return
+    an index of ``N`` — one past the last particle.
+    """
+
+    c = np.cumsum(_normalised_weights(weights))
+    c[-1] = 1.0
+    return c
+
+
 def resample_from_index(particles, weights, indexes):
     particles[:] = particles[indexes]
     weights.resize(len(particles))
@@ -30,11 +53,12 @@ def residual_resample(weights, rng=None):
     rng = _resolve_rng(rng)
 
     N = len(weights)
+    weights = _normalised_weights(weights)
     indexes = np.zeros(N, "i")
 
     # take int(N*w) copies of each weight, which ensures particles with the
     # same weight are drawn uniformly
-    num_copies = (np.floor(N * np.asarray(weights))).astype(int)
+    num_copies = (np.floor(N * weights)).astype(int)
     k = 0
     for i in range(N):
         for _ in range(num_copies[i]):  # make n copies
@@ -43,7 +67,9 @@ def residual_resample(weights, rng=None):
 
     # use multinormal resample on the residual to fill up the rest. This
     # maximizes the variance of the samples
-    residual = np.maximum(weights - num_copies, 0.0)  # get fractional part
+    # ``num_copies`` counts particles while ``weights`` are probabilities;
+    # the fractional part must be computed in the same (count) units.
+    residual = np.maximum(N * weights - num_copies, 0.0)
     total = np.sum(residual)
     if total <= 0.0:
         # Every particle already received an integer number of copies, or the
@@ -67,19 +93,10 @@ def stratified_resample(weights, rng=None):
     rng = _resolve_rng(rng)
 
     N = len(weights)
-    # make N subdivisions, and chose a random position within each one
-    positions = (rng.random(N) + range(N)) / N
+    # make N subdivisions, and choose a random position within each one
+    positions = (rng.random(N) + np.arange(N)) / N
 
-    indexes = np.zeros(N, "i")
-    cumulative_sum = np.cumsum(weights)
-    i, j = 0, 0
-    while i < N:
-        if positions[i] < cumulative_sum[j]:
-            indexes[i] = j
-            i += 1
-        else:
-            j += 1
-    return indexes
+    return np.searchsorted(_cumulative(weights), positions)
 
 
 def systematic_resample(weights, rng=None):
@@ -93,16 +110,7 @@ def systematic_resample(weights, rng=None):
     # make N subdivisions, and choose positions with a consistent random offset
     positions = (rng.random() + np.arange(N)) / N
 
-    indexes = np.zeros(N, "i")
-    cumulative_sum = np.cumsum(weights)
-    i, j = 0, 0
-    while i < N:
-        if positions[i] < cumulative_sum[j]:
-            indexes[i] = j
-            i += 1
-        else:
-            j += 1
-    return indexes
+    return np.searchsorted(_cumulative(weights), positions)
 
 
 def multinomial_resample(weights, rng=None):
@@ -110,6 +118,4 @@ def multinomial_resample(weights, rng=None):
     cumulative sum of the weights and then use binary search to select the resampled point based on a uniformly distributed random number. Run time is O(n log n). You do not want to use this algorithm in practice; for some reason it is popular in blogs and online courses so I included it for reference.
     """
     rng = _resolve_rng(rng)
-    cumulative_sum = np.cumsum(weights)
-    cumulative_sum[-1] = 1.0  # avoid round-off errors: ensures sum is exactly one
-    return np.searchsorted(cumulative_sum, rng.random(len(weights)))
+    return np.searchsorted(_cumulative(weights), rng.random(len(weights)))

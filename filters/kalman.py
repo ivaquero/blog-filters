@@ -21,16 +21,13 @@ from numpy import linalg
 from scipy import stats
 
 from ._typing import BatchOutput, Matrix, MeasurementLike, RtsOutput, Vector
-from .helpers import mahalanobis, pretty_str
+from .helpers import as_covariance, mahalanobis, pretty_str
+from .smoothers import rts_smoother as _rts_smoother
 from .transformers import reshape_z
 
 
 def _default_sequence(value: object, n: int) -> list:
     return [value] * n
-
-
-def _as_covariance(value: npt.NDArray[np.float64] | float, dim: int) -> Matrix:
-    return np.eye(dim) * value if np.isscalar(value) else value
 
 
 class KalmanFilter:
@@ -192,7 +189,7 @@ class KalmanFilter:
         F = self.F if F is None else F
         if G is None and u is not None:
             G = self.G
-        Q = self.Q if Q is None else _as_covariance(Q, self.dim_x)
+        Q = self.Q if Q is None else as_covariance(Q, self.dim_x)
 
         # x = Fx + Gu
         self.x = F @ self.x
@@ -226,7 +223,7 @@ class KalmanFilter:
 
         z = reshape_z(z, self.dim_z, self.x.ndim)
         H = self.H if H is None else H
-        R = self.R if R is None else _as_covariance(R, self.dim_z)
+        R = self.R if R is None else as_covariance(R, self.dim_z)
 
         # y = z - Hx
         self.y = z - H @ self.x
@@ -314,6 +311,10 @@ class KalmanFilter:
     ) -> RtsOutput:
         """Rauch-Tung-Striebel smoother over a `batch_filter` run.
 
+        Delegates to `filters.smoothers.rts_smoother`, the single core
+        implementation. This method keeps the historical defaults of using
+        this filter's ``F``/``Q`` when no sequences are supplied.
+
         Parameters
         ----------
         Xs, Ps
@@ -324,32 +325,13 @@ class KalmanFilter:
             Matrix inverse callable; defaults to `numpy.linalg.inv`. Pass
             `scipy.linalg.pinv` for numerically degenerate covariances.
         """
-        if len(Xs) != len(Ps):
-            error_message = "length of Xs and Ps must be the same"
-            raise ValueError(error_message)
-
-        n = Xs.shape[0]
-        dim_x = Xs.shape[1]
-
-        Fs = _default_sequence(self.F, n) if Fs is None else Fs
-        Qs = _default_sequence(self.Q, n) if Qs is None else Qs
-
-        K = np.zeros((n, dim_x, dim_x))
-
-        x, P, Pp = Xs.copy(), Ps.copy(), Ps.copy()
-        for k in range(n - 2, -1, -1):
-            F = Fs[k + 1]
-            Pp[k] = F @ P[k] @ F.T + Qs[k + 1]
-            PFt = P[k] @ F.T
-            K[k] = (
-                linalg.solve(Pp[k].T, PFt.T).T
-                if inv is linalg.inv
-                else PFt @ inv(Pp[k])
-            )
-            x[k] += K[k] @ (x[k + 1] - F @ x[k])
-            P[k] += K[k] @ (P[k + 1] - Pp[k]) @ K[k].T
-
-        return RtsOutput(x, P, K, Pp)
+        return _rts_smoother(
+            Xs,
+            Ps,
+            Fs=self.F if Fs is None else Fs,
+            Qs=self.Q if Qs is None else Qs,
+            inv=inv,
+        )
 
     # ------------------------------------------------------------------
     # diagnostic helpers

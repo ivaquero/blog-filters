@@ -41,8 +41,9 @@ class EnsembleKalmanFilter:
     ):
         if dim_z <= 0:
             raise ValueError("dim_z must be greater than zero")
-        if N <= 0:
-            raise ValueError("N must be greater than zero")
+        # The ensemble covariance divides by N - 1; N=1 produced NaN silently.
+        if N < 2:
+            raise ValueError("N must be at least 2 for a sample covariance")
 
         self.rng = resolve_rng(rng)
         dim_x = len(x)

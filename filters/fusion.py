@@ -20,7 +20,11 @@ def fusion_kf2d(
     P: float = 100,
     rng: np.random.Generator | None = None,
 ) -> KFSaver:
-    """Two-sensor 1-D fusion demo; returns a KFSaver with the filter history."""
+    """Fuse two range sensors into a 2-D position/velocity state.
+
+    Each sensor measures the same 1-D position with its own noise; the
+    Kalman filter carries a 2-D state. Returns a KFSaver with the history.
+    """
     generator = resolve_rng(rng)
 
     kf = KalmanFilter(dim_x=2, dim_z=2)

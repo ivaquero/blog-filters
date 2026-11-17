@@ -4,7 +4,7 @@ import numpy as np
 from numpy import linalg
 
 
-class gaussian(NamedTuple):
+class Gaussian(NamedTuple):
     """Scalar Gaussian parameterised by mean and **standard deviation**.
 
     The second field is σ, not σ². The historical name for it was `var`,
@@ -20,7 +20,11 @@ class gaussian(NamedTuple):
         return f"N(μ={self.mean:.3f}, σ={self.sigma:.3f})"
 
 
-def gaussian_product(g1: gaussian, g2: gaussian) -> gaussian:
+# Backward-compatible alias; existing notebooks use ``stats.gaussian(...)``.
+gaussian = Gaussian
+
+
+def gaussian_product(g1: Gaussian, g2: Gaussian) -> Gaussian:
     """Product of two Gaussians — Bayes' rule for a conjugate prior.
 
     The parameters are combined through their variances; the return value
@@ -34,13 +38,13 @@ def gaussian_product(g1: gaussian, g2: gaussian) -> gaussian:
     var = var1 + var2
 
     mean = (var2 * g1.mean + var1 * g2.mean) / var
-    return gaussian(mean, np.sqrt(var1 * var2 / var))
+    return Gaussian(mean, np.sqrt(var1 * var2 / var))
 
 
-def gaussian_sum(g1: gaussian, g2: gaussian) -> gaussian:
+def gaussian_sum(g1: Gaussian, g2: Gaussian) -> Gaussian:
     """Sum of two independent Gaussians: means add, variances add."""
 
-    return gaussian(g1.mean + g2.mean, np.sqrt(g1.sigma**2 + g2.sigma**2))
+    return Gaussian(g1.mean + g2.mean, np.sqrt(g1.sigma**2 + g2.sigma**2))
 
 
 def NEES(xs, est_xs, ps):

@@ -9,8 +9,8 @@ Single source of truth for:
 * Protocols — `Filter`, `SigmaPointGenerator`, `Resampler` describe the
   runtime duck-typed contracts so IMM/MMAE and downstream helpers can accept
   conforming objects (including test doubles) without inheritance.
-* NamedTuple return shapes — `BatchOutput`, `RtsOutput`, `SmootherOutput`,
-  `IMMOutput`. They unpack exactly like the historical tuples so existing
+* NamedTuple return shapes — `BatchOutput`, `BatchPosteriorOutput`, `RtsOutput`,
+  `UkfRtsOutput`. They unpack exactly like the historical tuples so existing
   notebooks keep working (`means, cov, _, _ = kf.batch_filter(zs)`), but
   `result.means` also type-checks.
 
@@ -43,10 +43,10 @@ from shared import (
 __all__ = [
     "Batch2Output",
     "BatchOutput",
+    "BatchPosteriorOutput",
     "CovarianceLayout",
     "Filter",
     "FloatLike",
-    "IMMOutput",
     "Matrix",
     "MatrixLike",
     "Measurement",
@@ -54,7 +54,6 @@ __all__ = [
     "Resampler",
     "RtsOutput",
     "SigmaPointGenerator",
-    "SmootherOutput",
     "StateLayout",
     "StateSpaceModelLike",
     "UkfRtsOutput",
@@ -103,7 +102,7 @@ class SigmaPointGenerator(Protocol):
 
     def num_sigmas(self) -> int: ...
 
-    def sigma_points(self, x: Vector, P: Matrix) -> tuple[Vector, Vector, Vector]: ...
+    def sigma_points(self, x: Vector, P: Matrix) -> Matrix: ...
 
 
 class Resampler(Protocol):
@@ -168,11 +167,15 @@ class BatchOutput(NamedTuple):
     covs_prior: CovarianceLayout
 
 
-class Batch2Output(NamedTuple):
-    """Return of UKF/Hinf `batch_filter` — posterior estimates only."""
+class BatchPosteriorOutput(NamedTuple):
+    """Return of UKF/H∞ `batch_filter` — posterior estimates only."""
 
     means: StateLayout
     covs: CovarianceLayout
+
+
+# Historical name: the "2" meant two fields, not two filters.
+Batch2Output = BatchPosteriorOutput
 
 
 class RtsOutput(NamedTuple):
@@ -190,18 +193,3 @@ class UkfRtsOutput(NamedTuple):
     x: StateLayout
     P: CovarianceLayout
     K: CovarianceLayout
-
-
-class SmootherOutput(NamedTuple):
-    """Fixed-lag smoother output."""
-
-    x_smoothed: StateLayout
-    P_smoothed: CovarianceLayout
-
-
-class IMMOutput(NamedTuple):
-    """IMM / MMAE estimator snapshot after an update or predict step."""
-
-    x: Vector
-    P: Matrix
-    mu: Vector

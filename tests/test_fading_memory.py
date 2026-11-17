@@ -69,3 +69,10 @@ def test_coefficients_have_one_entry_per_state():
 def test_order_out_of_range_is_rejected(order):
     with pytest.raises(ValueError, match="order"):
         FadingMemoryFilter(0.0, 1.0, order, 0.6)
+
+
+@pytest.mark.parametrize("beta", [0.0, 1.0, -0.2, 1.5])
+def test_beta_out_of_range_is_rejected(beta):
+    """beta=1 divided by zero; beta=0 silently turned fading off."""
+    with pytest.raises(ValueError, match="beta"):
+        FadingMemoryFilter(0.0, 1.0, 0, beta)

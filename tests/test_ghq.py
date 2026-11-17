@@ -159,3 +159,33 @@ def test_scalar_state_is_supported():
 
     assert np.isclose(integral.ravel()[0], 3.0)
     assert SX.shape == (1, 3)
+
+
+def test_all_ghq_defaults_share_one_order_constant():
+    import inspect
+
+    from filters import ghq
+
+    for fn in (
+        ghq.gh_transform,
+        ghq.gh_kf_predict,
+        ghq.gh_kf_update,
+        ghq.gh_rts_smooth,
+    ):
+        assert inspect.signature(fn).parameters["p"].default == ghq.DEFAULT_P
+
+
+def test_gh_transform_forwards_g_param_to_the_function():
+    """The order used to occupy ``tr_param`` and shadow ``g_param``."""
+    from filters import ghq
+
+    seen = []
+
+    def g(x, param):
+        seen.append(param)
+        return x
+
+    ghq.gh_transform(np.zeros(1), np.eye(1), g, g_param="sentinel")
+
+    assert seen
+    assert set(seen) == {"sentinel"}

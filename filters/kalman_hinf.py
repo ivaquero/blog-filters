@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 from numpy import linalg
 
-from ._typing import Batch2Output
+from ._typing import BatchPosteriorOutput
 from .helpers import pretty_str
 
 
@@ -157,7 +157,7 @@ class HInfinityFilter:
                 if saver is not None:
                     saver.save()
 
-        return Batch2Output(means, covariances)
+        return BatchPosteriorOutput(means, covariances)
 
     def residual_of(self, z):
         """Returns the residual for the given measurement (z). Does not alter the state of the filter."""

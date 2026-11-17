@@ -20,6 +20,12 @@ class FadingMemoryFilter:
             error_message = "order must be between 0 and 2"
             raise ValueError(error_message)
 
+        # Every coefficient below divides by (1 - beta); beta=1 used to raise
+        # ZeroDivisionError and beta=0 disabled fading with no warning.
+        if not 0.0 < beta < 1.0:
+            error_message = "beta must be strictly between 0 and 1"
+            raise ValueError(error_message)
+
         if np.isscalar(x0):
             self.x = np.zeros(order + 1)
             self.x[0] = x0
