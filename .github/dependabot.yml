@@ -4,14 +4,18 @@ updates:
     directory: '/'
     schedule:
       interval: monthly
-  - package-ecosystem: pip
+  # The project is uv-managed and `pyproject.toml` is the only manifest, so the
+  # `uv` ecosystem is the right updater: it bumps the constraints in
+  # pyproject.toml and regenerates uv.lock in the same PR. The `pip` ecosystem
+  # would edit pyproject.toml alone and leave the lock stale.
+  - package-ecosystem: uv
     directory: '/'
     schedule:
       interval: monthly
     ignore:
       # Jupyter Book majors are full rewrites (2.0 replaced Sphinx with a
       # mystmd/Node pipeline and silently stopped emitting _build/html).
-      # requirements.txt already bounds `>=2,<3`; keep major bumps manual so a
+      # pyproject.toml already bounds `>=2.1,<3`; keep major bumps manual so a
       # new engine never lands through an auto-merged PR.
       - dependency-name: 'jupyter-book'
         update-types: ['version-update:semver-major']

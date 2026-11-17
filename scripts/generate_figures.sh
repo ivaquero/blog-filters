@@ -11,9 +11,9 @@
 #   ./scripts/generate_figures.sh              # execute everything, build the site
 #   ./scripts/generate_figures.sh --clean      # drop the execution cache first
 #
-# Requires: `jupyter-book>=2` plus `jupyter-server` and `ipykernel` (see
-# requirements.txt), and a Python env with numpy/scipy/matplotlib/pandas
-# installed via `pip install -e .`.
+# Requires the `book` + `sim` extras from pyproject.toml (jupyter-book>=2,
+# jupyter-server, ipykernel, pandas, PyYAML). Install with:
+#   uv sync --extra book --extra sim      # or: pip install -e ".[book,sim]"
 
 set -euo pipefail
 
@@ -27,7 +27,7 @@ else
 fi
 
 command -v jupyter-book >/dev/null 2>&1 || {
-    echo "[generate_figures] jupyter-book not found on PATH. Run: pip install -r requirements.txt" >&2
+    echo "[generate_figures] jupyter-book not found on PATH. Run: uv sync --extra book --extra sim" >&2
     exit 127
 }
 

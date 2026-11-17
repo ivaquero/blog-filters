@@ -5,26 +5,26 @@ description = "Companion code and notebooks for the blog-filters series on Kalma
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-  "matplotlib>=3.10",
-  "numpy>=2.1",
-  "scipy>=1.14",
-  "sympy>=1.13",
+  "matplotlib>=3.11",
+  "numpy>=2.5",
+  "scipy>=1.18",
+  "sympy>=1.14",
 ]
 
 [project.optional-dependencies]
 book = [
-  "jupyter-book>=2,<3",
-  "jupyter-server>=2",
-  "ipykernel>=6",
+  "jupyter-book>=2.1,<3",
+  "jupyter-server>=2.21",
+  "ipykernel>=7",
 ]
 dev = [
-  "ruff>=0.14",
-  "pytest>=8.3",
+  "ruff>=0.17",
+  "pytest>=9.2",
   "ty==0.0.104",
 ]
 sim = [
-  "pandas>=2.2",
-  "PyYAML>=6.0",
+  "pandas>=3.1",
+  "PyYAML>=6.0.3",
 ]
 
 [build-system]
@@ -59,15 +59,14 @@ skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
 extend-select = [
-  "ANN",  # type annotations (PEP 484 / 695)
+  "ANN",
   "ASYNC",
-  "B",  # bugbear
-  "C4",  # comprehensions
-  "DTZ",
+  "B",
+  "C4",
   "E",
   "F",
-  "FA",  # future-annotations cleanup
-  "FURB",  # refurbisher (idiom modernization)
+  "FA",
+  "FURB",
   "I",
   "ICN",
   "ISC",
@@ -76,7 +75,7 @@ extend-select = [
   "PERF",
   "PGH",
   "PIE",
-  "PT",  # flake8-pytest-style
+  "PT",
   "PTH",
   "PYI",
   "Q",
@@ -87,7 +86,7 @@ extend-select = [
   "SIM",
   "SLF",
   "TID",
-  "TRY",  # exception handling patterns
+  "TRY",
   "UP",
   "W",
 ]
@@ -100,23 +99,18 @@ ignore = [
   "RUF003",
   "S101",
   "S603",
-  # Mathematical code legitimately uses `I` for identity matrices.
+
   "E741",
-  # Notebook-adjacent helpers intentionally use try/except around matplotlib draws.
+
   "PERF203",
   "BLE001",
-  # Docstring-heavy numeric APIs still use bare `array` in prose; ANN401 would
-  # forbid `Any`, but the Protocol layer needs it for duck-typed inputs.
+
   "ANN401",
-  # Existing notebooks rely on `assert_allclose` from `numpy.testing`, not
-  # pytest.raises with match=; PT rules would churn for no gain.
   "PT006",
   "PT007",
   "PT011",
   "PT012",
   "PT013",
-  # TRY003/TRY004/TRY301 force "raise .. from .." verbosity that hurts
-  # readability in this teaching codebase.
   "TRY003",
   "TRY300",
   "TRY301",
@@ -124,9 +118,6 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "filters/*" = [
-  # filters/ is being migrated progressively; only kalman.py and _typing.py
-  # currently satisfy full ANN coverage. Everything else is grandfathered
-  # until we finish the retrofit.
   "ANN",
 ]
 "filters/_typing.py" = ["ANN401"]
@@ -136,7 +127,7 @@ ignore = [
 "simulators/*" = ["ANN"]
 "symbols/*" = ["ANN"]
 "tests/*" = [
-  "ANN",  # fixtures + test bodies stay un-annotated for readability
+  "ANN",
   "ARG",
   "S101",
   "SLF001",
@@ -162,11 +153,6 @@ respect-ignore-files = true
 exclude = ["_build", "build"]
 
 [tool.ty.rules]
-# Baseline everything to error, then relax the few spots we intentionally
-# keep loose (Any-returning helpers, matplotlib duck typing).
-# Rule names track ty 0.0.104; the pre-0.0.100 spellings
-# (`invalid-method-override`, `unresolved-attribute`) are retired aliases and
-# emit `warning[renamed-rule]`, which `--error-on-warning` turns into a CI fail.
 import-not-found = "error"
 incompatible-method-override = "error"
 invalid-assignment = "error"

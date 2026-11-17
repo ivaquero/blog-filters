@@ -15,7 +15,9 @@ into a Jupyter Book plus a small Python package (`filters`, `models`, `plots`,
 
 ## Run locally
 
-The toolkit targets **Python 3.14** and is managed with [uv](https://docs.astral.sh/uv/):
+The toolkit targets **Python 3.14** and is managed with [uv](https://docs.astral.sh/uv/).
+All dependencies — runtime, `book`, `dev`, `sim` — are declared in
+`pyproject.toml` only; there is no `requirements.txt` to keep in sync.
 
 ```bash
 # 1. Create the pinned environment (book tooling lives in the `book` extra)

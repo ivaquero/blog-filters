@@ -146,7 +146,7 @@ def plot_sigmas_selection(ax, kappas=None, alphas=None, betas=None, var=None):
             ax, x, P, stds=np.sqrt(var), facecolor="b", alpha=0.3, show_title=False
         )
 
-    ax.axis("equal")
+    ax.set_aspect("equal", adjustable="box")
     ax.set(xlim=(0, 10), ylim=(0, 10))
     ax.xaxis.set_visible(False)
     ax.yaxis.set_visible(False)

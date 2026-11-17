@@ -88,16 +88,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Install dependencies
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
           python-version: 3.14
 
+      # Install dependencies. `pyproject.toml` is the single source of truth:
+      # the `book` extra carries jupyter-book/jupyter-server/ipykernel, `sim`
+      # carries pandas/PyYAML. The editable install also puts filters/models/
+      # plots/simulators/symbols on sys.path for the notebooks.
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -e ".[book,sim]"
 
       # Build the book (Jupyter Book 2 / MyST, configured by myst.yml).
       #   --html     render the static site into _build/html

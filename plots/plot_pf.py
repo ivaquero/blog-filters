@@ -37,6 +37,12 @@ def plot_particles(
     markersize: float = 1,
     color: str = "g",
 ) -> None:
+    # `scatter` has no pixel marker: "," silently degrades to a finite-sized
+    # square and emits a UserWarning per call. Map it here so callers can keep
+    # passing "," when they want a single-pixel dot.
+    if marker == ",":
+        marker = "s"
+
     N = len(particles)
     alpha = 0.20
     if N > 5000:

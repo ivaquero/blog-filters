@@ -8,12 +8,14 @@ These tests pin the line count and the data both call shapes produce.
 
 from __future__ import annotations
 
+import warnings
+
 import numpy as np
 import pytest
 from matplotlib import pyplot as plt
 from matplotlib.colors import to_rgb
 
-from plots import plot_common
+from plots import plot_common, plot_kf_plus, plot_pf
 
 
 @pytest.fixture(autouse=True)
@@ -126,3 +128,26 @@ def test_prepend_x0_accepts_scalar_and_keeps_float_dtype():
 
     assert isinstance(out, np.ndarray)
     np.testing.assert_allclose(out, [0.5, 1.0, 2.0])
+
+
+def test_plot_particles_accepts_pixel_marker_without_warning():
+    """``","`` is a pixel marker for ``plot`` only; ``scatter`` warns and degrades."""
+    _, ax = plt.subplots()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        plot_pf.plot_particles(ax, np.zeros((4, 2)), marker=",")
+
+    assert len(ax.collections) == 1
+
+
+def test_plot_sigmas_selection_keeps_its_fixed_limits(capsys):
+    """``axis("equal")`` used to drop the y limit and print to stderr."""
+    _, ax = plt.subplots()
+
+    plot_kf_plus.plot_sigmas_selection(ax)
+    ax.figure.canvas.draw()
+
+    assert capsys.readouterr().err == ""
+    np.testing.assert_allclose(ax.get_xlim(), (0, 10))
+    np.testing.assert_allclose(ax.get_ylim(), (0, 10))
