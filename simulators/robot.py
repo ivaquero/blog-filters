@@ -268,7 +268,7 @@ def robot_pf(
             generator.standard_normal(NL) * sensor_std_err
         )
         # move diagonally forward to (x+1, x+1)
-        particle.pf_predict(particles, u=(0.00, 1.414), std=(0.2, 0.05))
+        particle.pf_predict(particles, u=(0.00, 1.414), std=(0.2, 0.05), rng=generator)
         # incorporate measurements
         particle.pf_update(
             particles, weights, z=zs, R=sensor_std_err, landmarks=landmarks

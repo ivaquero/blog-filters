@@ -48,7 +48,9 @@ class LeastSquaresFilter:
 
         if self._order == 0:
             K[0] = 1.0 / n
-            y = z - x
+            # x is a length-1 array; subtracting it from the scalar
+            # measurement produced an array and broke the in-place update.
+            y = z - x[0]
             x[0] += K[0] * y
 
         elif self._order == 1:
@@ -71,6 +73,9 @@ class LeastSquaresFilter:
             x[0] += (K[0] * y) + (x[1] * dt) + (0.5 * dt**2 * x[2])
             x[1] += (K[1] * y) + (x[2] * dt)
             x[2] += K[2] * y
+
+        # `y` is declared in reset() as the residual; keep it visible.
+        self.y = y
         return self.x
 
     def errors(self):
@@ -93,15 +98,21 @@ class LeastSquaresFilter:
             std[0] = sigma / math.sqrt(n)
 
         elif order == 1:
+            std[0] = sigma * math.sqrt((2 * (2 * n - 1)) / (n * (n + 1)))
+            # The velocity term divides by n(n²-1), which vanishes at n == 1.
             if n > 1:
                 error[0] = sigma * math.sqrt(2 * (2 * n - 1) / (n * (n + 1)))
                 error[1] = sigma * math.sqrt(12.0 / (n * (n * n - 1) * dt * dt))
-            std[0] = sigma * math.sqrt((2 * (2 * n - 1)) / (n * (n + 1)))
-            std[1] = (sigma / dt) * math.sqrt(12.0 / (n * (n * n - 1)))
+                std[1] = (sigma / dt) * math.sqrt(12.0 / (n * (n * n - 1)))
 
         elif order == 2:
             dt2 = dt * dt
+            std[0] = sigma * math.sqrt(
+                (3 * (3 * n * n - 3 * n + 2)) / (n * (n + 1) * (n + 2))
+            )
 
+            # The derivative terms divide by (n²-1)(n²-4), which vanishes at
+            # n == 1 and n == 2.
             if n >= 3:
                 error[0] = sigma * math.sqrt(
                     3 * (3 * n * n - 3 * n + 2) / (n * (n + 1) * (n + 2))
@@ -114,14 +125,12 @@ class LeastSquaresFilter:
                 error[2] = sigma * math.sqrt(
                     720 / (n * (n * n - 1) * (n * n - 4) * dt2 * dt2)
                 )
-
-            std[0] = sigma * math.sqrt(
-                (3 * (3 * n * n - 3 * n + 2)) / (n * (n + 1) * (n + 2))
-            )
-            std[1] = (sigma / dt) * math.sqrt(
-                (12 * (16 * n * n - 30 * n + 11)) / (n * (n * n - 1) * (n * n - 4))
-            )
-            std[2] = (sigma / dt2) * math.sqrt(720 / (n * (n * n - 1) * (n * n - 4)))
+                std[1] = (sigma / dt) * math.sqrt(
+                    (12 * (16 * n * n - 30 * n + 11)) / (n * (n * n - 1) * (n * n - 4))
+                )
+                std[2] = (sigma / dt2) * math.sqrt(
+                    720 / (n * (n * n - 1) * (n * n - 4))
+                )
 
         return error, std
 

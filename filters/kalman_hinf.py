@@ -31,7 +31,7 @@ class HInfinityFilter:
         # gain and residual are computed during the innovation step.
         # We save them so that in case to inspect them for various purposes
 
-        self.K = 0  # H-infinity gain
+        self.K = np.zeros((dim_x, dim_z))  # H-infinity gain
         self.y = np.zeros((dim_z, 1))
         self.z = np.zeros((dim_z, 1))
 
@@ -70,6 +70,7 @@ class HInfinityFilter:
         PL = P @ L
 
         K = F @ PL @ HTVI
+        self.K = K
 
         self.y = z - H @ x
 
@@ -184,9 +185,17 @@ class HInfinityFilter:
 
     @V.setter
     def V(self, value):
-        """Measurement noise matrix"""
+        """Measurement noise matrix.
 
-        self._V = np.array([[value]], dtype=float) if np.isscalar(value) else value
+        A scalar is expanded to ``dim_z × dim_z``; the previous version built a
+        ``1 × 1`` matrix regardless of ``dim_z``, which silently produced a
+        wrongly shaped ``V`` for multi-dimensional measurements.
+        """
+
+        if np.isscalar(value):
+            self._V = np.eye(self.dim_z) * value
+        else:
+            self._V = np.asarray(value, dtype=float)
         self._VI = linalg.inv(self._V)
 
     def __repr__(self):
@@ -196,7 +205,7 @@ class HInfinityFilter:
                 pretty_str("dim_x", self.dim_x),
                 pretty_str("dim_z", self.dim_z),
                 pretty_str("dim_u", self.dim_u),
-                pretty_str("gamma", self.dim_u),
+                pretty_str("gamma", self.gamma),
                 pretty_str("x", self.x),
                 pretty_str("P", self.P),
                 pretty_str("F", self.F),

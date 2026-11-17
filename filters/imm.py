@@ -1,9 +1,76 @@
+import functools
+import inspect
+from collections.abc import Callable
 from copy import deepcopy
 from itertools import product
 
 import numpy as np
 
+from ._typing import Filter, Measurement
 from .helpers import pretty_str
+
+
+@functools.cache
+def _explicit_params(func: Callable[..., object]) -> frozenset[str]:
+    """Names of the explicitly declared parameters of ``func``.
+
+    ``*args``/``**kwargs`` are deliberately excluded: a filter that exposes
+    ``**kwargs`` swallows keywords it does not understand, and
+    ``UnscentedKalmanFilter.update`` forwards stray keywords to the
+    measurement function, so a stray ``H=`` would reach user code instead of
+    raising. Only names that appear in the signature are ever passed on.
+    """
+
+    signature = inspect.signature(func)
+    return frozenset(
+        name
+        for name, param in signature.parameters.items()
+        if param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD)
+    )
+
+
+def _params_of(obj: Filter, method: str) -> frozenset[str]:
+    """Names of the parameters declared by ``obj``'s ``method``.
+
+    Looking the method up on the type rather than the instance keeps the
+    answer identical for bound methods and avoids materialising a bound
+    method object just to introspect it.
+    """
+
+    try:
+        func = getattr(type(obj), method)
+    except AttributeError:
+        return frozenset()
+    return _explicit_params(func)
+
+
+def _predict(obj: Filter, u: object) -> None:
+    """Call ``obj.predict`` without relying on positional-argument order.
+
+    ``KalmanFilter.predict`` takes ``F`` first and ``u`` third, so the
+    historical ``filter.predict(u)`` silently fed the control input in as
+    the transition matrix. Pass ``u`` by keyword, and only when the callee
+    declares it.
+    """
+
+    if u is not None and "u" in _params_of(obj, "predict"):
+        obj.predict(u=u)
+    else:
+        obj.predict()
+
+
+def _update(
+    obj: Filter, z: Measurement | None, *, H: object = None, R: object = None
+) -> None:
+    """Call ``obj.update`` forwarding only the overrides it declares."""
+
+    params = _params_of(obj, "update")
+    overrides: dict[str, object] = {}
+    if H is not None and "H" in params:
+        overrides["H"] = H
+    if R is not None and "R" in params:
+        overrides["R"] = R
+    obj.update(z, **overrides)
 
 
 class IMMEstimator:
@@ -53,7 +120,7 @@ class IMMEstimator:
 
         # run update on each filter, and save the likelihood
         for i, f in enumerate(self.filters):
-            f.update(z)
+            _update(f, z)
             self.likelihood[i] = f.likelihood
 
         # update mode probabilities from total probability * likelihood
@@ -89,7 +156,7 @@ class IMMEstimator:
             # propagate using the mixed state estimate and covariance
             f.x = xs[i].copy()
             f.P = Ps[i].copy()
-            f.predict(u)
+            _predict(f, u)
 
         # compute mixed IMM state and covariance and save posterior estimate
         self._update_state_estimate()
@@ -179,7 +246,7 @@ class MMAEFilterBank:
         """Predict next position using the Kalman filter state propagation equations for each filter in the bank."""
 
         for f in self.filters:
-            f.predict(u=u)
+            _predict(f, u)
 
         # save prior
         self.x_prior = self.x.copy()
@@ -206,7 +273,7 @@ class MMAEFilterBank:
 
         # new probability is recursively defined as prior * likelihood
         for i, f in enumerate(self.filters):
-            f.update(z, H=H, R=R)
+            _update(f, z, H=H, R=R)
             self.p[i] *= f.likelihood
 
         self.p /= np.sum(self.p)  # normalize

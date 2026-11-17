@@ -146,11 +146,14 @@ def show_resample_systematic(
     ax.set(title="systematic resampling")
 
 
-def show_resample_residual(a, figsize: tuple[float, float] = (6, 2)) -> None:
+def show_resample_residual(
+    a, figsize: tuple[float, float] = (6, 2), rng: np.random.Generator | None = None
+) -> None:
+    generator = resolve_rng(rng)
     N = len(a)
     ax, cumsum = plot_hbar(a, N, figsize=figsize)
 
-    indexes = residual_resample(np.asarray(a) / np.sum(a))
+    indexes = residual_resample(np.asarray(a) / np.sum(a), rng=generator)
     bins = np.bincount(indexes)
     for i in range(1, N):
         n = bins[i - 1]  # number particles in this sample

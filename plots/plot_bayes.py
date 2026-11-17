@@ -8,8 +8,8 @@ def plot_gaussian_product(ax, xs, g1, g2):
     g_product = gaussian_product(g1, g2)
 
     for g, ls in zip([g1, g2, g_product], ["-", "-", "--"], strict=True):
-        ys = [stats.norm(g.mean, g.var**0.5).pdf(x) for x in xs]
-        ax.plot(xs, ys, linestyle=ls, label=f"$N({g.mean:.2f}, {g.var:.2f})$")
+        ys = [stats.norm(g.mean, g.sigma).pdf(x) for x in xs]
+        ax.plot(xs, ys, linestyle=ls, label=f"$N({g.mean:.2f}, \\sigma={g.sigma:.2f})$")
 
     ax.grid(1)
     ax.legend()

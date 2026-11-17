@@ -6,35 +6,51 @@ import numpy as np
 from numpy import linalg
 from scipy import stats
 
-from .helpers import pretty_str
+from .helpers import mahalanobis, pretty_str
 from .sigma_points import SphericalRadialSigmas
+from .transformers import reshape_z
+
+
+def _as_point(value, size: int, what: str) -> np.ndarray:
+    """Flatten a callback result to ``(size,)``, rejecting wrong sizes.
+
+    ``fx``/``hx`` are user callables and may return either ``(n,)`` or
+    ``(n, 1)``. Assigning the column form into a ``(n,)`` row used to raise a
+    bare ``ValueError``; flattening is the fix, but the size check stays so a
+    genuinely wrong model still fails loudly.
+    """
+
+    arr = np.asarray(value, dtype=float)
+    if arr.size != size:
+        error_message = f"{what} returned shape {arr.shape}, expected {size} values"
+        raise ValueError(error_message)
+    return arr.reshape(size)
 
 
 def ckf_transform(Xs, Q):
-    """_summary_
+    """Cubature transform: mean and covariance of ``Xs``, plus ``Q``.
 
     Parameters
     ----------
-    Xs : _type_
-        _description_
-    Q : _type_
-        _description_
+    Xs : ndarray, shape (2n, n)
+        Cubature points after passing through the model.
+    Q : ndarray, shape (n, n)
+        Additive covariance (process or measurement noise).
 
     Returns
     -------
-    _type_
-        _description_
+    x : ndarray, shape (n,)
+        Mean of the points. Returning a 1-D vector keeps the filter state in
+        one canonical shape; the previous column-vector return made
+        ``update`` broadcast a ``(n, 1)`` residual against a ``(n,)`` state,
+        which raised for the documented usage order and silently produced an
+        ``(n, n)`` state otherwise.
+    P : ndarray, shape (n, n)
+        Covariance of the points, plus ``Q``.
     """
-    m, n = Xs.shape
-
-    x = sum(Xs, 0)[:, None] / m
-    P = np.zeros((n, n))
-    xf = x.flatten()
-    for k in range(m):
-        P += np.outer(Xs[k], Xs[k]) - np.outer(xf, xf)
-
-    P *= 1 / m
-    P += Q
+    x = Xs.mean(axis=0)
+    dx = Xs - x
+    P = dx.T @ dx / Xs.shape[0] + Q
 
     return x, P
 
@@ -63,11 +79,12 @@ class CubatureKalmanFilter:
         self.R = np.eye(dim_z)
         self.x = np.zeros(dim_x)
         self.P = np.eye(dim_x)
-        self.K = 0
+        self.K = np.zeros((dim_x, dim_z))
         self.dim_x = dim_x
         self.dim_z = dim_z
         self._dt = dt
-        self._num_sigmas = 2 * dim_x
+        self.points = SphericalRadialSigmas(dim_x)
+        self._num_sigmas = self.points.num_sigmas()
         self.hx = hx
         self.fx = fx
         self.x_mean = x_mean_fn
@@ -110,11 +127,13 @@ class CubatureKalmanFilter:
         if not isinstance(fx_args, tuple):
             fx_args = (fx_args,)
 
-        sigmas = SphericalRadialSigmas(self.dim_x, self.P).sigma_points(self.x, self.P)
+        sigmas = self.points.sigma_points(self.x, self.P)
 
         # evaluate cubature points
         for k in range(self._num_sigmas):
-            self.sigmas_f[k] = self.fx(sigmas[k], dt, *fx_args)
+            self.sigmas_f[k] = _as_point(
+                self.fx(sigmas[k], dt, *fx_args), self.dim_x, "fx"
+            )
 
         self.x, self.P = ckf_transform(self.sigmas_f, self.Q)
 
@@ -141,8 +160,14 @@ class CubatureKalmanFilter:
         elif np.isscalar(R):
             R = np.eye(self.dim_z) * R
 
+        # The state is 1-D, so the measurement must be too; `residual_z` is a
+        # user hook and cannot be trusted to normalise on its own.
+        z = reshape_z(z, self.dim_z, 1)
+
         for k in range(self._num_sigmas):
-            self.sigmas_h[k] = self.hx(self.sigmas_f[k], *hx_args)
+            self.sigmas_h[k] = _as_point(
+                self.hx(self.sigmas_f[k], *hx_args), self.dim_z, "hx"
+            )
 
         # mean and covariance of prediction passed through unscented transform
         zp, self.S = ckf_transform(self.sigmas_h, R)
@@ -150,21 +175,24 @@ class CubatureKalmanFilter:
 
         # compute cross variance of the state and the measurements
         m = self._num_sigmas  # literaure uses m for scaling factor
-        xf = self.x.flatten()
-        zpf = zp.flatten()
 
         Pxz = (
             np.sum(
-                np.einsum("ij,ik->ijk", self.sigmas_f - xf, self.sigmas_h - zpf), axis=0
+                np.einsum("ij,ik->ijk", self.sigmas_f - self.x, self.sigmas_h - zp),
+                axis=0,
             )
             / m
         )
 
         self.K = Pxz @ self.SI  # Kalman gain
-        self.y = self.residual_z(z, zp)  # residual
+        self.y = _as_point(self.residual_z(z, zp), self.dim_z, "residual_z")
 
-        self.x += self.K @ self.y
-        self.P -= self.K @ self.S @ self.K.T
+        self.x = self.x + self.K @ self.y
+        self.P = self.P - self.K @ self.S @ self.K.T
+        # No H is available here, so the Joseph form cannot be formed; force
+        # symmetry instead, which keeps the covariance from drifting apart
+        # under repeated rank-one subtractions.
+        self.P = (self.P + self.P.T) / 2
 
         # save measurement and posterior state
         self.z = deepcopy(z)
@@ -200,13 +228,13 @@ class CubatureKalmanFilter:
         return self._likelihood
 
     @property
-    def mahalanobis(self):
-        """ "
-        Mahalanobis distance of innovation.
+    def mahalanobis(self) -> float:
+        """Mahalanobis distance of the innovation.
+
         e.g. 3 means measurement was 3 standard deviations away from the predicted value.
         """
         if self._mahalanobis is None:
-            self._mahalanobis = math.sqrt(float(self.y.T @ self.SI @ self.y))
+            self._mahalanobis = mahalanobis(self.y, self.S)
         return self._mahalanobis
 
     def __repr__(self):

@@ -9,7 +9,7 @@ import numpy as np
 from numpy import linalg
 from scipy import stats
 
-from .helpers import pretty_str
+from .helpers import mahalanobis, pretty_str
 from .transformers import reshape_z
 
 if TYPE_CHECKING:
@@ -371,13 +371,13 @@ class ExtendedKalmanFilter:
         return self._likelihood
 
     @property
-    def mahalanobis(self):
-        """Mahalanobis distance of innovation.
+    def mahalanobis(self) -> float:
+        """Mahalanobis distance of the innovation.
+
         e.g. 3 means measurement was 3 standard deviations away from the predicted value.
         """
-
         if self._mahalanobis is None:
-            self._mahalanobis = np.sqrt(float(self.y.T @ self.SI @ self.y))
+            self._mahalanobis = mahalanobis(self.y, self.S)
         return self._mahalanobis
 
     def __repr__(self):

@@ -90,3 +90,53 @@ def test_mmae_update_routes_H_and_R_by_keyword(monkeypatch):
 def test_mmae_rejects_mismatched_filter_count():
     with pytest.raises(ValueError, match="filters and p"):
         MMAEFilterBank([_cv_filter(0.01)], p=[0.5, 0.5], dim_x=2)
+
+
+def test_imm_predict_forwards_the_control_input_as_a_keyword():
+    """``f.predict(u)`` bound ``u`` to ``F`` on the linear filter.
+
+    ``KalmanFilter.predict(F=None, G=None, u=None)`` takes the transition
+    matrix first, so the positional call replaced ``F`` with the control
+    vector and the next matmul raised.
+    """
+    filters = [_cv_filter(0.01), _cv_filter(0.01)]
+    for f in filters:
+        f.G = np.array([[0.0], [1.0]])
+    imm = IMMEstimator(filters, mu=np.array([0.5, 0.5]), M=np.eye(2) * 0.9 + 0.05)
+
+    transitions_before = [f.F.copy() for f in filters]
+    imm.predict(np.array([2.0]))
+
+    for f, before in zip(filters, transitions_before, strict=True):
+        assert np.array_equal(f.F, before), "predict must not treat u as F"
+        assert np.isfinite(f.x).all()
+
+
+def test_mmae_skips_overrides_a_filter_does_not_declare():
+    """Only explicitly declared ``H``/``R`` parameters receive the override.
+
+    ``UnscentedKalmanFilter.update`` accepts ``**hx_args``, so a stray ``H=``
+    used to be forwarded to the measurement function instead of being
+    rejected; ``HInfinityFilter.update`` takes neither.
+    """
+
+    class RatioOnlyFilter:
+        def __init__(self):
+            self.x = np.array([0.0, 1.0])
+            self.P = np.eye(2)
+            self.z = np.array([0.0])
+            self.likelihood = 1.0
+            self.seen = {}
+
+        def update(self, z, R=None):
+            self.seen = {"z": z, "R": R}
+
+    first, second = RatioOnlyFilter(), RatioOnlyFilter()
+    bank = MMAEFilterBank([first, second], p=[0.5, 0.5], dim_x=2)
+
+    bank.update(np.array([1.0]), H=np.array([[1.0, 0.0]]), R=np.array([[0.5]]))
+
+    assert set(first.seen) == {"z", "R"}
+    received_R = first.seen["R"]
+    assert received_R is not None
+    assert np.array_equal(received_R, np.array([[0.5]]))

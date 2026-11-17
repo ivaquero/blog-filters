@@ -5,16 +5,63 @@ from ._typing import RtsOutput
 from .helpers import pretty_str
 
 
-def rts_smoother(Xs, Ps, Fs, Q):
-    n, dim_x, _ = Xs.shape
+def _as_sequence(value, n: int, default):
+    """Broadcast one matrix to ``n`` steps, or pass a per-step stack through."""
+
+    if value is None:
+        return [default] * n
+    if isinstance(value, np.ndarray) and value.ndim == 2:
+        return [value] * n
+    return list(value)
+
+
+def rts_smoother(Xs, Ps, Fs=None, Qs=None, Q=None, inv=linalg.inv):
+    """Rauch-Tung-Striebel smoother over a ``batch_filter`` run.
+
+    Parameters
+    ----------
+    Xs : ndarray, shape (n, dim_x) or (n, dim_x, 1)
+        State means from the forward pass. Both layouts are accepted; the
+        result keeps whichever one was supplied.
+    Ps : ndarray, shape (n, dim_x, dim_x)
+        Covariances from the forward pass.
+    Fs : ndarray | sequence | None
+        A single ``(dim_x, dim_x)`` transition matrix or a per-step stack.
+        Defaults to the identity.
+    Qs : ndarray | sequence | None
+        A single process-noise covariance or a per-step stack. Defaults to
+        zeros.
+    Q : ndarray | None
+        Alias for ``Qs``, kept so the historical ``rts_smoother(..., Q=kf.Q)``
+        call sites keep working.
+    inv : callable
+        Matrix inverse; pass ``scipy.linalg.pinv`` for degenerate covariances.
+    """
+
+    Xs = np.asarray(Xs, dtype=float)
+    Ps = np.asarray(Ps, dtype=float)
+
+    if Xs.shape[0] != Ps.shape[0]:
+        error_message = "length of Xs and Ps must be the same"
+        raise ValueError(error_message)
+
+    n = Xs.shape[0]
+    dim_x = Xs.shape[1]
+
+    Fs = _as_sequence(Fs, n, np.eye(dim_x))
+    Qs = _as_sequence(Qs if Qs is not None else Q, n, np.zeros((dim_x, dim_x)))
+
     # smoother gain
     K = np.zeros((n, dim_x, dim_x))
-    x, P, Pp, F = Xs.copy(), Ps.copy(), Ps.copy(), Fs.copy()
+    x, P, Pp = Xs.copy(), Ps.copy(), Ps.copy()
+
     for k in range(n - 2, -1, -1):
-        Pp[k] = F @ P[k] @ F.T + Q
-        K[k] = P[k] @ F.T @ linalg.inv(Pp[k])
+        F = Fs[k + 1]
+        Pp[k] = F @ P[k] @ F.T + Qs[k + 1]
+        K[k] = P[k] @ F.T @ inv(Pp[k])
         x[k] += K[k] @ (x[k + 1] - F @ x[k])
         P[k] += K[k] @ (P[k + 1] - Pp[k]) @ K[k].T
+
     return RtsOutput(x, P, K, Pp)
 
 

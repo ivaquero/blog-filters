@@ -20,37 +20,37 @@ def gh_packed_pc(x, fmm_param):
 
     Description:
     Packs the integrals that need to be evaluated in nice function form to ease the evaluation. Evaluates P = (f-fm)(f-fm)' and C = (x-m)(f-fm)'.
+
+    ``m`` and ``fm`` may arrive as column vectors; they are flattened before
+    use. The previous implementation indexed them elementwise, so a ``(d, 1)``
+    mean raised ``TypeError``/``ValueError`` instead of broadcasting. The
+    triple loop became a pair of ``einsum`` calls.
     """
 
     f = fmm_param[0]
-    m = fmm_param[1]
-    fm = fmm_param[2]
-    if len(fmm_param) >= 4:
-        param = fmm_param[3]
+    m = np.asarray(fmm_param[1], dtype=float).reshape(-1)
+    fm = np.asarray(fmm_param[2], dtype=float).reshape(-1)
+    param = fmm_param[3] if len(fmm_param) >= 4 else None
 
-    if isinstance(f, str) or callable(f):
-        F = f(x) if "param" not in locals() else f(x, param)
-    elif isinstance(f, np.ndarray):
+    if isinstance(f, np.ndarray):
         F = f @ x
+    elif param is None:
+        F = f(x)
     else:
-        F = f(x) if "param" not in locals() else f(x, param)
+        F = f(x, param)
+
     d = x.shape[0]
     s = F.shape[0]
-
-    # Compute P = (f-fm)(f-fm)' and C = (x-m)(f-fm)'
-    # and form array of [vec(P):vec(C)]
     f_ = F.shape[1]
-    pc = np.zeros((s**2 + d * s, f_))
-    P = np.zeros((s, s))
-    C = np.zeros((d, s))
-    for k in range(f_):
-        for j in range(s):
-            for i in range(s):
-                P[i, j] = (F[i, k] - fm[i]) * (F[j, k] - fm[j])
-            for i in range(d):
-                C[i, j] = (x[i, k] - m[i]) * (F[j, k] - fm[j])
-        pc[:, k] = np.concatenate([P.reshape(s * s), C.reshape(s * d)])
-    return pc
+
+    # P = (f-fm)(f-fm)' and C = (x-m)(f-fm)', one slice per evaluation point
+    delta_f = F - fm[:, None]
+    delta_x = x - m[:, None]
+
+    P = np.einsum("ik,jk->ijk", delta_f, delta_f).reshape(s * s, f_)
+    C = np.einsum("ik,jk->ijk", delta_x, delta_f).reshape(d * s, f_)
+
+    return np.concatenate([P, C], axis=0)
 
 
 def hermite_polynomial(n):
@@ -131,6 +131,10 @@ def gh_nd_scaled(f, n, m, P, param=None):
     for i in range(n):
         W[i] = Wc * np.polyval(p2, x[i]) ** (-2)
 
+    # The mean may arrive flat or as a column vector; normalise it here so the
+    # trailing `np.tile(m, ...)` broadcast is rectangular either way.
+    m = np.asarray(m, dtype=float).reshape(-1, 1)
+
     d = m.shape[0]
     if d == 1:
         x = x.T
@@ -143,9 +147,12 @@ def gh_nd_scaled(f, n, m, P, param=None):
         ind[i] = num % n
         num //= n
 
-    # Form the sigma points and weights
+    # Form the sigma points and weights.
+    # scipy returns the upper-triangular factor U with U.T @ U = P, so the
+    # points are m + sqrt(2) * U.T @ t. Using `U @ t` instead mixed the two
+    # coordinates and produced a covariance that was a rotation of P.
     L = linalg.cholesky(P)
-    SX = np.sqrt(2) * L @ x[ind] + np.tile(m, ind.shape[1])
+    SX = np.sqrt(2) * L.T @ x[ind] + np.tile(m, ind.shape[1])
     W = np.prod(W[ind], axis=0)  # ND weights
 
     # Evaluate the function at the sigma points
@@ -248,7 +255,7 @@ def gh_kf_predict(M, P, f=None, Q=None, f_param=None, p=10):
     if f is None:
         f = np.eye(m_)
     if Q is None:
-        Q = np.zeros(m_)
+        Q = np.zeros((m_, m_))
 
     # Do transform and add process noise
     M, P, *_ = gh_transform(M, P, f, f_param, p)
@@ -303,16 +310,19 @@ def gh_kf_update(M, P, Y, h, R=None, h_param=None, p=3):
 
     # Do the transform and make the update
     MU, S, C, *_ = gh_transform(M, P, h, h_param, p)
-    S += R
+    S = S + (np.zeros_like(S) if R is None else R)
     K = linalg.solve(S.T, C.T).T
-    M += K @ (Y - MU)
-    P -= K @ S @ K.T
+    M = M + K @ (Y - MU)
+    P = P - K @ S @ K.T
 
-    if h_param is not None:
-        LH = stats.multivariate_normal.pdf(Y, MU, S)
-        return M, P, K, MU, S, LH
+    # The return arity used to depend on whether `h_param` was supplied, so a
+    # caller could not unpack the result without knowing that detail. The
+    # likelihood is always available and always returned.
+    LH = stats.multivariate_normal.pdf(
+        np.asarray(Y).reshape(-1), np.asarray(MU).reshape(-1), S, allow_singular=True
+    )
 
-    return M, P, K, MU, S
+    return M, P, K, MU, S, LH
 
 
 def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
@@ -323,8 +333,9 @@ def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
             [M,P,D] = GHRTS_SMOOTH(M,P,f,Q,[f_param,p,same_p])
 
     In:
-            M - NxK matrix of K mean estimates from Gauss-Hermite Kalman filter
-            P - NxNxK matrix of K state covariances from Gauss-Hermite filter
+            M - KxN matrix of K mean estimates from Gauss-Hermite Kalman filter
+                    (one state per row, matching the rest of the package)
+            P - KxNxN stack of K state covariances from Gauss-Hermite filter
             f - Dynamic model function as a matrix A defining
                     linear function f(x) = A*x, inline function,
                     function handle or name of function in
@@ -359,7 +370,7 @@ def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
         f = np.eye(m_2)
 
     if Q is None:
-        Q = np.zeros(m_2)
+        Q = np.zeros((m_2, m_2))
 
     if p is None:
         p = 10
@@ -370,26 +381,16 @@ def gh_rts_smooth(M, P, f, Q=None, f_param=None, p=None, *, same_p=True):
 
     # Run the smoother
     D = np.zeros((m_1, m_2, m_2))
-    if f_param is None:
-        for k in range(m_1 - 2, -1, -1):
-            m_pred, P_pred, C, *_ = gh_transform(M[k], P[k], f, f_param, p)
-            P_pred += Q[k]
-            D[k] = linalg.solve(P_pred.T, C.T).T
-            M[k] += D[k] @ (M[k + 1] - m_pred)
-            P[k] += D[k] @ (P[k + 1] - P_pred) @ D[k].T
-    else:
-        for k in range(m_1 - 2, -1, -1):
-            if f_param is None:
-                params = None
-            elif same_p:
-                params = f_param
-            else:
-                params = f_param[k]
+    for k in range(m_1 - 2, -1, -1):
+        params = f_param if f_param is None or same_p else f_param[k]
+        m_pred, P_pred, C, *_ = gh_transform(M[k], P[k], f, params, p)
 
-            m_pred, P_pred, C, *_ = gh_transform(M[k], P[k], f, params, p)
-            P_pred += Q[k]
-            D[k] = linalg.solve(P_pred.T, C.T).T
-            M[k] += D[k] @ (M[k + 1] - m_pred)
-            P[k] += D[k] @ (P[k + 1] - P_pred) @ D[k].T
+        # gh_transform returns a column mean; states here are rows
+        m_pred = np.asarray(m_pred).reshape(-1)
+        P_pred = P_pred + Q[k]
+
+        D[k] = linalg.solve(P_pred.T, C.T).T
+        M[k] = M[k] + D[k] @ (M[k + 1] - m_pred)
+        P[k] = P[k] + D[k] @ (P[k + 1] - P_pred) @ D[k].T
 
     return M, P, D

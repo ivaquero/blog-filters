@@ -7,7 +7,7 @@ from numpy import linalg
 from scipy import stats
 
 from ._typing import Batch2Output, UkfRtsOutput
-from .helpers import pretty_str
+from .helpers import mahalanobis, pretty_str
 
 
 def _as_covariance(value, dim):
@@ -277,6 +277,9 @@ class UnscentedKalmanFilter:
 
         if Qs is None:
             Qs = [self.Q] * n
+        elif np.ndim(Qs) == 2:
+            # a single (dim_x, dim_x) matrix applies to every step
+            Qs = [Qs] * n
 
         if UT is None:
             UT = unscented_transform
@@ -295,9 +298,7 @@ class UnscentedKalmanFilter:
             for i, sigma in enumerate(sigmas):
                 sigmas_f[i] = self.fx(sigma, dts[k])
 
-            xb, Pb = UT(
-                sigmas_f, self.Wm, self.Wc, self.Q, self.x_mean, self.residual_x
-            )
+            xb, Pb = UT(sigmas_f, self.Wm, self.Wc, Qs[k], self.x_mean, self.residual_x)
 
             # compute cross variance
             if self.residual_x is np.subtract:
@@ -342,9 +343,13 @@ class UnscentedKalmanFilter:
         return self._likelihood
 
     @property
-    def mahalanobis(self):
+    def mahalanobis(self) -> float:
+        """Mahalanobis distance of the innovation.
+
+        e.g. 3 means measurement was 3 standard deviations away from the predicted value.
+        """
         if self._mahalanobis is None:
-            self._mahalanobis = np.sqrt(float(self.y.T @ linalg.solve(self.S, self.y)))
+            self._mahalanobis = mahalanobis(self.y, self.S)
         return self._mahalanobis
 
     def __repr__(self):

@@ -83,14 +83,14 @@ class FadingMemoryFilter:
 
         if self.order == 0:
             G = 1 - self.beta
-            self.x = self.x + G @ (z - self.x)
+            self.x = self.x + G * (z - self.x)
 
         elif self.order == 1:
             G = 1 - self.beta**2
             H = (1 - self.beta) ** 2
             x = self.x[0]
             dx = self.x[1]
-            dxdt = dx @ self.dt
+            dxdt = dx * self.dt
 
             residual = z - (x + dxdt)
             self.x[0] = x + dxdt + G * residual
@@ -104,7 +104,7 @@ class FadingMemoryFilter:
             x = self.x[0]
             dx = self.x[1]
             ddx = self.x[2]
-            dxdt = dx @ self.dt
+            dxdt = dx * self.dt
             T2 = self.dt**2.0
 
             residual = z - (x + dxdt + 0.5 * ddx * T2)

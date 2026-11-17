@@ -5,27 +5,42 @@ from numpy import linalg
 
 
 class gaussian(NamedTuple):
-    """Scalar Gaussian parameterised by mean and (standard) deviation.
+    """Scalar Gaussian parameterised by mean and **standard deviation**.
 
-    `var` stores the *standard deviation* (matching the historical
-    filterpy convention where `var ** 2` is printed as σ²).
+    The second field is σ, not σ². The historical name for it was `var`,
+    which silently disagreed with ``plot_bayes`` (that code did
+    ``g.var**0.5``) and let ``gaussian_product`` apply the variance formula
+    to standard deviations. Use ``g.sigma**2`` when a variance is needed.
     """
 
     mean: float
-    var: float
+    sigma: float
 
     def __repr__(self) -> str:
-        return f"N(μ={self.mean:.3f}, σ²={self.var**2:.3f})"
+        return f"N(μ={self.mean:.3f}, σ={self.sigma:.3f})"
 
 
-def gaussian_product(g1, g2):
-    mean = (g1.var * g2.mean + g2.var * g1.mean) / (g1.var + g2.var)
-    variance = (g1.var * g2.var) / (g1.var + g2.var)
-    return gaussian(mean, variance)
+def gaussian_product(g1: gaussian, g2: gaussian) -> gaussian:
+    """Product of two Gaussians — Bayes' rule for a conjugate prior.
+
+    The parameters are combined through their variances; the return value
+    keeps the σ convention. ``N(μ=0, σ=1) ⊗ N(μ=10, σ=2)`` gives
+    ``N(μ=2.000, σ=0.894)``, which is the variance-weighted mean, not the
+    σ-weighted one the previous implementation produced (μ=3.333).
+    """
+
+    var1 = g1.sigma**2
+    var2 = g2.sigma**2
+    var = var1 + var2
+
+    mean = (var2 * g1.mean + var1 * g2.mean) / var
+    return gaussian(mean, np.sqrt(var1 * var2 / var))
 
 
-def gaussian_sum(g1, g2):
-    return gaussian(g1.mean + g2.mean, g1.var + g2.var)
+def gaussian_sum(g1: gaussian, g2: gaussian) -> gaussian:
+    """Sum of two independent Gaussians: means add, variances add."""
+
+    return gaussian(g1.mean + g2.mean, np.sqrt(g1.sigma**2 + g2.sigma**2))
 
 
 def NEES(xs, est_xs, ps):

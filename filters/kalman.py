@@ -21,7 +21,7 @@ from numpy import linalg
 from scipy import stats
 
 from ._typing import BatchOutput, Matrix, MeasurementLike, RtsOutput, Vector
-from .helpers import pretty_str
+from .helpers import mahalanobis, pretty_str
 from .transformers import reshape_z
 
 
@@ -392,14 +392,7 @@ class KalmanFilter:
     def mahalanobis(self) -> float:
         """Mahalanobis distance of the innovation."""
         if self._mahalanobis is None:
-            if not np.any(self.S):
-                self._mahalanobis = 0.0
-                return self._mahalanobis
-            try:
-                distance = self.y.T @ linalg.solve(self.S, self.y)
-            except linalg.LinAlgError:
-                distance = self.y.T @ linalg.pinv(self.S) @ self.y
-            self._mahalanobis = math.sqrt(float(np.squeeze(distance)))
+            self._mahalanobis = mahalanobis(self.y, self.S)
         return self._mahalanobis
 
     @property

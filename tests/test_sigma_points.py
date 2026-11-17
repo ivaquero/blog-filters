@@ -66,12 +66,16 @@ def test_spherical_radial_returns_points_not_none():
     """Phase 1 fix: `sigma_points` used to have no return statement."""
     n = 3
     P = np.eye(n)
-    sp = SphericalRadialSigmas(n=n, P=P)
+    sp = SphericalRadialSigmas(n=n)
     x = np.zeros(n)
     sigmas = sp.sigma_points(x, P)
     assert sigmas is not None, "SphericalRadialSigmas must return an array"
     assert sigmas.ndim == 2
     assert sigmas.shape[1] == n
+    # The constructor no longer stores a covariance it never read, and the
+    # weights have one entry per cubature point (2n), not 4n.
+    assert len(sp.Wm) == 2 * n
+    assert np.isclose(np.sum(sp.Wm), 1.0)
 
 
 def test_num_sigmas_takes_no_argument():

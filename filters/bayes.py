@@ -45,6 +45,11 @@ def posterior(likelihood, prior):
 
 
 def prior_estimate(x0, model, zs, R, *, show_steps=False):
+    """Sequential Bayesian update of a scalar state.
+
+    Returns three (n, 2) stacks of (mean, σ) for the priors, the estimates
+    and the posterior standard deviations.
+    """
     x = x0
     priors, estimates, ps = (
         np.zeros((len(zs), 2)),
@@ -55,7 +60,7 @@ def prior_estimate(x0, model, zs, R, *, show_steps=False):
         prior = gaussian_sum(x, model)
         likelihood = gaussian(z, R)
         x = gaussian_product(prior, likelihood)
-        priors[i], estimates[i], ps[i] = prior, x.mean, x.var
+        priors[i], estimates[i], ps[i] = prior, x.mean, x.sigma
         if show_steps:
             if i == 0:
                 print_steps(prior, z, x)
@@ -71,7 +76,7 @@ def print_steps(prior, z, x):
 
 def print_header():
     print("\tprior\t\t\tESTIMATE")
-    print("    x\t    var\t\t  z\t    x\t   var")
+    print("    x\t    σ\t\t  z\t    x\t   σ")
 
 
 def print_conclusion(z, x):

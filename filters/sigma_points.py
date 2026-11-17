@@ -162,15 +162,6 @@ class MerweScaledSigmas:
         self.Wc[0] = λ / c + (1 - self.α**2 + self.β)
         self.Wm[0] = λ / c
 
-    def sigma_mweights(self):
-        """Returns the weights matrix for the scaled UKF."""
-
-        Wm, Wc, c = self.sigma_weights()
-        W = np.eye(len(Wc)) - np.tile(Wm, (1, len(Wm)))
-        W = W @ np.diag(Wc) @ W.T
-
-        return Wm, W, c
-
     def __repr__(self):
         return "\n".join(
             [
@@ -262,14 +253,19 @@ class SimplexSigmas:
 
 
 class SphericalRadialSigmas:
-    """Generates sigma points and weights according to the spherical radial method."""
+    """Generates cubature points and weights by the spherical-radial rule.
 
-    def __init__(self, n, P):
+    The rule uses ``2n`` points with equal weights ``1 / (2n)``. The previous
+    implementation stored a ``P`` argument it never read and returned weights
+    of length ``4n`` from ``sigma_weights``.
+    """
+
+    def __init__(self, n):
         self.n = n
-        self.P = P
+        self.sigma_weights()
 
     def num_sigmas(self):
-        """Number of sigma points for each variable in the state x"""
+        """Number of cubature points for each variable in the state x"""
 
         return 2 * self.n
 
@@ -278,15 +274,15 @@ class SphericalRadialSigmas:
 
         Parameters
         ----------
-        x : _type_
-            _description_
-        P : _type_
-            _description_
+        x : ndarray, shape (n,)
+            Mean state.
+        P : ndarray, shape (n, n)
+            State covariance.
 
         Returns
         -------
-        _type_
-            _description_
+        ndarray, shape (2n, n)
+            Cubature points.
 
         References
         ----------
@@ -296,9 +292,8 @@ class SphericalRadialSigmas:
             error_message = f"expected size(x) {self.n}, but size is {np.size(x)}"
             raise ValueError(error_message)
 
-        # dimension of P is
         n = self.n
-        x = x.flatten()
+        x = np.asarray(x).flatten()
 
         # evaluation points (nx2n)
         sigmas = np.empty((2 * n, n))
@@ -310,7 +305,9 @@ class SphericalRadialSigmas:
 
         return sigmas
 
-    def sigma_weights(self, x=None):
-        n = self.num_sigmas()
-        # equal weights 1/(2n) across all cubature points
-        return np.full(2 * n, 1.0 / (2 * n))
+    def sigma_weights(self):
+        """Computes the equal weights of the cubature rule."""
+
+        num = self.num_sigmas()
+        self.Wm = np.full(num, 1.0 / num)
+        self.Wc = self.Wm

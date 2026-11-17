@@ -10,152 +10,6 @@ def print_steps(estims, preds):
         )
 
 
-class GFilter:
-    """Implements the g filter.
-
-    References
-    ----------
-    Brookner, "Tracking and Kalman Filters Made Easy". John Wiley and
-    Sons, 1998.
-
-    Returns
-    -------
-    _type_
-        _description_
-    """
-
-    def __init__(self, x0, dx, dt, g: float):
-        self.x = x0
-        self.dx = dx
-        self.dt = dt
-        self.g = g
-        self.dx_pred = self.dx
-        self.x_pred = self.x
-
-        if np.ndim(x0) == 0:
-            self.y = 0.0  # residual
-            self.z = 0.0
-        else:
-            self.y = np.zeros(len(x0))
-            self.z = np.zeros(len(x0))
-
-    def update(self, z, g=None, h=None):
-        """Performs the g filter predict and update step on the
-        measurement z.
-
-        Parameters
-        ----------
-        z : _type_
-            _description_
-        g : _type_, optional
-            _description_, by default None
-        h : _type_, optional
-            _description_, by default None
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-
-        if g is None:
-            g = self.g
-
-        # prediction step
-        self.dx_pred = self.dx
-        self.x_pred = self.x + (self.dx * self.dt)
-
-        # update step
-        self.y = z - self.x_pred
-        self.dx = self.dx_pred + h * self.y / self.dt
-        self.x = self.x_pred + g * self.y
-
-        return (self.x, self.dx)
-
-    def batch_filter(self, data, saver=None, *, save_preds=False):
-        """Performs g-h filter with a fixed g and h.
-
-        Parameters
-        ----------
-        data : _type_
-            _description_
-        save_preds : bool, optional
-            _description_, by default False
-        saver : _type_, optional
-            _description_, by default None
-
-        Returns
-        -------
-        _type_
-            _description_
-        """
-
-        x = self.x
-        dx = self.dx
-        n = len(data)
-
-        estimates = np.zeros((n + 1, 2))
-        estimates[0, 0] = x
-        estimates[0, 1] = dx
-
-        if save_preds:
-            predictions = np.zeros(n)
-
-        for i, z in enumerate(data):
-            # prediction step
-            x_est = x + (dx * self.dt)
-
-            # update step
-            residual = z - x_est
-            x = x_est + self.g * residual
-
-            estimates[i + 1, 0] = x
-            estimates[i + 1, 1] = dx
-
-            if save_preds:
-                predictions[i] = x_est
-
-            if saver is not None:
-                saver.save()
-
-        return (estimates, predictions) if save_preds else estimates
-
-    def VRF_pred(self):
-        """Returns the Variance Reduction Factor of the prediction step of the filter. The VRF is the normalized variance for the filter.
-
-        References
-        ----------
-        Asquith, "Weight Selection in First Order Linear Filters"
-        Report No RG-TR-69-12, U.S. Army Missile Command. Redstone Arsenal, Al. November 24, 1970.
-        """
-
-        g = self.g
-
-        return (2 * g**2) / (g * (4 - 2 * g))
-
-    def VRF(self):
-        """Returns the Variance Reduction Factor (VRF) of the state variable of the filter (x) and its derivatives (dx, ddx). The VRF is the normalized variance for the filter."""
-
-        g = self.g
-        den = g * (4 - 2 * g)
-        return (2 * g**2) / den
-
-    def __repr__(self):
-        return "\n".join(
-            [
-                "GHFilter object",
-                pretty_str("dt", self.dt),
-                pretty_str("g", self.g),
-                pretty_str("x", self.x),
-                pretty_str("dx", self.dx),
-                pretty_str("x_pred", self.x_pred),
-                pretty_str("dx_pred", self.dx_pred),
-                pretty_str("y", self.y),
-                pretty_str("z", self.z),
-            ]
-        )
-
-
 class GHFilter:
     """Implements the g-h filter.
 
@@ -270,7 +124,7 @@ class GHFilter:
     def __repr__(self):
         return "\n".join(
             [
-                "GHFilter object",
+                f"{type(self).__name__} object",
                 pretty_str("dt", self.dt),
                 pretty_str("g", self.g),
                 pretty_str("h", self.h),
@@ -282,6 +136,32 @@ class GHFilter:
                 pretty_str("z", self.z),
             ]
         )
+
+
+class GFilter(GHFilter):
+    """Implements the g filter — the ``h = 0`` member of the g-h family.
+
+    Position is corrected by ``g`` while the velocity estimate is left
+    untouched, which is what the notebooks demonstrate before ``h`` is
+    introduced. It is a thin subclass of `GHFilter`; the previous standalone
+    copy carried a dead ``h`` argument that raised ``TypeError`` whenever its
+    default was used.
+
+    `VRF` therefore returns the ``(x, dx)`` pair like `GHFilter.VRF`, with
+    the velocity term collapsing to zero.
+    """
+
+    def __init__(self, x0, dx, dt, g):
+        super().__init__(x0, dx, dt, g, h=0.0)
+
+    def update(self, z, g=None, h=None):
+        """Predict/update with ``h`` pinned to zero; returns ``(x, dx)``.
+
+        ``h`` is accepted so the signature stays substitutable for
+        `GHFilter.update`, and is ignored.
+        """
+
+        return super().update(z, g=g, h=0.0)
 
 
 class GHKFilter:
@@ -314,10 +194,13 @@ class GHKFilter:
             self.z = np.zeros(len(x0))
 
     def update(self, z, g=None, h=None, k=None):
-        """Performs the g-h filter predict and update step on the
+        """Performs the g-h-k filter predict and update step on the
         measurement z.
 
-        On return, self.x, self.dx, self.y, and self.x_pred will have been updated with the estimates of the computation. For convenience, self.x and self.dx are returned in a tuple.
+        On return, self.x, self.dx, self.ddx, self.y, and the ``*_pred``
+        attributes will have been updated with the estimates of the
+        computation. For convenience, self.x and self.dx are returned in a
+        tuple.
         """
 
         if g is None:
@@ -343,37 +226,49 @@ class GHKFilter:
 
         return (self.x, self.dx)
 
-    def batch_filter(self, data, *, save_preds=False):
-        """Performs g-h filter with a fixed g and h."""
+    def batch_filter(self, data, saver=None, *, save_preds=False):
+        """Batch-processes ``data`` with the object's fixed g, h, k.
 
-        x = self.x
-        dx = self.dx
+        The previous implementation was a copy of the g-h loop: it ignored
+        ``k`` entirely and returned two columns, so the acceleration state was
+        never estimated. Estimates now carry ``(x, dx, ddx)``.
+        """
+
+        dt = self.dt
+        half_dt_sqr = 0.5 * dt**2
+        h_dt = self.h / dt
+        k_dt_sqr = 2 * self.k / dt**2
+        g = self.g
+
+        x, dx, ddx = self.x, self.dx, self.ddx
         n = len(data)
 
-        estimates = np.zeros((n + 1, 2))
-        estimates[0, 0] = x
-        estimates[0, 1] = dx
+        estimates = np.zeros((n + 1, 3))
+        estimates[0] = (x, dx, ddx)
 
         if save_preds:
             predictions = np.zeros(n)
 
-        # optimization to avoid n computations of h / dt
-        h_dt = self.h / self.dt
-
         for i, z in enumerate(data):
-            # prediction step
-            x_est = x + (dx * self.dt)
+            # prediction step; ddx is carried, only dx and x advance
+            dx_pred = dx + ddx * dt
+            x_est = x + dx * dt + half_dt_sqr * ddx
 
             # update step
             residual = z - x_est
-            dx = dx + h_dt * residual  # i.e. dx = dx + h * residual / dt
-            x = x_est + self.g * residual
+            ddx = ddx + k_dt_sqr * residual
+            dx = dx_pred + h_dt * residual
+            x = x_est + g * residual
 
             estimates[i + 1, 0] = x
             estimates[i + 1, 1] = dx
+            estimates[i + 1, 2] = ddx
 
             if save_preds:
                 predictions[i] = x_est
+
+            if saver is not None:
+                saver.save()
 
         return (estimates, predictions) if save_preds else estimates
 
@@ -431,7 +326,7 @@ class GHKFilter:
     def __repr__(self):
         return "\n".join(
             [
-                "GHFilter object",
+                f"{type(self).__name__} object",
                 pretty_str("dt", self.dt),
                 pretty_str("g", self.g),
                 pretty_str("h", self.h),
@@ -441,7 +336,7 @@ class GHKFilter:
                 pretty_str("ddx", self.ddx),
                 pretty_str("x_pred", self.x_pred),
                 pretty_str("dx_pred", self.dx_pred),
-                pretty_str("ddx_pred", self.dx_pred),
+                pretty_str("ddx_pred", self.ddx_pred),
                 pretty_str("y", self.y),
                 pretty_str("z", self.z),
             ]

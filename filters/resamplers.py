@@ -43,8 +43,15 @@ def residual_resample(weights, rng=None):
 
     # use multinormal resample on the residual to fill up the rest. This
     # maximizes the variance of the samples
-    residual = weights - num_copies  # get fractional part
-    residual /= sum(residual)  # normalize
+    residual = np.maximum(weights - num_copies, 0.0)  # get fractional part
+    total = np.sum(residual)
+    if total <= 0.0:
+        # Every particle already received an integer number of copies, or the
+        # weights do not sum to one. Dividing by zero here used to emit NaN and
+        # index the particles with garbage; fall back to uniform.
+        residual = np.full(N, 1.0 / N)
+        total = 1.0
+    residual = residual / total
     cumulative_sum = np.cumsum(residual)
     cumulative_sum[-1] = 1.0  # avoid round-off errors: ensures sum is exactly one
     indexes[k:N] = np.searchsorted(cumulative_sum, rng.random(N - k))

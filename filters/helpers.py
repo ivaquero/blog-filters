@@ -1,5 +1,6 @@
 import contextlib
 import inspect
+import math
 from collections import defaultdict, deque
 from copy import deepcopy
 from typing import Any
@@ -108,6 +109,24 @@ class KFSaver:
 
     def __repr__(self):
         return f"<KFSaver object at {hex(id(self))}\n  Keys: {' '.join(self.keys)}>"
+
+
+def mahalanobis(y, S) -> float:
+    """Mahalanobis distance of the innovation ``y`` under covariance ``S``.
+
+    Returns 0.0 before the first update (``S`` still all zeros) and falls back
+    to the pseudo-inverse when ``S`` is singular, so reading the property never
+    raises. Accepts ``y`` as either ``(dim_z,)`` or ``(dim_z, 1)``.
+    """
+    y = np.asarray(y, dtype=float).reshape(-1)
+    S = np.asarray(S, dtype=float)
+    if not np.any(S):
+        return 0.0
+    try:
+        squared = float(y @ np.linalg.solve(S, y))
+    except np.linalg.LinAlgError:
+        squared = float(y @ np.linalg.pinv(S) @ y)
+    return math.sqrt(max(squared, 0.0))
 
 
 def pretty_str(label, arr):

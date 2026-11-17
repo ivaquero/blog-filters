@@ -84,3 +84,38 @@ def test_top_level_rts_matches_method_on_constant_fs():
     smoothed_b, _, _, _ = rts_smoother(means_b, covs_b, Fs=kf_b.F, Q=kf_b.Q)
 
     assert np.allclose(smoothed_a, smoothed_b, atol=1e-6)
+
+
+def test_top_level_rts_accepts_flat_means():
+    """Only ``(n, dim_x, 1)`` used to be accepted; ``(n, dim_x)`` raised."""
+    kf = _build_filter()
+    means, covs = _collect_runs([1.0, 2.0, 3.0], kf)
+    flat = means[:, :, 0]
+
+    x, P, _K, _Pp = rts_smoother(flat, covs, Fs=kf.F, Q=kf.Q)
+
+    assert x.shape == flat.shape
+    assert P.shape == covs.shape
+    assert np.allclose(x, kf.rts_smoother(flat, covs)[0])
+
+
+def test_top_level_rts_accepts_per_step_matrices():
+    """``Fs`` used to be treated as one matrix even when a stack was given."""
+    kf = _build_filter()
+    means, covs = _collect_runs([1.0, 2.0, 3.0, 4.0], kf)
+    n = means.shape[0]
+
+    x, P, _K, _Pp = rts_smoother(means, covs, Fs=[kf.F] * n, Qs=[kf.Q] * n)
+
+    assert np.all(np.isfinite(x))
+    assert np.all(np.isfinite(P))
+
+
+def test_top_level_rts_defaults_to_identity_transition():
+    kf = _build_filter()
+    means, covs = _collect_runs([1.0, 2.0, 3.0], kf)
+
+    x, _P, _K, _Pp = rts_smoother(means, covs)
+
+    assert np.all(np.isfinite(x))
+    assert x.shape == means.shape

@@ -124,7 +124,11 @@ class EnsembleKalmanFilter:
             self.sigmas[i] += self.K @ (z + e_r[i] - sigmas_h[i])
 
         self.x = np.mean(self.sigmas, axis=0)
-        self.P = self.P - self.K @ self.S @ self.K.T
+        # The ensemble *is* the state, so P is recomputed from it. The
+        # previous analytic update (P -= K S K') mixed the prior covariance
+        # with a gain derived from ensemble statistics and left x, P and
+        # sigmas mutually inconsistent.
+        self.P = outer_product_sum(self.sigmas - self.x) / (N - 1)
 
         # save measurement and posterior state
         self.z = deepcopy(z)

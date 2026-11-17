@@ -63,3 +63,50 @@ def test_ukf_predict_update_cycle_shrinks_variance():
     # After a handful of measurements with a well-specified model the
     # variance in the observed coordinate should have collapsed substantially.
     assert prior_var < 1.0
+
+
+def _static_ukf():
+    """UKF over an identity model, for smoother tests."""
+    return UnscentedKalmanFilter(
+        dim_x=2,
+        dim_z=1,
+        dt=1.0,
+        hx=lambda x, *_args, **_kwargs: np.array([x[0]]),
+        fx=lambda x, *_args, **_kwargs: np.asarray(x),
+        points=MerweScaledSigmas(n=2, kappa=0),
+    )
+
+
+def test_rts_smoother_uses_the_supplied_process_noise():
+    """``Qs`` was accepted and then ignored in favour of ``self.Q``."""
+    ukf = _static_ukf()
+    means = np.tile(np.array([0.0, 1.0]), (5, 1))
+    covs = np.tile(np.eye(2), (5, 1, 1))
+
+    _, quiet, _ = ukf.rts_smoother(means, covs, Qs=[np.eye(2) * 1e-6] * 5)
+    _, noisy, _ = ukf.rts_smoother(means, covs, Qs=[np.eye(2) * 100.0] * 5)
+
+    assert not np.allclose(quiet, noisy)
+
+
+def test_rts_smoother_accepts_a_single_covariance():
+    ukf = _static_ukf()
+    means = np.tile(np.array([0.0, 1.0]), (4, 1))
+    covs = np.tile(np.eye(2), (4, 1, 1))
+
+    per_step, P_per_step, _ = ukf.rts_smoother(means, covs, Qs=[np.eye(2) * 0.5] * 4)
+    single, P_single, _ = ukf.rts_smoother(means, covs, Qs=np.eye(2) * 0.5)
+
+    assert np.allclose(per_step, single)
+    assert np.allclose(P_per_step, P_single)
+
+
+def test_rts_smoother_returns_three_values():
+    ukf = _static_ukf()
+    means = np.tile(np.array([0.0, 1.0]), (3, 1))
+    covs = np.tile(np.eye(2), (3, 1, 1))
+
+    result = ukf.rts_smoother(means, covs)
+
+    assert len(result) == 3
+    assert result.x.shape == means.shape
