@@ -33,18 +33,18 @@ project:
     - file: README.md
     - title: Filter Implementation
       children:
-        - file: filters-bayes.ipynb
-        - file: filters-kf-basic.ipynb
-        - file: filters-kf-design.ipynb
-        - file: filters-ghk.ipynb
-        - file: filters-kf-plus.ipynb
-        - file: filters-smoothers.ipynb
-        - file: filters-pf.ipynb
+        - file: notebooks/filters-bayes.ipynb
+        - file: notebooks/filters-kf-basic.ipynb
+        - file: notebooks/filters-kf-design.ipynb
+        - file: notebooks/filters-ghk.ipynb
+        - file: notebooks/filters-kf-plus.ipynb
+        - file: notebooks/filters-smoothers.ipynb
+        - file: notebooks/filters-pf.ipynb
     - title: Real Scenario Simulation
       children:
-        - file: filters-maneuver.ipynb
-        - file: filters-task-tracking.ipynb
-        - file: filters-task-fusion.ipynb
+        - file: notebooks/filters-maneuver.ipynb
+        - file: notebooks/filters-task-tracking.ipynb
+        - file: notebooks/filters-task-fusion.ipynb
 
 site:
   template: book-theme
