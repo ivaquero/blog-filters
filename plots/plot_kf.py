@@ -174,9 +174,13 @@ def plot_adaptive_2d(
     axes[1].set(xlabel="time", title=f"velocity {title_suffix}")
 
 
-def plot_fusion_kf2d(ax, saver):
-    """Plot fusion Kalman filter 2D results."""
-    ts = np.arange(0.1, 10, 0.1)
+def plot_fusion_kf2d(ax, saver, dt=0.1):
+    """Plot fusion Kalman filter 2D results.
+
+    The time axis is derived from the saved states instead of a hard-coded
+    `arange(0.1, 10, 0.1)`, which silently truncated any longer run.
+    """
+    ts = np.arange(1, len(saver.x) + 1) * dt
     plot_zs(ax, ts, saver.z[:, 0])
     ax.plot(ts, saver.x[:, 0], label="Kalman Filter")
     ax.plot(ts, saver.z[:, 1], ls="--", label="Sensor")

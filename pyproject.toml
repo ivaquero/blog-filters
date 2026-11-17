@@ -13,21 +13,13 @@ dependencies = [
 
 [project.optional-dependencies]
 book = [
-  # Jupyter Book 2 (mystmd) reads myst.yml. Bound below 3 so a future major
-  # cannot silently change the build contract again.
   "jupyter-book>=2,<3",
-  # `build --execute` drives a Jupyter Server against an installed kernel;
-  # jupyter-book does not depend on either.
   "jupyter-server>=2",
   "ipykernel>=6",
 ]
 dev = [
   "ruff>=0.14",
   "pytest>=8.3",
-  # Pinned to a patch release on purpose: ty is pre-1.0 and renames rules inside
-  # 0.0.x (e.g. `invalid-method-override` -> `incompatible-method-override` in
-  # 0.0.104), which turns into a CI failure under `--error-on-warning`. Bump this
-  # together with [tool.ty.rules] in one commit, never implicitly.
   "ty==0.0.104",
 ]
 sim = [

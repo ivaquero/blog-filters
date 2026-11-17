@@ -60,30 +60,45 @@ def residual_x(a, b):
     return y
 
 
+def _state_xy_heading(x):
+    """Flatten a robot state to ``(x, y, heading)``.
+
+    States reach these helpers either as 1-D ``(3,)`` arrays (UKF convention)
+    or as ``(3, 1)`` column vectors (EKF convention). Indexing a column vector
+    with ``x[0]`` yields a length-1 array, which ``math.atan2`` refuses to
+    accept as a scalar, so both callers must be normalised here.
+    """
+    px, py, hdg = np.asarray(x, dtype=float).reshape(-1)[:3]
+    return px, py, hdg
+
+
 def Hx(x, landmarks):
     """Takes a state variable and returns the measurement that would correspond to that state."""
+    px, py, hdg = _state_xy_heading(x)
     hx = []
     for lmark in landmarks:
-        dx, dy = lmark[0] - x[0], lmark[1] - x[1]
+        dx, dy = lmark[0] - px, lmark[1] - py
         dist = np.hypot(dx, dy)
         angle = math.atan2(dy, dx)
-        hx += [dist, normalize_angle(angle - x[2])]
+        hx += [dist, normalize_angle(angle - hdg)]
     return np.array(hx)
 
 
 def Hx_1(x, lmark):
     """Takes a state variable and returns the measurement that would correspond to that state."""
-    dx, dy = lmark[0] - x[0], lmark[1] - x[1]
+    px, py, hdg = _state_xy_heading(x)
+    dx, dy = lmark[0] - px, lmark[1] - py
     dist = np.hypot(dx, dy)
     angle = math.atan2(dy, dx)
-    hx = [dist, normalize_angle(angle - x[2])]
+    hx = [dist, normalize_angle(angle - hdg)]
     return np.array(hx)
 
 
 def HJac(x, lmark):
     """Compute Jacobian of H matrix where h(x) computes the range and bearing to a landmark for state x"""
 
-    dx, dy = lmark[0] - x[0, 0], lmark[1] - x[1, 0]
+    px, py, _ = _state_xy_heading(x)
+    dx, dy = lmark[0] - px, lmark[1] - py
     dist = np.hypot(dx, dy)
 
     return np.array([[-dx / dist, -dy / dist, 0], [dy / dist**2, -dx / dist**2, -1]])
@@ -93,9 +108,9 @@ def z_landmark(
     lmark, sim_pos, std_rng, std_brg, rng: np.random.Generator | None = None
 ):
     generator = resolve_rng(rng)
-    x, y = sim_pos[0], sim_pos[1]
-    dist = np.hypot(lmark[0] - x, lmark[1] - y)
-    angle = math.atan2(lmark[1] - y, lmark[0] - x) - sim_pos[2]
+    px, py, hdg = _state_xy_heading(sim_pos)
+    dist = np.hypot(lmark[0] - px, lmark[1] - py)
+    angle = math.atan2(lmark[1] - py, lmark[0] - px) - hdg
     return np.array(
         [
             dist + generator.standard_normal() * std_rng,
@@ -170,8 +185,15 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         self.v, self.a, self.θ = v, a, θ
 
     def predict(self, u=None):
-        if u is None:
-            u = np.zeros(2)
+        """Propagate the state and covariance one ``dt`` forward.
+
+        Process noise enters through ``V M V'`` (control space), so ``self.Q``
+        from the base class is intentionally not applied here.
+        """
+        u = np.zeros(2) if u is None else np.asarray(u, dtype=float).reshape(-1)
+        # the EKF state is a column vector; normalise in case the caller
+        # assigned a 1-D array, since move()/HJac() index x[2, 0]
+        self.x = np.asarray(self.x, dtype=float).reshape(3, 1)
         self.x = self.move(self.x, u, self.dt)
         self.subs[self.θ] = self.x[2, 0]
         self.subs[self.v] = u[0]
@@ -180,9 +202,15 @@ class RobotEKF(kalman_ekf.ExtendedKalmanFilter):
         F = np.array(self.F_j.evalf(subs=self.subs)).astype(float)
         V = np.array(self.V_j.evalf(subs=self.subs)).astype(float)
 
-        # covariance of motion noise in control space
-        M = np.array([[self.std_vel * u[0] ** 2, 0], [0, self.std_steer**2]])
+        # covariance of motion noise in control space. std_vel / std_steer are
+        # standard deviations, hence squared; `std_vel * u[0] ** 2` (the
+        # filterpy original) mixes a std with a squared velocity.
+        M = np.array([[(self.std_vel * u[0]) ** 2, 0], [0, self.std_steer**2]])
         self.P = F @ self.P @ F.T + V @ M @ V.T
+
+        # save prior, mirroring ExtendedKalmanFilter.predict
+        self.x_prior = np.copy(self.x)
+        self.P_prior = np.copy(self.P)
 
     def move(self, x, u, dt):
         hdg = x[2, 0]

@@ -151,8 +151,8 @@ class ExtendedKalmanFilter:
     def update(
         self,
         z: np.ndarray,
-        HJac: Callable[[np.ndarray], np.ndarray],
-        Hx: Callable[[np.ndarray], np.ndarray],
+        HJac: Callable[..., np.ndarray],
+        Hx: Callable[..., np.ndarray],
         R: np.ndarray | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
@@ -203,7 +203,16 @@ class ExtendedKalmanFilter:
         self.SI = linalg.inv(self.S)
         self.K = Pxz @ self.SI
 
-        self.y = residual(z, hx)
+        # `z` and `hx` reach this method in mixed shapes: EKF users pass
+        # (dim_z, 1) columns, UKF-style range/bearing helpers return (dim_z,)
+        # vectors. Both sides are normalised to the state's dimensionality
+        # first, because a mixed pair either broadcasts the residual into a
+        # (dim_z, dim_z) matrix or adds a (dim_x,) correction to a
+        # (dim_x, 1) state, turning it into (dim_x, dim_x) -- silent
+        # corruption in both cases rather than an error.
+        z = reshape_z(z, self.dim_z, self.x.ndim)
+        hx = reshape_z(np.asarray(hx), self.dim_z, self.x.ndim)
+        self.y = reshape_z(residual(z, hx), self.dim_z, self.x.ndim)
         self.x += self.K @ self.y
 
         # P = (I-KH)P(I-KH)' + KRK' is more numerically stable
@@ -225,10 +234,10 @@ class ExtendedKalmanFilter:
     def update2(
         self,
         z: np.ndarray,
-        Hess: Callable[[np.ndarray], np.ndarray],
-        Hx: Callable[[np.ndarray], np.ndarray],
-        Hxx: Callable[[np.ndarray], np.ndarray],
-        HxR: Callable[[np.ndarray], np.ndarray] | None = None,
+        Hess: Callable[..., np.ndarray],
+        Hx: Callable[..., np.ndarray],
+        Hxx: Callable[..., np.ndarray],
+        HxR: Callable[..., np.ndarray] | None = None,
         R: np.ndarray | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
@@ -318,8 +327,8 @@ class ExtendedKalmanFilter:
     def predict_update(
         self,
         z: np.ndarray,
-        HJac: Callable[[np.ndarray], np.ndarray],
-        Hx: Callable[[np.ndarray], np.ndarray],
+        HJac: Callable[..., np.ndarray],
+        Hx: Callable[..., np.ndarray],
         R: np.ndarray | float | None = None,
         args: tuple = (),
         hx_args: tuple = (),
@@ -330,8 +339,8 @@ class ExtendedKalmanFilter:
         Parameters
         ----------
         z : np.ndarray
-        HJac : Callable[[np.ndarray], np.ndarray]
-        Hx : Callable[[np.ndarray], np.ndarray]
+        HJac : Callable[..., np.ndarray]
+        Hx : Callable[..., np.ndarray]
         R : np.ndarray | float | None
         args : tuple
         hx_args : tuple

@@ -82,3 +82,43 @@ def test_ekf_range_bearing_update_reduces_uncertainty():
     before = np.trace(ekf.P)
     ekf.update(np.array([[14.0], [math.pi / 4]]), HJac, Hx, R=np.diag([0.5, 0.01]))
     assert np.trace(ekf.P) < before
+
+
+def test_ekf_update_normalises_measurement_shapes():
+    """Mixed measurement shapes must not broadcast the state into a matrix.
+
+    ``Hx`` may return a ``(dim_z, 1)`` column (EKF convention) or a
+    ``(dim_z,)`` vector (the range/bearing helpers in ``simulators/robot.py``),
+    and callers pass ``z`` in either form. A mixed pair used to go unnoticed:
+    ``x += K @ y`` with a ``(dim_x,)`` correction turns a ``(dim_x, 1)`` state
+    into ``(dim_x, dim_x)`` without raising. Every combination must now reach
+    the same posterior.
+    """
+
+    def HJac(state):
+        return np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+
+    def Hx_column(state):
+        return np.array([[state[0, 0]], [state[1, 0]]])
+
+    def Hx_flat(state):
+        return np.array([state[0, 0], state[1, 0]])
+
+    def posterior(z, hx):
+        ekf = ExtendedKalmanFilter(dim_x=3, dim_z=2)
+        ekf.x = np.array([[1.0], [2.0], [0.3]])
+        ekf.P = np.diag([0.5, 0.5, 0.1])
+        ekf.update(z, HJac, hx, R=np.eye(2) * 0.01)
+        return ekf
+
+    reference = posterior(np.array([[1.2], [1.7]]), Hx_column)
+    for z, hx in (
+        (np.array([1.2, 1.7]), Hx_flat),
+        (np.array([[1.2], [1.7]]), Hx_flat),
+        (np.array([1.2, 1.7]), Hx_column),
+    ):
+        ekf = posterior(z, hx)
+        assert ekf.x.shape == (3, 1)
+        assert ekf.y.shape == (2, 1)
+        assert np.allclose(ekf.x, reference.x)
+        assert np.allclose(ekf.P, reference.P)

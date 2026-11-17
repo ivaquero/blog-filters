@@ -54,15 +54,22 @@ def plot_particles(
 def plot_pf(
     axes, pf, xlim: float = 100, ylim: float = 100, *, weights: bool = True
 ) -> None:
+    """Plot particles, with weight marginals when `weights` is set.
+
+    `xlim`/`ylim` are the upper bounds of the particle cloud, not matplotlib
+    axis limits. They were previously cross-wired (the weight panel took the
+    particle scale as its x range and vice versa), and the weight axes used
+    the particle scale instead of `[0, 1]`.
+    """
     if weights:
-        axes[1].set(yticklabels="", xlim=(0, ylim), ylim=(0, xlim))
+        axes[1].set(xlim=(0, xlim), ylim=(0, 1), yticklabels="")
         axes[1].scatter(pf.particles[:, 0], pf.weights, marker=".", s=1, color="k")
 
-        axes[2].set(xticklabels="", xlim=(0, ylim), ylim=(0, xlim))
+        axes[2].set(xlim=(0, 1), ylim=(0, ylim), xticklabels="")
         axes[2].scatter(pf.weights, pf.particles[:, 1], marker=".", s=1, color="k")
 
     axes[0].scatter(pf.particles[:, 0], pf.particles[:, 1], marker=".", s=1, color="k")
-    axes[0].set(xlim=(0, ylim), ylim=(0, xlim))
+    axes[0].set(xlim=(0, xlim), ylim=(0, ylim))
 
 
 def plot_hbar(a, N: int, figsize):

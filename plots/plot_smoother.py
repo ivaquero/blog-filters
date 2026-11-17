@@ -32,8 +32,10 @@ def plot_rts(
     kf.P = 10.0 * np.eye(len(kf.x))
     kf.R = np.array([[R]])
     kf.Q = Q * np.eye(len(kf.x))
-    # create noisy data
-    zs = np.asarray([t + generator.standard_normal() * R for t in range(40)])
+    # create noisy data; `R` is the measurement *variance* (it is  assigned to
+    # `kf.R` above), so the noise scale is its square root — drawing with
+    # `standard_normal() * R` made the plot disagree with the filter it feeds.
+    zs = np.arange(40.0) + generator.standard_normal(40) * np.sqrt(R)
     # filter data with Kalman filter, than run smoother on it
     means, covs, _, _ = kf.batch_filter(zs)
     smoothed, _, _, _ = kf.rts_smoother(means, covs)

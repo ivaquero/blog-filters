@@ -7,12 +7,12 @@ from scipy import stats
 
 
 def prepend_x0(x0, data):
-    """Prepend initial value to data array."""
-    if isinstance(x0, list):
-        return [x0, *data.tolist()]
-    if isinstance(x0, np.ndarray):
-        return np.concatenate([x0, data])
-    return data
+    """Prepend initial value to data, always returning a flat float array.
+
+    `x0` may be a scalar, a sequence or an array; scalars used to fall through
+    unchanged, which silently dropped the initial point.
+    """
+    return np.concatenate([np.atleast_1d(np.asarray(x0, dtype=float)), data])
 
 
 def gen_data_by_only_x(xs, dt):
@@ -21,13 +21,27 @@ def gen_data_by_only_x(xs, dt):
 
 
 def plot_zs(ax, xs, ys=None, x0=None, dt=1, label="Measured", **scatter_kwargs):
-    """Plot scatter data with optional initial value."""
-    if x0:
-        xs = prepend_x0(x0, xs)
-    if ys is None:
-        xs, ys = gen_data_by_only_x(xs, dt)
+    """Plot measurement scatter, optionally seeded with the initial value.
 
-    ax.scatter(xs, ys, label=label, marker="x", color="k", **scatter_kwargs)
+    `x0` is the state before the first sample, so it only pairs with the
+    values-only call shape (`ys=None`). Passing it together with `ys` raises:
+    there is no measurement to attach it to, and prepending it to `xs` alone
+    left the two arrays ragged.
+
+    Style keywords are defaults, not overrides — `marker` and `color` used to
+    be hard-coded next to `**scatter_kwargs`, which turned any caller override
+    into `got multiple values for keyword argument`.
+    """
+    if ys is None:
+        if x0 is not None:
+            xs = prepend_x0(x0, np.asarray(xs, dtype=float))
+        xs, ys = gen_data_by_only_x(xs, dt)
+    elif x0 is not None:
+        raise ValueError("x0 is only supported when ys is None")
+
+    scatter_kwargs.setdefault("marker", "x")
+    scatter_kwargs.setdefault("color", "k")
+    ax.scatter(xs, ys, label=label, **scatter_kwargs)
     ax.grid(1)
 
 
@@ -36,8 +50,17 @@ def plot_track(ax, xs, ys=None, dt=None, label="Track", c="k", lw=2, ls=":", **k
     if ys is None and dt is not None:
         xs, ys = gen_data_by_only_x(xs, dt)
 
-    plot_data = xs if ys is None else (xs, ys)
-    return ax.plot(plot_data, color=c, lw=lw, ls=ls, label=label, **kwargs)
+    # `ax.plot(xs)` and `ax.plot(xs, ys)` are two distinct call shapes. Passing
+    # the pair as a single argument instead (`ax.plot((xs, ys))`) makes
+    # matplotlib stack it into a (2, n) array and draw one two-point line per
+    # sample, so the pair must be unpacked into x and y.
+    #
+    # `c` stays the documented keyword while `color` remains reachable through
+    # `**kwargs`; hard-coding `color=c` made `plot_track(..., color="r")` raise.
+    style = {"color": c, "lw": lw, "ls": ls, "label": label, **kwargs}
+    if ys is None:
+        return ax.plot(xs, **style)
+    return ax.plot(xs, ys, **style)
 
 
 def plot_preds(ax, priors, kind=None):
@@ -86,14 +109,15 @@ def plot_track_ellipses(ax, N, zs, xs, cov, title):
 
 
 def cal_cov_ellipse(cov, deviations=1):
-    """Calculate covariance ellipse parameters."""
+    """Calculate covariance ellipse parameters.
+
+    `np.linalg.svd` returns singular values in descending order, so the first
+    radius is always the major axis — no ordering guard is needed here.
+    """
     U, s, _ = np.linalg.svd(cov)
     orientation = math.atan2(U[1, 0], U[0, 0])
     width_radius = deviations * np.sqrt(s[0])
     height_radius = deviations * np.sqrt(s[1])
-
-    if height_radius > width_radius:
-        raise ValueError("width_radius must be greater than height_radius")
 
     return orientation, width_radius, height_radius
 
